@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dither Image Editor</title>
+    <link rel="stylesheet" href="assets/styles/base.css">
+    <link rel="stylesheet" href="assets/styles/layout.css">
+    <link rel="stylesheet" href="assets/styles/components.css">
+    <link rel="stylesheet" href="assets/styles/themes.css">
+</head>
+<body>
+    <div id="app" class="app-shell">
+        <!-- app-shell 只提供 SPA 外殼；各頁內容會由 JavaScript 掛到 #page-host。 -->
+        <header class="app-header">
+            <div class="app-title">Dither Image Editor</div>
+            <div class="app-header-actions">
+                <div id="app-status" class="app-status is-ready" title="Ready" aria-label="Ready"></div>
+                <button id="app-menu-button" class="icon-button" type="button" aria-label="Menu">Menu</button>
+            </div>
+        </header>
+        <main id="page-host" class="page-host"></main>
+    </div>
+
+    <!-- 先載入全域 namespace 與 core，再載入各頁 entry，最後由 main 啟動 app shell。 -->
+    <script src="src/namespace.js"></script>
+    <script src="assets/demo/demo-16x9-data.js"></script>
+    <script src="src/i18n/en.js"></script>
+    <script src="src/utils/dom.js"></script>
+    <script src="src/utils/math.js"></script>
+    <script src="src/core/storage/storage-keys.js"></script>
+    <script src="src/core/storage/settings-store.js"></script>
+    <script src="src/core/storage/document-store.js"></script>
+    <script src="src/core/canvas/canvas-utils.js"></script>
+    <script src="src/core/color/color-utils.js"></script>
+    <script src="src/core/color/palette-utils.js"></script>
+    <script src="src/core/image/image-loader.js"></script>
+    <script src="src/core/image/image-exporter.js"></script>
+    <script src="src/ui/sortable-list.js"></script>
+    <script src="src/app/app-state.js"></script>
+    <script src="src/app/page-registry.js"></script>
+    <script src="src/app/page-router.js"></script>
+    <script src="src/app/app-menu.js"></script>
+    <script src="src/app/script-loader.js"></script>
+    <script src="src/pages/dither-editor/entry.js"></script>
+    <script src="src/pages/web-setting/entry.js"></script>
+    <script src="src/pages/help/entry.js"></script>
+    <script src="src/pages/about/entry.js"></script>
+    <script src="src/app/app-shell.js"></script>
+    <script src="src/main.js"></script>
+</body>
+</html>

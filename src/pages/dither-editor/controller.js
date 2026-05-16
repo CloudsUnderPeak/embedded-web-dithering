@@ -1,0 +1,348 @@
+(function (app) {
+    // Dither Editor 的協調器：維護 editor state、觸發 feature hooks、排程 preview/export。
+    // 這裡不直接建立 DOM；畫面更新一律透過外部傳入的 render callback。
+    // Controller 保存目前 editor state，並提供頁面 UI 可呼叫的操作方法。
+    function DitherEditorController(options) {
+        options = options || {};
+        this.state = options.initialState || app.pages.ditherEditor.state.create();
+        this.render = options.render;
+        this.renderLivePreview = options.renderLivePreview || options.render;
+        this.setStatus = options.setStatus;
+        this.previewTimer = null;
+        this.livePreviewFrame = null;
+        this.previewHoldDepth = 0;
+        this.previewPending = false;
+    }
+
+    // 將 imageLoader 回傳結果寫入 state，並通知 feature 進行 onImageLoaded 初始化。
+    DitherEditorController.prototype.loadResult = function loadResult(result, fileName) {
+        // 所有圖片來源（upload/demo/new image）最後都收斂到 loadResult，
+        // 先重建預設 state，確保重新載圖時不沿用上一張圖的演算法設定。
+        this.resetStateForImage();
+        this.state.fileName = fileName || 'Untitled';
+        this.state.sourceImageData = result.imageData;
+        this.state.livePreview = null;
+        this.state.originalSize = result.originalSize;
+        this.state.workingSize = result.workingSize;
+        this.runFeatureHook('onImageLoaded', { result: result });
+        this.state.status = 'ready';
+        app.pages.ditherEditor.editorModeStateMachine.enterCrop(this.state);
+        // 新圖載入後直接跳到 Crop；Image Input 仍可點，但面板先收合。
+        this.state.openToolPanels.input = false;
+        this.render(this.state);
+    };
+
+    DitherEditorController.prototype.resetStateForImage = function resetStateForImage() {
+        var nextState = app.pages.ditherEditor.state.create();
+        var state = this.state;
+        var revision = (state.uiRevision || 0) + 1;
+        Object.keys(state).forEach(function (key) {
+            delete state[key];
+        });
+        Object.keys(nextState).forEach(function (key) {
+            state[key] = nextState[key];
+        });
+        state.uiRevision = revision;
+        this.previewPending = false;
+        this.previewHoldDepth = 0;
+        clearTimeout(this.previewTimer);
+        this.previewTimer = null;
+        if (this.livePreviewFrame) {
+            cancelAnimationFrame(this.livePreviewFrame);
+            this.livePreviewFrame = null;
+        }
+    };
+
+    // 建立預設尺寸白底圖，作為沒有匯入圖片時的起點。
+    DitherEditorController.prototype.newImage = function newImage() {
+        var size = app.pages.ditherEditor.constants.DEFAULT_NEW_IMAGE_SIZE;
+        this.loadResult(app.core.imageLoader.createBlankImage(size.width, size.height), 'Untitled');
+    };
+
+    // 載入專案內建 demo 圖，成功後走和一般檔案相同的 loadResult 流程。
+    DitherEditorController.prototype.loadDemo = function loadDemo() {
+        var self = this;
+        var max = app.pages.ditherEditor.constants.MAX_INPUT_LONG_EDGE;
+        this.state.status = 'loading-image';
+        this.render(this.state);
+        return app.core.imageLoader
+            .loadDemoImage(max)
+            .then(function (result) {
+                self.loadResult(result, 'demo-16x9.png');
+            })
+            .catch(function (error) {
+                self.state.status = 'error';
+                self.state.error = error.message;
+                self.render(self.state);
+            });
+    };
+
+    // 載入使用者選取或拖放的檔案，格式檢查由 imageLoader 負責。
+    DitherEditorController.prototype.loadFile = function loadFile(file) {
+        var self = this;
+        this.state.status = 'loading-image';
+        this.render(this.state);
+        return app.core.imageLoader
+            .loadImageFromFile(file, app.pages.ditherEditor.constants.MAX_INPUT_LONG_EDGE)
+            .then(function (result) {
+                self.loadResult(result, file.name);
+            })
+            .catch(function (error) {
+                self.state.status = 'error';
+                self.state.error = error.message;
+                self.render(self.state);
+            });
+    };
+
+    // 更新單一 feature setting，觸發 feature hook、重繪與排程 preview。
+    DitherEditorController.prototype.updateSetting = function updateSetting(group, key, value) {
+        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.modes.CROP && group !== 'crop') {
+            return;
+        }
+        var previous = Object.assign({}, this.state.settings[group]);
+        this.state.settings[group][key] = value;
+        // previous 讓 feature 可以在 normalize 或 UI sync 時知道變更前狀態。
+        this.runFeatureHook('onSettingChanged', { id: group, key: key, value: value, previous: previous });
+        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.modes.CROP) {
+            this.state.status = 'ready';
+            this.render(this.state);
+            return;
+        }
+        this.schedulePreview();
+    };
+
+    // 一次更新多個 setting，給 flip/rotation/pan 等需要同步修改的操作使用。
+    DitherEditorController.prototype.updateSettings = function updateSettings(group, values) {
+        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.modes.CROP && group !== 'crop') {
+            return;
+        }
+        var previous = Object.assign({}, this.state.settings[group]);
+        Object.assign(this.state.settings[group], values);
+        this.runFeatureHook('onSettingChanged', { id: group, key: null, values: values, previous: previous });
+        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.modes.CROP) {
+            this.state.status = 'ready';
+            this.render(this.state);
+            return;
+        }
+        this.schedulePreview();
+    };
+
+    // 使用者拖曳滑桿時進入 preview hold，先建立 live preview 基底。
+    DitherEditorController.prototype.beginPreviewHold = function beginPreviewHold(id) {
+        this.previewHoldDepth += 1;
+        if (!this.state.livePreview) {
+            var feature = app.pages.ditherEditor.featureRegistry.get(id);
+            // livePreview 是拖曳期間的輕量回饋，不代表正式 pipeline 結果。
+            this.state.livePreview = {
+                id: id,
+                baseImageData: feature && feature.createLivePreviewBase
+                    ? feature.createLivePreviewBase({ state: this.state })
+                    : null
+            };
+        }
+        clearTimeout(this.previewTimer);
+        this.previewTimer = null;
+    };
+
+    // 使用者放開滑桿後離開 live preview，清掉 filter 並補跑正式 pipeline。
+    DitherEditorController.prototype.endPreviewHold = function endPreviewHold() {
+        this.previewHoldDepth = Math.max(0, this.previewHoldDepth - 1);
+        if (this.previewHoldDepth !== 0) {
+            return;
+        }
+        if (this.previewPending) {
+            this.previewPending = false;
+            clearTimeout(this.previewTimer);
+            this.previewTimer = null;
+            this.schedulePreview();
+            return;
+        }
+        this.state.livePreview = null;
+        this.render(this.state);
+    };
+
+    // 用 requestAnimationFrame 合併 live preview 更新，避免 input 事件過密。
+    DitherEditorController.prototype.scheduleLivePreview = function scheduleLivePreview() {
+        var self = this;
+        if (this.livePreviewFrame) {
+            return;
+        }
+        this.livePreviewFrame = requestAnimationFrame(function () {
+            self.livePreviewFrame = null;
+            self.renderLivePreview(self.state);
+        });
+    };
+
+    // 封裝 feature lifecycle hook 呼叫，並自動補上 state/controller。
+    DitherEditorController.prototype.runFeatureHook = function runFeatureHook(name, context) {
+        app.pages.ditherEditor.featureRegistry.dispatch(
+            name,
+            Object.assign({ state: this.state }, context),
+            { id: context.id }
+        );
+    };
+
+    // 啟用或停用 pipeline 中的某個 operation。
+    DitherEditorController.prototype.toggleOperation = function toggleOperation(id, enabled) {
+        if (this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.modes.EDIT) {
+            return;
+        }
+        this.state.pipeline.enabled[id] = enabled;
+        this.schedulePreview();
+    };
+
+    // 接收 sortable list 回傳的新順序，更新 effectsOrder。
+    DitherEditorController.prototype.reorderEffects = function reorderEffects(order) {
+        if (this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.modes.EDIT) {
+            return;
+        }
+        this.state.pipeline.effectsOrder = order.slice();
+        this.schedulePreview();
+    };
+
+    // 切換 Original/Result 檢視，不改變 pipeline 結果。
+    DitherEditorController.prototype.setViewMode = function setViewMode(mode) {
+        if (this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.modes.EDIT) {
+            return;
+        }
+        this.state.viewMode = mode;
+        this.render(this.state);
+    };
+
+    DitherEditorController.prototype.openCropMode = function openCropMode() {
+        if (!this.state.sourceImageData) {
+            return;
+        }
+        clearTimeout(this.previewTimer);
+        this.previewTimer = null;
+        this.state.livePreview = null;
+        this.state.status = 'ready';
+        app.pages.ditherEditor.editorModeStateMachine.enterCrop(this.state);
+        this.render(this.state);
+    };
+
+    DitherEditorController.prototype.closeCropMode = function closeCropMode() {
+        if (!this.state.sourceImageData) {
+            return;
+        }
+        app.pages.ditherEditor.editorModeStateMachine.enterEdit(this.state);
+        this.schedulePreview();
+    };
+
+    // 將正式 preview 計算 debounce，避免連續設定變更時每次都重跑 pipeline。
+    DitherEditorController.prototype.schedulePreview = function schedulePreview() {
+        var self = this;
+        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.modes.CROP) {
+            this.state.status = 'ready';
+            this.render(this.state);
+            return;
+        }
+        if (this.previewHoldDepth > 0) {
+            // 使用者拖曳 slider 時先更新輕量 live preview，完整 pipeline 延到互動結束。
+            this.previewPending = true;
+            this.scheduleLivePreview();
+            return;
+        }
+        clearTimeout(this.previewTimer);
+        this.state.status = 'processing-preview';
+        this.render(this.state);
+        // debounce 避免 slider/select 每次 input 都立即跑完整 pipeline。
+        this.previewTimer = setTimeout(function () {
+            self.previewTimer = null;
+            self.runPreview();
+        }, app.pages.ditherEditor.constants.PREVIEW_DEBOUNCE_MS);
+    };
+
+    // 實際執行 pipeline 並把 resultImageData 寫回 state。
+    DitherEditorController.prototype.runPreview = function runPreview() {
+        if (!this.state.sourceImageData) {
+            this.state.status = 'empty';
+            this.render(this.state);
+            return;
+        }
+        try {
+            this.runFeatureHook('onBeforePreview', {});
+            // Preview 永遠從 sourceImageData 跑完整 pipeline，避免連續套用造成畫質累積劣化。
+            this.state.previewImageData = app.pages.ditherEditor.pipelineRunner.run(
+                this.state.sourceImageData,
+                this.state
+            );
+            this.state.outputImageData = this.state.previewImageData;
+            this.state.status = 'preview-ready';
+            this.runFeatureHook('onAfterPreview', {});
+            this.saveWorkspace();
+        } catch (error) {
+            this.state.status = 'error';
+            this.state.error = error.message;
+        }
+        this.state.livePreview = null;
+        this.render(this.state);
+    };
+
+    // 匯出目前結果；若尚未有 result，會先同步跑一次 preview。
+    DitherEditorController.prototype.exportPng = function exportPng() {
+        var self = this;
+        if (!this.state.sourceImageData || this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.modes.EDIT) {
+            return Promise.resolve();
+        }
+        this.state.status = 'exporting';
+        this.render(this.state);
+        return Promise.resolve()
+            .then(function () {
+                self.runFeatureHook('onBeforeExport', {});
+                // Export 不使用暫存 preview；重新跑正式 pipeline，確保輸出和最新 settings 一致。
+                return app.pages.ditherEditor.pipelineRunner.run(self.state.sourceImageData, self.state);
+            })
+            .then(function (imageData) {
+                self.state.outputImageData = imageData;
+                return app.core.imageExporter.exportPng(imageData, 'dither-output.png');
+            })
+            .then(function () {
+                self.state.status = 'exported';
+                self.runFeatureHook('onAfterExport', {});
+                self.render(self.state);
+            })
+            .catch(function (error) {
+                self.state.status = 'error';
+                self.state.error = error.message;
+                self.render(self.state);
+            });
+    };
+
+    // 儲存輕量 workspace 狀態，供離開頁面再回來時恢復設定。
+    DitherEditorController.prototype.saveWorkspace = function saveWorkspace() {
+        var state = this.state;
+        // settingsStore 保存輕量偏好；documentStore 保存目前工作區 metadata/settings。
+        // 目前不保存 ImageData 本體，避免 localStorage/IndexedDB 負擔失控。
+        app.core.settingsStore.save({
+            language: 'en',
+            theme: app.app.state.theme || 'light',
+            lastDocumentId: app.core.storageKeys.currentDocumentId,
+            defaultPipeline: {
+                effectsOrder: state.pipeline.effectsOrder,
+                enabled: state.pipeline.enabled
+            },
+            defaultSettings: state.settings
+        });
+        app.core.documentStore.saveCurrent({
+            name: state.fileName,
+            updatedAt: Date.now(),
+            originalSize: state.originalSize,
+            workingSize: state.workingSize,
+            pipeline: state.pipeline,
+            settings: state.settings
+        }).catch(function () {});
+    };
+
+    // 頁面卸載時清掉 timer/frame，避免背景頁面繼續更新。
+    DitherEditorController.prototype.destroy = function destroy() {
+        clearTimeout(this.previewTimer);
+        if (this.livePreviewFrame) {
+            cancelAnimationFrame(this.livePreviewFrame);
+            this.livePreviewFrame = null;
+        }
+        this.state.livePreview = null;
+    };
+
+    app.pages.ditherEditor.Controller = DitherEditorController;
+})(window.DitherApp);

@@ -1,0 +1,208 @@
+(function (app) {
+    // Dither Editor 的 plug-and-play 核心。
+    // feature 透過 register() 提供 dock、panel、operation 與 lifecycle hooks；
+    // page/controller 只查 registry，不硬寫 crop、palette 等單一 feature。
+    var features = [];
+    var featureIds = {};
+    var VALID_PIPELINE_STAGES = {
+        fixedBefore: true,
+        effectsOrder: true,
+        fixedAfter: true
+    };
+
+    // 註冊單一 feature，並把它的 operation 交給 operationRegistry。
+    function register(feature) {
+        validateFeature(feature);
+        features.push(feature);
+        featureIds[feature.id] = true;
+        if (feature.operation) {
+            // operation id 預設等於 feature id，讓 pipeline settings 可以用同一把 key。
+            app.pages.ditherEditor.operationRegistry.register(
+                Object.assign({ id: feature.id }, feature.operation)
+            );
+        }
+    }
+
+    // 依 id 取得 feature 定義。
+    function get(id) {
+        return features.find(function (feature) {
+            return feature.id === id;
+        });
+    }
+
+    // 從 manifest 解析出啟用且依賴順序正確的 script 路徑。
+    function featureScripts() {
+        return resolveManifest(app.pages.ditherEditor.featureManifest || []).map(function (entry) {
+            return entry.path;
+        });
+    }
+
+    // 檢查 manifest 宣告啟用的 feature 是否真的完成 register。
+    function assertRegistered() {
+        resolveManifest(app.pages.ditherEditor.featureManifest || []).forEach(function (entry) {
+            if (!get(entry.id)) {
+                throw new Error('Feature script did not register feature: ' + entry.id);
+            }
+        });
+    }
+
+    // 過濾停用項目並做 dependency topological sort。
+    function resolveManifest(manifest) {
+        var enabled = manifest.filter(function (entry) {
+            return entry.enabled !== false;
+        });
+        var byId = {};
+        var resolved = [];
+        var visiting = {};
+        var visited = {};
+
+        enabled.forEach(function (entry) {
+            validateManifestEntry(entry, byId);
+            byId[entry.id] = entry;
+        });
+
+        enabled
+            .slice()
+            .sort(function (a, b) {
+                // loadOrder 只決定同層初步順序；dependsOn 仍會在 visit 時被放到前面。
+                return (a.loadOrder || 0) - (b.loadOrder || 0);
+            })
+            .forEach(function (entry) {
+                visitManifestEntry(entry, byId, visiting, visited, resolved);
+            });
+
+        return resolved;
+    }
+
+    // DFS 解析依賴順序，同時偵測循環依賴。
+    function visitManifestEntry(entry, byId, visiting, visited, resolved) {
+        if (visited[entry.id]) {
+            return;
+        }
+        if (visiting[entry.id]) {
+            throw new Error('Circular feature dependency: ' + entry.id);
+        }
+
+        visiting[entry.id] = true;
+        (entry.dependsOn || []).forEach(function (dependencyId) {
+            var dependency = byId[dependencyId];
+            if (!dependency) {
+                throw new Error('Missing feature dependency: ' + entry.id + ' depends on ' + dependencyId);
+            }
+            visitManifestEntry(dependency, byId, visiting, visited, resolved);
+        });
+        visiting[entry.id] = false;
+        visited[entry.id] = true;
+        resolved.push(entry);
+    }
+
+    // 驗證 manifest item 的基本欄位與 dependsOn 目標。
+    function validateManifestEntry(entry, byId) {
+        if (!entry || !entry.id || !entry.path) {
+            throw new Error('Feature manifest entries require id and path.');
+        }
+        if (byId[entry.id]) {
+            throw new Error('Duplicate feature manifest id: ' + entry.id);
+        }
+    }
+
+    // 驗證 feature contract，避免缺少 id/labelKey 等必要欄位時靜默失敗。
+    function validateFeature(feature) {
+        if (!feature || !feature.id) {
+            throw new Error('Feature registration requires id.');
+        }
+        if (featureIds[feature.id]) {
+            throw new Error('Duplicate feature id: ' + feature.id);
+        }
+        if (feature.pipelineStage && !VALID_PIPELINE_STAGES[feature.pipelineStage]) {
+            throw new Error('Invalid pipeline stage for feature ' + feature.id + ': ' + feature.pipelineStage);
+        }
+        if (feature.dock !== false && (!feature.icon || !feature.labelKey)) {
+            throw new Error('Dock feature requires icon and labelKey: ' + feature.id);
+        }
+        if (feature.pipelineStage && feature.id !== 'export' && !feature.operation) {
+            throw new Error('Pipeline feature requires operation: ' + feature.id);
+        }
+        if (feature.operation && typeof feature.operation.run !== 'function') {
+            throw new Error('Feature operation requires run(): ' + feature.id);
+        }
+    }
+
+    // 取得某個 pipeline stage 的 feature id 順序；沒有使用者順序時用 feature metadata。
+    function pipelineIds(pipeline, stage) {
+        var configured = pipeline && pipeline[stage];
+        if (!configured || configured.length === 0) {
+            // 若 preset 沒指定順序，就由 feature 自己的 pipelineOrder 產生預設 pipeline。
+            return features
+                .filter(function (feature) {
+                    return feature.pipelineStage === stage && isPipelineFeatureAvailable(feature);
+                })
+                .sort(function (a, b) {
+                    return (a.pipelineOrder || 0) - (b.pipelineOrder || 0);
+                })
+                .map(function (feature) {
+                    return feature.id;
+                });
+        }
+
+        return configured
+            .map(get)
+            .filter(function (feature) {
+                return feature && feature.pipelineStage === stage && isPipelineFeatureAvailable(feature);
+            })
+            .map(function (feature) {
+                return feature.id;
+            });
+    }
+
+    // 產生工具列顯示順序，拖曳型工具依目前 effectsOrder 排列。
+    function dockTools(pipeline) {
+        // Tool dock = 固定非 pipeline 工具 + fixedBefore + 可拖曳 effects。
+        // Export 由 feature action 外露，不放進 accordion tool list。
+        var fixedTools = features
+            .filter(function (feature) {
+                return feature.dock !== false && !feature.pipelineStage;
+            })
+            .sort(function (a, b) {
+                return (a.dockOrder || 0) - (b.dockOrder || 0);
+            });
+
+        return fixedTools
+            .concat(pipelineIds(pipeline, 'fixedBefore').map(get))
+            .concat(pipelineIds(pipeline, 'effectsOrder').map(get))
+            .filter(Boolean);
+    }
+
+    // 判斷 feature 是否有可放進 pipeline 的 operation。
+    function isPipelineFeatureAvailable(feature) {
+        return feature.id === 'export' || app.pages.ditherEditor.operationRegistry.get(feature.id);
+    }
+
+    // 呼叫所有 feature 的指定 lifecycle hook。
+    function dispatch(name, context, options) {
+        var targetId = options && options.id;
+        features.forEach(function (feature) {
+            if (!feature[name]) {
+                return;
+            }
+            if (targetId && targetId !== feature.id) {
+                return;
+            }
+            feature[name](Object.assign({ feature: feature }, context || {}));
+        });
+    }
+
+    app.pages.ditherEditor = app.pages.ditherEditor || {};
+    app.pages.ditherEditor.featureRegistry = {
+        register: register,
+        get: get,
+        all: function all() {
+            return features.slice();
+        },
+        featureScripts: featureScripts,
+        assertRegistered: assertRegistered,
+        pipelineIds: pipelineIds,
+        dockTools: dockTools,
+        dispatch: dispatch
+    };
+})(window.DitherApp);

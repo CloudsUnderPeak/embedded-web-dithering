@@ -1,0 +1,682 @@
+.panel-section {
+    /* Panel 是工具展開後的設定區；Tool Row 本身另由 .tool-button 控制。 */
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface-alpha);
+    box-shadow: 0 12px 28px var(--color-shadow);
+}
+
+.panel-section[hidden] {
+    display: none;
+}
+
+.panel-section h2,
+.panel-section h3 {
+    margin: 0;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--color-border-faint);
+    font-size: 14px;
+}
+
+.tool-panel-host .panel-section h2 {
+    display: none;
+}
+
+.panel-body {
+    display: grid;
+    gap: 10px;
+    padding: 12px 14px 14px;
+}
+
+.control-row {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+}
+
+.control-row label {
+    color: var(--color-muted);
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.control-row input,
+.control-row select {
+    width: 100%;
+    min-height: 34px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 6px;
+    padding: 6px 8px;
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.control-row input[type="checkbox"],
+.control-row input[type="radio"],
+.setting-choice input {
+    accent-color: var(--color-accent);
+}
+
+.unit-number-field {
+    /* 帶單位的數字欄位，給 crop zoom/rotation 使用。 */
+    position: relative;
+    width: 100%;
+}
+
+.unit-number-field input {
+    padding-right: 56px;
+    text-align: right;
+    -moz-appearance: textfield;
+}
+
+.unit-number-field input::-webkit-inner-spin-button,
+.unit-number-field input::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
+}
+
+.unit-number-suffix {
+    position: absolute;
+    top: 50%;
+    right: 30px;
+    color: var(--color-muted);
+    font-size: 12px;
+    line-height: 1;
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+.unit-number-stepper {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    bottom: 3px;
+    display: grid;
+    width: 22px;
+    overflow: hidden;
+    border-left: 1px solid var(--color-border-faint);
+}
+
+.unit-number-step {
+    display: grid;
+    place-items: center;
+    border: 0;
+    padding: 0;
+    color: var(--color-muted);
+    background: transparent;
+    cursor: pointer;
+}
+
+.unit-number-step:hover {
+    color: var(--color-text);
+    background: var(--color-panel-subtle);
+}
+
+.unit-number-step::before {
+    content: "";
+    width: 0;
+    height: 0;
+    border-right: 4px solid transparent;
+    border-left: 4px solid transparent;
+}
+
+.unit-number-step.is-up::before {
+    border-bottom: 5px solid currentColor;
+}
+
+.unit-number-step.is-down::before {
+    border-top: 5px solid currentColor;
+}
+
+.button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.button-row[hidden] {
+    display: none;
+}
+
+.palette-editor {
+    display: grid;
+    gap: 8px;
+}
+
+.palette-editor-label {
+    color: var(--color-text);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.palette-swatches {
+    /* 色票可換色、可新增刪除；刪除鈕在 hover/focus 時才顯示。 */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.palette-swatch {
+    position: relative;
+    display: grid;
+    width: 32px;
+    height: 32px;
+}
+
+.palette-color-input {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--color-border-heavy);
+    border-radius: 999px;
+    padding: 0;
+    overflow: hidden;
+    background: transparent;
+    cursor: pointer;
+}
+
+.palette-color-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.palette-color-input::-webkit-color-swatch {
+    border: 0;
+    border-radius: 999px;
+}
+
+.palette-color-input::-moz-color-swatch {
+    border: 0;
+    border-radius: 999px;
+}
+
+.palette-remove-button {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 999px;
+    padding: 0;
+    color: var(--color-on-danger);
+    background: var(--color-danger);
+    font-size: 11px;
+    line-height: 1;
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.9);
+    transition:
+        opacity 120ms ease,
+        transform 120ms ease;
+}
+
+.palette-swatch:hover .palette-remove-button,
+.palette-swatch:focus-within .palette-remove-button {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1);
+}
+
+.palette-add-button {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    padding: 0;
+    color: var(--color-add);
+    background: transparent;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.tool-dock {
+    /* Tool Dock 是功能列表；可拖曳的是 Tool Row，不是展開後的 Panel。 */
+    display: grid;
+    align-content: start;
+    gap: 6px;
+}
+
+.tool-accordion-item {
+    display: grid;
+    gap: 6px;
+}
+
+.tool-accordion-item.is-dragging {
+    position: relative;
+    z-index: 2;
+}
+
+body.is-sorting,
+body.is-sorting * {
+    cursor: grabbing !important;
+}
+
+.tool-button {
+    width: 100%;
+    min-height: 42px;
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    color: var(--color-text-soft);
+    background: var(--color-surface-alpha);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0 11px;
+    text-align: left;
+}
+
+.tool-button.is-draggable {
+    /* 可進入 pipeline 排序的工具會多一欄 drag handle，視覺上和一般工具區分。 */
+    grid-template-columns: 28px 18px minmax(0, 1fr) auto;
+    user-select: none;
+}
+
+.tool-drag-handle {
+    display: grid;
+    place-items: center;
+    color: var(--color-muted);
+    cursor: grab;
+    font-size: 15px;
+    line-height: 1;
+}
+
+.tool-button.is-draggable:active .tool-drag-handle {
+    cursor: grabbing;
+}
+
+.tool-panel-host[hidden] {
+    display: none;
+}
+
+.tool-button::after {
+    content: '>';
+    color: var(--color-muted);
+    font-size: 13px;
+    transform: rotate(90deg);
+    transition: transform 120ms ease;
+}
+
+.tool-button[aria-expanded="false"]::after {
+    transform: rotate(0deg);
+}
+
+.tool-button-icon {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--color-panel-subtle);
+    font-size: 13px;
+}
+
+.tool-button-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tool-button:hover {
+    background: var(--color-surface-hover);
+}
+
+.tool-accordion-item.is-disabled {
+    opacity: 0.46;
+}
+
+.tool-accordion-item.is-disabled .tool-button {
+    pointer-events: none;
+}
+
+.tool-button.is-active {
+    border-color: var(--color-accent);
+    color: var(--color-on-accent);
+    background: var(--color-accent);
+}
+
+.tool-button.is-active::after {
+    color: var(--color-on-accent);
+}
+
+.tool-button.is-active .tool-button-icon {
+    background: var(--color-active-icon-bg);
+}
+
+.tool-button.is-active .tool-drag-handle {
+    color: var(--color-on-accent);
+}
+
+.tool-accordion-item.is-dragging .tool-button {
+    border-color: var(--color-accent);
+    color: var(--color-accent-text);
+    background: var(--color-accent-soft);
+    box-shadow: inset 0 0 0 1px var(--color-border-faint);
+    transform: scale(0.995);
+    cursor: grabbing;
+}
+
+.tool-accordion-item.is-dragging .tool-button::after,
+.tool-accordion-item.is-dragging .tool-drag-handle {
+    color: var(--color-accent);
+}
+
+.primary-button,
+.secondary-button,
+.icon-button {
+    min-height: 36px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0 12px;
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.primary-button {
+    border-color: var(--color-accent);
+    color: var(--color-on-accent);
+    background: var(--color-accent);
+}
+
+.app-status {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+    border: 2px solid var(--color-status-idle-border);
+    border-radius: 999px;
+    background: var(--color-status-idle-fill);
+    box-shadow: inset 0 0 0 2px var(--color-status-ring);
+}
+
+.app-status.is-ready {
+    border-color: var(--color-accent);
+    background: var(--color-status-ready-fill);
+}
+
+.app-status.is-busy {
+    border-color: var(--color-status-busy-border);
+    background: var(--color-status-busy-fill);
+}
+
+.app-status.is-error {
+    border-color: var(--color-danger);
+    background: var(--color-danger-fill);
+}
+
+.app-status.is-idle,
+.app-status.is-disabled {
+    opacity: 0.42;
+}
+
+.secondary-button:hover,
+.icon-button:hover {
+    background: var(--color-surface-hover);
+}
+
+.secondary-button.is-active {
+    border-color: var(--color-accent);
+    color: var(--color-on-accent);
+    background: var(--color-accent);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled,
+.icon-button:disabled,
+.export-action.is-disabled {
+    opacity: 0.46;
+    cursor: not-allowed;
+}
+
+.dropzone {
+    display: grid;
+    place-items: center;
+    min-height: 92px;
+    padding: 16px;
+    border: 1px dashed var(--color-drop-border);
+    border-radius: 8px;
+    color: var(--color-muted-strong);
+    background: var(--color-surface-muted);
+    text-align: center;
+}
+
+.dropzone.is-over {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+}
+
+.pipeline-list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pipeline-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    align-items: center;
+    min-height: 40px;
+    padding: 7px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-surface);
+}
+
+.pipeline-handle {
+    color: var(--color-muted);
+}
+
+.export-action {
+    display: grid;
+    margin-top: 2px;
+}
+
+.export-action .export-button {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 8px;
+    font-weight: 700;
+}
+
+.crop-ok-button {
+    min-width: 112px;
+    min-height: 44px;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.preview-toolbar {
+    --preview-toolbar-button-width: 112px;
+    --preview-toolbar-button-height: 44px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.preview-toolbar[hidden] {
+    display: none;
+}
+
+.preview-toolbar .button-row {
+    flex-wrap: nowrap;
+}
+
+.preview-toolbar .primary-button,
+.preview-toolbar .secondary-button {
+    display: inline-grid;
+    place-items: center;
+    width: var(--preview-toolbar-button-width);
+    min-width: var(--preview-toolbar-button-width);
+    min-height: var(--preview-toolbar-button-height);
+    padding: 0 10px;
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.crop-overlay {
+    /* Crop overlay 只顯示固定比例裁切框；實際拖曳移動的是底下的原圖 transform。 */
+    position: absolute;
+    z-index: 3;
+    display: grid;
+    place-items: start end;
+    border: 2px solid var(--color-accent);
+    box-shadow:
+        0 0 0 9999px var(--color-crop-mask),
+        inset 0 0 0 1px var(--color-on-accent);
+    cursor: move;
+    touch-action: none;
+}
+
+.crop-overlay[hidden] {
+    display: none;
+}
+
+.crop-overlay-label {
+    margin: 6px;
+    border-radius: 999px;
+    padding: 4px 8px;
+    color: var(--color-on-accent);
+    background: var(--color-accent);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.metric-strip {
+    display: none;
+    color: var(--color-muted-strong);
+    font-size: 13px;
+}
+
+.app-menu {
+    position: fixed;
+    top: 56px;
+    right: 16px;
+    z-index: 30;
+    display: grid;
+    min-width: 180px;
+    padding: 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+    box-shadow: 0 18px 44px var(--color-shadow-strong);
+}
+
+.app-menu[hidden] {
+    display: none;
+}
+
+.app-menu button {
+    border: 0;
+    border-radius: 6px;
+    padding: 10px;
+    color: var(--color-text);
+    background: transparent;
+    text-align: left;
+}
+
+.app-menu button:hover {
+    background: var(--color-surface-hover);
+}
+
+.notice {
+    color: var(--color-muted);
+    font-size: 13px;
+}
+
+.error-text {
+    color: var(--color-danger);
+    font-size: 13px;
+}
+
+.setting-section {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface-alpha);
+    box-shadow: 0 12px 28px var(--color-shadow);
+}
+
+.setting-section h2 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.setting-choice-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.setting-choice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.setting-choice:has(input:checked) {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+}
+
+@media (max-width: 920px) {
+    .tool-dock {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding-bottom: 2px;
+    }
+
+    .tool-button {
+        width: 100%;
+        min-height: 48px;
+        grid-template-columns: 28px minmax(0, 1fr) auto;
+        align-items: center;
+        padding: 0 11px;
+        text-align: left;
+    }
+
+    .tool-button.is-draggable {
+        grid-template-columns: 28px 18px minmax(0, 1fr) auto;
+    }
+
+    .tool-button-icon {
+        background: var(--color-panel-subtle);
+    }
+
+    .tool-button-label,
+    .tool-drag-handle,
+    .tool-button::after {
+        display: grid;
+        align-items: center;
+    }
+
+    .tool-panel-host {
+        min-width: 0;
+    }
+}
