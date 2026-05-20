@@ -53,7 +53,7 @@
         }
     };
 
-    // 建立預設尺寸白底圖，作為沒有匯入圖片時的起點。
+    // 建立預設尺寸白底圖；目前 UI 不暴露此入口，保留給後續 blank-canvas flow。
     DitherEditorController.prototype.newImage = function newImage() {
         var size = app.pages.ditherEditor.constants.DEFAULT_NEW_IMAGE_SIZE;
         this.loadResult(app.core.imageLoader.createBlankImage(size.width, size.height), 'Untitled');

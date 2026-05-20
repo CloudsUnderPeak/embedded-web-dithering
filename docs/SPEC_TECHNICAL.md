@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-05-16
+Last Updated: 2026-05-21
 Split From: SPEC_INDEX.md
 ```
 
@@ -12,8 +12,10 @@ Split From: SPEC_INDEX.md
 ## History
 
 - 2026-05-16: 定調目前專案版本為 `0.1.0`；此版本號與 storage / document `schemaVersion` 分開管理。
-- 2026-05-16: 新增 `editor-mode-state-machine.js` 與 editor `mode` 狀態，集中管理 `empty`、`crop`、`edit` 轉換；重新載入圖片、demo 或新空白圖時 controller 必須重建 default editor state，避免沿用上一張圖的演算法設定。
+- 2026-05-16: 新增 `editor-mode-state-machine.js` 與 editor `mode` 狀態，集中管理 `empty`、`crop`、`edit` 轉換；重新載入圖片或 demo 時 controller 必須重建 default editor state，避免沿用上一張圖的演算法設定。
 - 2026-05-16: 明確規範 Crop mode 不執行正式 preview pipeline，非允許工具與 action 必須由 controller guard；preview toolbar 必須由 mode 決定顯示列，未啟用列要真正 hidden，且各模式 toolbar 按鈕尺寸一致。
+- 2026-05-21: Empty 模式的 upload/drop affordance 由 `page.js` 掛在 preview stage 中央，支援 hidden file input 的 Browse File 與 drop event；Image Input panel 不應顯示 Choose/Drop controls，empty canvas placeholder 必須隱藏。
+- 2026-05-21: Image Input panel 的 `New Image` 改由 hidden file input 觸發本機圖片選擇，取代舊 `Choose Image` row；目前 UI 不暴露 blank canvas 建立入口。
 
 ## Plug-and-Play 架構要求
 
@@ -524,13 +526,13 @@ const editorState = {
 
 模式：
 
-- `empty`：`sourceImageData` 為 `null`。只有 `input` tool 可操作，其他 tool、Export 與 Original / Result 必須停用或隱藏；右下角 preview toolbar 不可顯示任何按鈕。
+- `empty`：`sourceImageData` 為 `null`。只有 `input` tool 可操作，其他 tool、Export 與 Original / Result 必須停用或隱藏；右下角 preview toolbar 不可顯示任何按鈕。Preview stage 必須顯示中央 upload dropzone，支援 drop 與 Browse File；empty canvas 與 No image loaded placeholder 必須不可視；Image Input panel 不應重複顯示 Choose/Drop controls。
 - `crop`：有來源圖且 Crop 展開。只有 `input` 與 `crop` tool 可操作；Preview 顯示 `sourceImageData` 加上 Crop transform，不跑完整 pipeline，也不套用 Resize、Adjust、Palette、Dither；右下角 preview toolbar 只能顯示 Zoom In、Zoom Out、OK。
 - `edit`：有來源圖且 Crop 收合。Preview / Export 使用正式 pipeline，右下角 preview toolbar 只能顯示 Original、Result。
 
 轉換規則：
 
-- 成功載入本機圖片、demo 或 new blank image 時，controller 必須重建 default editor state、清掉上一張圖的 settings/pipeline order/live preview 暫態，再寫入新 `sourceImageData` 並進入 `crop`。
+- 成功載入本機圖片或 demo 時，controller 必須重建 default editor state、清掉上一張圖的 settings/pipeline order/live preview 暫態，再寫入新 `sourceImageData` 並進入 `crop`。
 - 重新載圖成功後，Resize、Adjust、Palette、Dither 等演算法 settings 必須回到 enabled feature default；不可沿用上一張圖的值。
 - 展開 Crop 必須進入 `crop`；收合 Crop 或按 OK 必須進入 `edit` 並排程正式 preview。
 - `crop` 中的 Crop setting 變更只能重畫 crop preview，不可排程完整 pipeline。離開 `crop` 後才依目前 settings 跑正式 preview。
@@ -1583,18 +1585,10 @@ const documentValue = {
 New Image 規則：
 
 - 編輯區提供 `New Image`。
-- 點選後建立新的圖片工作區。
-- 若目前工作區有未保存變更，需提示使用者。
-- 新圖片可以從 upload、內建 demo 或空白 canvas 建立。
-
-空白 canvas 預設：
-
-```js
-const DEFAULT_NEW_IMAGE_SIZE = {
-    width: 800,
-    height: 480,
-};
-```
+- `New Image` 必須觸發隱藏的 file input，讓使用者選擇本機圖片。
+- `Image Input` panel 不可顯示獨立的 `Choose Image` row 或 panel drop zone。
+- 成功選擇圖片後，必須走與一般 upload 相同的 `controller.loadFile()` 流程，重建 default editor state 並進入 `crop`。
+- 目前版本不在 UI 暴露空白 canvas 建立入口。
 
 ## 離線資源策略
 

@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-05-16
+Last Updated: 2026-05-21
 Split From: SPEC_INDEX.md
 ```
 
@@ -12,8 +12,10 @@ Split From: SPEC_INDEX.md
 ## History
 
 - 2026-05-16: 定調目前專案版本為 `0.1.0`。
-- 2026-05-16: 定義 Dither Editor 的 Empty / Crop / Edit 使用者模式；首次進入無圖時只開放 Image Input，載入圖片、demo 或新空白圖後重設設定並進入 Crop，Crop 確認或收合後才進入 Edit。
+- 2026-05-16: 定義 Dither Editor 的 Empty / Crop / Edit 使用者模式；首次進入無圖時只開放 Image Input，載入圖片或 demo 後重設設定並進入 Crop，Crop 確認或收合後才進入 Edit。
 - 2026-05-16: 明確限制各模式右下角 preview toolbar：Empty 不顯示按鈕，Crop 只顯示 Zoom In、Zoom Out、OK，Edit 只顯示 Original、Result；所有 preview toolbar 按鈕尺寸必須一致。
+- 2026-05-21: Empty 模式的圖片上傳入口移至畫布中央，提供拖放上傳區與 Browse File 按鈕；Image Input panel 不顯示 Choose Image 與 Drop Zone，畫布的 No image loaded placeholder 不可視。
+- 2026-05-21: Image Input panel 的 New Image 改為開啟本機圖片選擇器，取代舊的 Choose Image row；目前 UI 不暴露空白 canvas 建立入口。
 
 ## 產品目標
 
@@ -33,7 +35,7 @@ MVP 必須支援：
 
 - 匯入本機圖片。
 - 從專案內建 demo 開始操作。
-- 建立新的空白圖片工作區。
+- 透過 New Image 重新選擇本機圖片。
 - 裁切、縮放與基礎影像調整。
 - 選擇或自訂 palette。
 - 選擇 Dither 效果。
@@ -111,15 +113,15 @@ Acceptance:
 - The demo must not come from a remote URL.
 - After loading, the app enters Crop mode; after OK or Crop collapse, Crop, Resize, Adjust, Palette, Dither, Effects Order, and Export can be tested against the demo.
 
-### US-05 Create New Blank Image
+### US-05 Choose New Image File
 
-As a user, I want to create a new blank image, so that I can start from an empty workspace.
+As a user, I want New Image to open the local image picker, so that I can replace the current workspace with another image.
 
 Acceptance:
 
-- Given the user clicks New Image, then the app creates a blank white working image.
-- If the current workspace has unsaved changes, the app should warn or otherwise avoid accidental loss.
-- After creation, the preview area shows the new image and the app enters Crop mode before image editing controls become usable.
+- Given the user opens Image Input and clicks New Image, then the browser file picker opens.
+- After the user selects a supported image, the app loads it, resets algorithm settings to defaults, and enters Crop mode.
+- Image Input must not show a separate Choose Image row or a panel drop zone.
 
 ### US-06 Crop With Fixed Ratio
 
@@ -259,7 +261,7 @@ Dither Editor 有三個使用者可見模式：
 
 模式轉換：
 
-- 載入任何新圖片、demo 或新空白圖後，App 必須重設演算法設定為 default，並進入 `Crop`。
+- 載入任何新圖片或 demo 後，App 必須重設演算法設定為 default，並進入 `Crop`。
 - 在 `Crop` 按下 OK 或自行收合 Crop 後，App 進入 `Edit` 並開始計算正式 preview。
 - 在 `Edit` 重新展開 Crop，視同回到 `Crop`；此時停止顯示演算法結果，回到原圖 crop transform preview。
 - 不支援格式載入失敗時，不應清掉上一個有效工作區；若沒有上一張圖，維持 `Empty`。
@@ -268,10 +270,10 @@ Dither Editor 有三個使用者可見模式：
 
 使用者可以：
 
-- 點擊按鈕選擇本機圖片。
-- 拖放圖片到 drop zone。
-- 選擇內建 demo。
-- 建立新的空白圖片工作區。
+- 在 Empty 模式的畫布中央拖放圖片。
+- 在 Empty 模式的畫布上傳區點擊 Browse File 按鈕選擇本機圖片。
+- 透過 Image Input 選擇內建 demo。
+- 透過 Image Input 的 New Image 重新選擇本機圖片。
 
 限制：
 
@@ -279,6 +281,7 @@ Dither Editor 有三個使用者可見模式：
 - 不支援 `SVG`、`GIF`、`AVIF`、`HEIC/HEIF`、`RAW`、`PSD`、`TIFF`、`BMP` 等格式進入演算法流程。
 - 不支援格式必須在進入 canvas / pipeline 前被拒絕，並顯示明確錯誤。
 - demo 必須來自專案內 `assets/demo/*` 圖片資源，不可依賴遠端 URL，也不可在 runtime 由程式臨時產生假 demo。
+- Image Input panel 在任何模式下都不應顯示獨立的 Choose Image row 或 panel Drop Zone；Empty 模式的主要上傳入口必須集中在畫布中央。
 - 不接受遠端圖片 URL 作為 MVP 輸入來源。
 
 ### Effects Order
@@ -504,7 +507,7 @@ MVP 驗收重點：
 
 - 使用者可匯入本機圖片。
 - 可選內建 demo。
-- 可建立 New Image。
+- New Image 會開啟本機圖片選擇器。
 - preview canvas 能顯示圖片。
 - 不依賴遠端 URL。
 

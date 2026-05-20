@@ -1,7 +1,7 @@
 (function (app) {
-    // Image Input feature 是所有影像來源的入口：本機檔案、拖放、demo、新空白圖。
+    // Image Input feature 是所有影像來源的入口：本機檔案、拖放與 demo。
     // 圖片格式與跨來源安全檢查集中在 core.imageLoader，避免 UI 分散重複邏輯。
-    // Image Input feature：唯一負責 upload/drop/demo/new image 入口的 tool。
+    // Image Input feature：負責重新選圖與 demo 入口；Empty 畫布 dropzone 由 page.js 擁有。
     // 真正的解碼與格式驗證在 core.imageLoader，避免 UI 繞過規則。
     var ui = app.pages.ditherEditor.panelUtils;
 
@@ -14,32 +14,19 @@
         buildPanel: function buildPanel(context) {
             var controller = context.controller;
             var file = app.utils.dom.el('input', {
-                attrs: { type: 'file', accept: app.core.imageLoader.acceptedImageTypes, id: 'image-file-input' }
-            });
-            file.addEventListener('change', function () {
-                if (file.files[0]) {
-                    controller.loadFile(file.files[0]);
+                className: 'image-input-file',
+                attrs: {
+                    type: 'file',
+                    accept: app.core.imageLoader.acceptedImageTypes,
+                    id: 'image-file-input',
+                    tabindex: '-1'
                 }
             });
-
-            var dropzone = app.utils.dom.el('div', {
-                className: 'dropzone',
-                text: ui.t('dropImage')
-            });
-            dropzone.addEventListener('dragover', function (event) {
-                event.preventDefault();
-                dropzone.classList.add('is-over');
-            });
-            dropzone.addEventListener('dragleave', function () {
-                dropzone.classList.remove('is-over');
-            });
-            dropzone.addEventListener('drop', function (event) {
-                event.preventDefault();
-                dropzone.classList.remove('is-over');
-                var dropped = event.dataTransfer.files[0];
-                if (dropped) {
-                    // 拖放不會套用 <input accept>，所以仍交給 controller/loadImageFromFile 做二次檢查。
-                    controller.loadFile(dropped);
+            file.addEventListener('change', function () {
+                var selected = file.files[0];
+                file.value = '';
+                if (selected) {
+                    controller.loadFile(selected);
                 }
             });
 
@@ -49,7 +36,7 @@
                 attrs: { type: 'button' }
             });
             newButton.addEventListener('click', function () {
-                controller.newImage();
+                file.click();
             });
 
             var demoButton = app.utils.dom.el('button', {
@@ -62,10 +49,9 @@
             });
 
             return ui.section('panelImageInput', [
-                ui.row(ui.t('actionChooseFile'), file),
-                dropzone,
+                file,
                 app.utils.dom.el('div', {
-                    className: 'button-row',
+                    className: 'button-row image-input-actions',
                     children: [newButton, demoButton]
                 })
             ], 'input');

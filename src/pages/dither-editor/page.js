@@ -239,6 +239,58 @@
         refs.resultButton.disabled = !isEditMode;
     }
 
+    function loadEmptyUploadFile(file) {
+        if (!file || !controller || !modeMachine().canUseTool(controller.state, "input")) {
+            return;
+        }
+        controller.loadFile(file);
+    }
+
+    function bindEmptyUploadDropzone() {
+        if (!refs.emptyUpload || !refs.emptyFileInput || !refs.emptyBrowseButton) {
+            return;
+        }
+        refs.emptyBrowseButton.addEventListener("click", function () {
+            refs.emptyFileInput.click();
+        });
+        refs.emptyFileInput.addEventListener("change", function () {
+            var selected = refs.emptyFileInput.files[0];
+            refs.emptyFileInput.value = "";
+            loadEmptyUploadFile(selected);
+        });
+        refs.emptyUpload.addEventListener("dragover", function (event) {
+            event.preventDefault();
+            refs.emptyUpload.classList.add("is-over");
+        });
+        refs.emptyUpload.addEventListener("dragleave", function (event) {
+            if (!refs.emptyUpload.contains(event.relatedTarget)) {
+                refs.emptyUpload.classList.remove("is-over");
+            }
+        });
+        refs.emptyUpload.addEventListener("drop", function (event) {
+            event.preventDefault();
+            refs.emptyUpload.classList.remove("is-over");
+            var dropped = event.dataTransfer && event.dataTransfer.files[0];
+            loadEmptyUploadFile(dropped);
+        });
+    }
+
+    function renderEmptyUpload(state) {
+        if (!refs.emptyUpload || !refs.previewStage || !refs.canvas) {
+            return;
+        }
+        var isEmptyMode = state.mode === modeMachine().modes.EMPTY;
+        refs.emptyUpload.hidden = !isEmptyMode;
+        refs.canvas.hidden = isEmptyMode;
+        refs.canvas.style.display = isEmptyMode ? "none" : "";
+        refs.previewStage.classList.toggle("is-empty-upload", isEmptyMode);
+
+        var inputPanel = refs.panelSectionsByTool && refs.panelSectionsByTool.input;
+        if (inputPanel) {
+            inputPanel.classList.toggle("is-empty-upload-panel", isEmptyMode);
+        }
+    }
+
     function adjustCropZoom(delta) {
         if (!controller || controller.state.mode !== modeMachine().modes.CROP) {
             return;
@@ -460,6 +512,7 @@
         }
         refs.error.textContent = state.status === 'error' ? state.error || 'Error' : '';
         renderActiveTool(state);
+        renderEmptyUpload(state);
         renderFeatureActions(state);
         renderPreviewToolbar(state);
         renderCropOverlay(state, cropMetrics);
@@ -547,6 +600,35 @@
                 attrs: { hidden: 'hidden' },
                 children: [refs.cropOverlayLabel]
             });
+            refs.emptyFileInput = app.utils.dom.el("input", {
+                className: "preview-upload-file-input",
+                attrs: {
+                    type: "file",
+                    accept: app.core.imageLoader.acceptedImageTypes,
+                    tabindex: "-1"
+                }
+            });
+            refs.emptyBrowseButton = app.utils.dom.el("button", {
+                className: "secondary-button preview-upload-button",
+                text: t("actionBrowseFile"),
+                attrs: { type: "button" }
+            });
+            refs.emptyUpload = app.utils.dom.el("div", {
+                className: "preview-upload-dropzone",
+                attrs: { hidden: "hidden" },
+                children: [
+                    refs.emptyFileInput,
+                    app.utils.dom.el("span", {
+                        className: "preview-upload-icon",
+                        text: "↑",
+                        attrs: { "aria-hidden": "true" }
+                    }),
+                    app.utils.dom.el("div", { className: "preview-upload-title", text: t("uploadDropTitle") }),
+                    app.utils.dom.el("div", { className: "preview-upload-separator", text: t("uploadDropSeparator") }),
+                    refs.emptyBrowseButton
+                ]
+            });
+            bindEmptyUploadDropzone();
             bindCropOverlay();
             bindViewportResize();
 
@@ -613,7 +695,7 @@
             preview.appendChild(
                 refs.previewStage = app.utils.dom.el('div', {
                     className: 'preview-stage',
-                    children: [refs.canvas, refs.cropOverlay]
+                    children: [refs.canvas, refs.cropOverlay, refs.emptyUpload]
                 })
             );
             preview.appendChild(

@@ -140,7 +140,7 @@
             });
     }
 
-    // 建立白底空白 ImageData，給 New Image 使用。
+    // 建立白底空白 ImageData；目前 UI 不直接暴露 blank canvas 建立入口。
     function createBlankImage(width, height) {
         var canvas = app.core.canvasUtils.createCanvas(width, height);
         var ctx = canvas.getContext('2d', { willReadFrequently: true });

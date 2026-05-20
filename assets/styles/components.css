@@ -139,6 +139,10 @@
     display: none;
 }
 
+.image-input-actions {
+    justify-content: flex-end;
+}
+
 .palette-editor {
     display: grid;
     gap: 8px;
@@ -435,6 +439,14 @@ body.is-sorting * {
 .export-action.is-disabled {
     opacity: 0.46;
     cursor: not-allowed;
+}
+
+.image-input-file {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .dropzone {
