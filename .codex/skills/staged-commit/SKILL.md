@@ -1,6 +1,6 @@
 ---
 name: staged-commit
-description: Create a commit from staged changes. Use when the user invokes `/commit`, `/commit all`, `$staged-commit`, or asks Codex to inspect the staging area, generate a simple `[Add]` or `[Fix]` commit message, and commit staged changes. `/commit all` first stages all current changes.
+description: Create a commit from staged changes. Use when the user invokes `/commit`, `/commit all`, `$staged-commit`, or asks Codex to inspect the staging area, generate a `[Add]` or `[Fix]` commit title with numbered details, and commit staged changes. `/commit all` first stages all current changes.
 ---
 
 # Staged Commit
@@ -23,6 +23,8 @@ Use this format:
 
 ```text
 [type] summary
+1. Concise change detail
+2. Concise change detail
 ```
 
 Allowed types:
@@ -30,16 +32,35 @@ Allowed types:
 - `[Add]`: new capability, new documentation, new config, new structure, new asset, or intentional expansion.
 - `[Fix]`: bug fix, broken link fix, typo correction, behavior correction, or correction to existing documentation/config.
 
-Prefer short English summaries:
+Title rules:
+
+- Keep the first line concise.
+- Do not end the summary with a period.
+- Prefer short English summaries.
+- The summary does not need to start with an uppercase word.
+
+Body rules:
+
+- Start numbered details on the second line, immediately after the title line.
+- Use numbered list items in `1. `, `2. `, `3. ` order.
+- Write only the numbered items needed to describe the staged change.
+- Keep details brief and avoid explaining obvious implementation steps.
+- Keep each numbered item short and implementation-oriented.
+- Do not add a blank line between the title and the first numbered item.
+
+Examples:
 
 ```text
-[Add] multilingual README
-[Add] docs sync skill
-[Fix] spec links
+[Add] preview upload entry
+1. Add centered empty-state upload dropzone
+2. Route New Image through the file picker
+3. Update behavior and technical specs
+
 [Fix] crop overlay rotation
+1. Keep the crop frame centered during rotation
+2. Prevent result controls from showing in crop mode
 ```
 
-Use a concise commit-title summary. Do not end the summary with a period.
 
 ## Workflow
 
@@ -49,8 +70,9 @@ Use a concise commit-title summary. Do not end the summary with a period.
 4. Run `git diff --cached --stat`.
 5. Run `git diff --cached` and infer the main intent.
 6. Choose `[Add]` or `[Fix]`.
-7. Show the planned commit message if the user did not explicitly ask to skip confirmation.
-8. Commit with exactly the staged changes:
-   - `git commit -m "[Add] summary"`
-   - or `git commit -m "[Fix] summary"`
-9. Report the commit hash and mention any unstaged changes left behind.
+7. Write concise numbered detail lines that summarize the staged diff.
+8. Show the full planned multiline commit message if the user did not explicitly ask to skip confirmation.
+9. Commit with exactly the staged changes using the exact multiline message.
+   - Prefer a temporary message file plus `git commit -F <message-file>` when needed to preserve the no-blank-line format.
+   - Do not use multiple `-m` flags if that would insert a blank line between the title and numbered items.
+10. Report the commit hash and mention any unstaged changes left behind.
