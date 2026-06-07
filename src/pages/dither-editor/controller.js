@@ -27,8 +27,7 @@
         this.runFeatureHook('onImageLoaded', { result: result });
         this.state.status = 'ready';
         app.pages.ditherEditor.editorModeStateMachine.enterCrop(this.state);
-        // 新圖載入後直接跳到 Crop；Image Input 仍可點，但面板先收合。
-        this.state.openToolPanels.input = false;
+        // 新圖載入後直接跳到 Crop；若使用者再展開 Image Input，其他面板會收合。
         this.render(this.state);
     };
 
@@ -218,6 +217,16 @@
         this.state.livePreview = null;
         this.state.status = 'ready';
         app.pages.ditherEditor.editorModeStateMachine.enterCrop(this.state);
+        this.render(this.state);
+    };
+
+    DitherEditorController.prototype.openInputPanel = function openInputPanel() {
+        var wasCropMode = this.state.mode === app.pages.ditherEditor.editorModeStateMachine.modes.CROP;
+        app.pages.ditherEditor.editorModeStateMachine.openInputPanel(this.state);
+        if (wasCropMode && this.state.mode === app.pages.ditherEditor.editorModeStateMachine.modes.EDIT) {
+            this.schedulePreview();
+            return;
+        }
         this.render(this.state);
     };
 

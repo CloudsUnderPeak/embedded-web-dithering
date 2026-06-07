@@ -17,6 +17,7 @@ Split From: SPEC_INDEX.md
 - 2026-05-21: Empty 模式的 upload/drop affordance 由 `page.js` 掛在 preview stage 中央，支援 hidden file input 的 Browse File 與 drop event；Image Input panel 不應顯示 Choose/Drop controls，empty canvas placeholder 必須隱藏。
 - 2026-05-21: Image Input panel 的 `New Image` 改由 hidden file input 觸發本機圖片選擇，取代舊 `Choose Image` row；目前 UI 不暴露 blank canvas 建立入口。
 - 2026-06-07: Crop 面板新增左轉 90 / 右轉 90 圖示按鈕，Flip 改為圖示按鈕；旋轉按鈕只更新 `rotation`，Flip 仍使用同一次 settings update 同步鏡射 rotation / pan，且不套用持續 active 視覺狀態。
+- 2026-06-07: 左側 tool panel 展開預設集中到 mode state machine：`empty` 只開 Image Input、載圖或展開 Crop 只開 Crop、離開 Crop 進入 `edit` 時開 Resize / Adjust / Palette / Dither，手動展開 Image Input 或 Crop 時其他面板收合。
 
 ## Plug-and-Play 架構要求
 
@@ -527,18 +528,22 @@ const editorState = {
 
 模式：
 
-- `empty`：`sourceImageData` 為 `null`。只有 `input` tool 可操作，其他 tool、Export 與 Original / Result 必須停用或隱藏；右下角 preview toolbar 不可顯示任何按鈕。Preview stage 必須顯示中央 upload dropzone，支援 drop 與 Browse File；empty canvas 與 No image loaded placeholder 必須不可視；Image Input panel 不應重複顯示 Choose/Drop controls。
-- `crop`：有來源圖且 Crop 展開。只有 `input` 與 `crop` tool 可操作；Preview 顯示 `sourceImageData` 加上 Crop transform，不跑完整 pipeline，也不套用 Resize、Adjust、Palette、Dither；右下角 preview toolbar 只能顯示 Zoom In、Zoom Out、OK。
-- `edit`：有來源圖且 Crop 收合。Preview / Export 使用正式 pipeline，右下角 preview toolbar 只能顯示 Original、Result。
+- `empty`：`sourceImageData` 為 `null`，且只展開 `input`。只有 `input` tool 可操作，其他 tool、Export 與 Original / Result 必須停用或隱藏；右下角 preview toolbar 不可顯示任何按鈕。Preview stage 必須顯示中央 upload dropzone，支援 drop 與 Browse File；empty canvas 與 No image loaded placeholder 必須不可視；Image Input panel 不應重複顯示 Choose/Drop controls。
+- `crop`：有來源圖且只展開 `crop`。只有 `input` 與 `crop` tool 可操作；Preview 顯示 `sourceImageData` 加上 Crop transform，不跑完整 pipeline，也不套用 Resize、Adjust、Palette、Dither；右下角 preview toolbar 只能顯示 Zoom In、Zoom Out、OK。
+- `edit`：有來源圖且 Crop 收合。Preview / Export 使用正式 pipeline，右下角 preview toolbar 只能顯示 Original、Result。從 Crop 收合或 OK 進入 `edit` 時，應展開目前 enabled dock tools 中的 `resize`、`adjust`、`palette`、`dither`。
 
 轉換規則：
 
 - 成功載入本機圖片或 demo 時，controller 必須重建 default editor state、清掉上一張圖的 settings/pipeline order/live preview 暫態，再寫入新 `sourceImageData` 並進入 `crop`。
 - 重新載圖成功後，Resize、Adjust、Palette、Dither 等演算法 settings 必須回到 enabled feature default；不可沿用上一張圖的值。
 - 展開 Crop 必須進入 `crop`；收合 Crop 或按 OK 必須進入 `edit` 並排程正式 preview。
+- 成功載圖或手動展開 Crop 時，`editor-mode-state-machine.js` 必須將 `openToolPanels` 設為只包含 `crop`，不可保留 Image Input 或其他 edit panel 的展開狀態。
+- 收合 Crop 或按 OK 進入 `edit` 時，`editor-mode-state-machine.js` 必須展開 enabled dock tools 中的 `resize`、`adjust`、`palette`、`dither`。
+- 已有圖片時手動展開 Image Input 必須收合其他 tool panel；若當下是 `crop`，controller 必須先透過 state machine 離開 Crop，再排程正式 preview。
 - `crop` 中的 Crop setting 變更只能重畫 crop preview，不可排程完整 pipeline。離開 `crop` 後才依目前 settings 跑正式 preview。
 - `empty` 或 `crop` 中的非允許 tool/action event 必須被 controller guard 掉，即使 DOM disabled 被繞過也不可改 settings、reorder effects 或 export。
 - `page.js` 必須只根據 `mode` 決定 preview toolbar 內容：`empty` 隱藏整個 toolbar，`crop` 只顯示 Crop 控制列，`edit` 只顯示 Original / Result 切換列。
+- `page.js` 的 tool button handler 應只呼叫 controller 或 state machine 的語意入口（例如 open input、open crop、close crop）；不應在一般 feature panel event handler 中分散實作模式切換規則。
 - 非目前模式的 preview toolbar row 必須使用 `hidden` 真正移出 layout，不可只做 disabled 或透明處理。
 - Preview toolbar 內 button 必須共用固定尺寸設定，避免 mode 切換或 primary / secondary 樣式造成按鈕大小不同。
 
@@ -1018,6 +1023,7 @@ Crop -> Resize -> Dither -> Palette -> Adjust -> Export
 - enabled / disabled toggle。
 - 點選後顯示該步驟的參數面板。
 - 多個 Tool Panel 可以同時展開。
+- Image Input 與 Crop 是模式入口，手動展開時採互斥收合規則；Resize、Adjust、Palette、Dither 在 `edit` 中可以多個同時展開。
 - 顯示是否有錯誤設定。
 
 ### Effects Drag Feel

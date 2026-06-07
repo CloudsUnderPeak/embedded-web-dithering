@@ -84,6 +84,22 @@
                     if (!modeMachine().canUseTool(controller.state, tool.id)) {
                         return;
                     }
+                    if (tool.id === 'input') {
+                        if (controller.state.mode === modeMachine().modes.EMPTY) {
+                            modeMachine().enterEmpty(controller.state);
+                            render(controller.state);
+                            return;
+                        }
+                        if (isToolOpen(controller.state, 'input')) {
+                            controller.state.openToolPanels.input = false;
+                            controller.state.activeTool = null;
+                            syncLegacyPanelOpenFlag(controller.state);
+                            render(controller.state);
+                        } else {
+                            controller.openInputPanel();
+                        }
+                        return;
+                    }
                     if (tool.id === 'crop') {
                         if (isToolOpen(controller.state, 'crop')) {
                             controller.closeCropMode();
@@ -93,13 +109,6 @@
                         return;
                     }
                     controller.state.openToolPanels = controller.state.openToolPanels || {};
-                    if (controller.state.mode === modeMachine().modes.EMPTY && tool.id === 'input') {
-                        controller.state.openToolPanels.input = true;
-                        controller.state.activeTool = tool.id;
-                        syncLegacyPanelOpenFlag(controller.state);
-                        render(controller.state);
-                        return;
-                    }
                     controller.state.openToolPanels[tool.id] = !isToolOpen(controller.state, tool.id);
                     controller.state.activeTool = tool.id;
                     syncLegacyPanelOpenFlag(controller.state);

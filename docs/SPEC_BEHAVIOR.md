@@ -17,6 +17,7 @@ Split From: SPEC_INDEX.md
 - 2026-05-21: Empty 模式的圖片上傳入口移至畫布中央，提供拖放上傳區與 Browse File 按鈕；Image Input panel 不顯示 Choose Image 與 Drop Zone，畫布的 No image loaded placeholder 不可視。
 - 2026-05-21: Image Input panel 的 New Image 改為開啟本機圖片選擇器，取代舊的 Choose Image row；目前 UI 不暴露空白 canvas 建立入口。
 - 2026-06-07: Crop 面板改為 2x2 象限控制，右下旋轉與 Flip 圖示按鈕等寬平分；Flip 圖示按下後不顯示持續高亮。
+- 2026-06-07: 左側工具面板新增模式化展開規則：初始只展開 Image Input，載圖後只展開 Crop，離開 Crop 後展開 Resize / Adjust / Palette / Dither；手動回到 Image Input 或 Crop 時其他面板收合。
 
 ## 產品目標
 
@@ -58,10 +59,10 @@ MVP 不包含：
 
 1. 使用者打開 `index.html`。
 2. App 顯示 Dither Editor 頁面。
-3. 第一次進入且尚未載入圖片時，只有 Image Input 可操作，其餘工具與動作反灰停用。
+3. 第一次進入且尚未載入圖片時，Image Input 自動展開；只有 Image Input 可操作，其餘工具與動作反灰停用。
 4. 使用者匯入本機圖片、選擇 demo，或建立新圖片。
-5. App 解碼圖片後自動進入 Crop 模式並展開 Crop；此時只有 Image Input 與 Crop 可操作。
-6. 使用者按下右下角顯眼的 OK，或自行收合 Crop，App 進入圖片編輯模式。
+5. App 解碼圖片後自動進入 Crop 模式並只展開 Crop；此時只有 Image Input 與 Crop 可操作。
+6. 使用者按下右下角顯眼的 OK，或自行收合 Crop，App 進入圖片編輯模式，並展開 Resize、Adjust、Palette、Dither。
 7. 圖片編輯模式會依 Crop 範圍與 Resize、Adjust、Palette、Dither 等設定更新 Result。
 8. 使用者可拖曳 Effects order，改變圖片處理順序。
 9. 使用者可在圖片呈現區右下角切換 Original / Result。
@@ -89,9 +90,10 @@ As a user, I want to choose a local image file, so that I can edit it in the bro
 Acceptance:
 
 - Given a supported `PNG`, `JPEG/JPG`, or `WebP` file, when the user selects it from Image Input, then the preview area shows the image.
-- The editor enters Crop mode after the image loads, with Crop expanded and the OK button shown in the preview toolbar.
+- The editor enters Crop mode after the image loads, with only Crop expanded and the OK button shown in the preview toolbar.
 - While Crop mode is active, only Image Input and Crop controls can be operated.
-- After the user presses OK or collapses Crop, the editor enters image editing mode and applies the configured pipeline to the cropped range.
+- After the user presses OK or collapses Crop, the editor enters image editing mode, expands Resize / Adjust / Palette / Dither, and applies the configured pipeline to the cropped range.
+- When the user manually expands Image Input or Crop after an image is loaded, all other tool panels collapse.
 - The source image must not be uploaded to a server.
 
 ### US-03 Reject Unsupported Image Format
@@ -258,15 +260,16 @@ Dither Editor 主畫面包含：
 
 Dither Editor 有三個使用者可見模式：
 
-- `Empty`：沒有來源圖片。Image Input 面板保持可用；Crop、Resize、Adjust、Palette、Dither、Effects Order、Export 與 Original / Result 反灰或隱藏，不可設定；右下角 preview toolbar 不顯示任何按鈕。
+- `Empty`：沒有來源圖片。Image Input 面板自動展開並保持可用；Crop、Resize、Adjust、Palette、Dither、Effects Order、Export 與 Original / Result 反灰或隱藏，不可設定；右下角 preview toolbar 不顯示任何按鈕。
 - `Crop`：已載入圖片且 Crop 展開。Preview 顯示原圖與 crop transform，不套用 Resize、Adjust、Palette、Dither 或其他非 Crop 演算法。只有 Image Input 與 Crop 可操作，右下角 preview toolbar 只顯示 Zoom In、Zoom Out、OK 三個按鈕。
-- `Edit`：Crop 已確認或收合。App 以 Crop 範圍作為 pipeline 輸入，依目前演算法設定更新 Result；右下角 preview toolbar 顯示 Original 與 Result。
+- `Edit`：Crop 已確認或收合。App 以 Crop 範圍作為 pipeline 輸入，依目前演算法設定更新 Result；從 Crop 進入 Edit 時，Resize、Adjust、Palette、Dither 預設展開，右下角 preview toolbar 顯示 Original 與 Result。
 
 模式轉換：
 
 - 載入任何新圖片或 demo 後，App 必須重設演算法設定為 default，並進入 `Crop`。
 - 在 `Crop` 按下 OK 或自行收合 Crop 後，App 進入 `Edit` 並開始計算正式 preview。
-- 在 `Edit` 重新展開 Crop，視同回到 `Crop`；此時停止顯示演算法結果，回到原圖 crop transform preview。
+- 在 `Edit` 重新展開 Crop，視同回到 `Crop`，並收合其他面板；此時停止顯示演算法結果，回到原圖 crop transform preview。
+- 在已載入圖片後手動展開 Image Input，Crop 與其他編輯面板必須收合；若原本在 `Crop`，視同離開 Crop 並回到 `Edit` preview 流程。
 - 不支援格式載入失敗時，不應清掉上一個有效工作區；若沒有上一張圖，維持 `Empty`。
 
 ### Image Input
@@ -323,7 +326,7 @@ Dither Editor 有三個使用者可見模式：
 - Crop overlay 固定代表最後輸出的裁切範圍。
 - 左右/上下反轉必須作用在原圖 transform，preview 與正式輸出需一致。
 - 若原圖已有 rotation，點擊左右/上下反轉時 rotation 需同步取反，並鏡射對應 pan 軸，讓反轉以目前畫面座標為準。
-- 只要 Crop 展開，App 就是 `Crop` 模式；使用者可按 OK 或再次收合 Crop 進入 `Edit`。
+- 只要 Crop 展開，App 就是 `Crop` 模式，且其他 tool panel 必須收合；使用者可按 OK 或再次收合 Crop 進入 `Edit`。
 
 ### Resize
 
