@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-05-21
+Last Updated: 2026-06-07
 Split From: SPEC_INDEX.md
 ```
 
@@ -16,6 +16,7 @@ Split From: SPEC_INDEX.md
 - 2026-05-16: 明確限制各模式右下角 preview toolbar：Empty 不顯示按鈕，Crop 只顯示 Zoom In、Zoom Out、OK，Edit 只顯示 Original、Result；所有 preview toolbar 按鈕尺寸必須一致。
 - 2026-05-21: Empty 模式的圖片上傳入口移至畫布中央，提供拖放上傳區與 Browse File 按鈕；Image Input panel 不顯示 Choose Image 與 Drop Zone，畫布的 No image loaded placeholder 不可視。
 - 2026-05-21: Image Input panel 的 New Image 改為開啟本機圖片選擇器，取代舊的 Choose Image row；目前 UI 不暴露空白 canvas 建立入口。
+- 2026-06-07: Crop 面板改為 2x2 象限控制，右下旋轉與 Flip 圖示按鈕等寬平分；Flip 圖示按下後不顯示持續高亮。
 
 ## 產品目標
 
@@ -133,6 +134,8 @@ Acceptance:
 - The crop overlay remains centered and represents the final output area.
 - Dragging in the preview moves the image under the fixed crop frame, not the crop frame itself.
 - Zoom, rotation, horizontal flip, and vertical flip affect the image transform without changing the selected crop ratio.
+- The Crop panel uses a 2x2 quadrant layout: Ratio, Zoom, Rotation, and an equal-width icon button group for rotate-left 90, rotate-right 90, horizontal flip, and vertical flip.
+- Flip icon buttons should behave visually like the rotate buttons and must not show a persistent active highlight after being pressed.
 
 ### US-07 Resize Output
 

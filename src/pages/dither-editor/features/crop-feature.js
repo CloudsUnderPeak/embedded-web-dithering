@@ -10,13 +10,13 @@
     var panelRefs = null;
 
     var ASPECT_RATIOS = [
-        { id: '1-1', label: '1:1', width: 1, height: 1 },
-        { id: '4-3', label: '4:3', width: 4, height: 3 },
-        { id: '3-4', label: '3:4', width: 3, height: 4 },
-        { id: '5-3', label: '5:3', width: 5, height: 3 },
-        { id: '3-5', label: '3:5', width: 3, height: 5 },
-        { id: '16-9', label: '16:9', width: 16, height: 9 },
-        { id: '9-16', label: '9:16', width: 9, height: 16 }
+        { id: '1-1', label: '1 : 1', width: 1, height: 1 },
+        { id: '4-3', label: '4 : 3', width: 4, height: 3 },
+        { id: '3-4', label: '3 : 4', width: 3, height: 4 },
+        { id: '5-3', label: '5 : 3', width: 5, height: 3 },
+        { id: '3-5', label: '3 : 5', width: 3, height: 5 },
+        { id: '16-9', label: '16 : 9', width: 16, height: 9 },
+        { id: '9-16', label: '9 : 16', width: 9, height: 16 }
     ];
 
     // 依 id 取得固定比例設定；找不到時回到預設 5:3。
@@ -36,6 +36,36 @@
     // 水平/垂直翻轉後，旋轉角度需要反向，讓視覺方向符合鏡像後的結果。
     function mirroredRotation(rotation) {
         return clamp(-Number(rotation || 0), -180, 180);
+    }
+
+    function cropLabel(text) {
+        return app.utils.dom.el('label', { text: text });
+    }
+
+    function cropField(label, input) {
+        return app.utils.dom.el('div', {
+            className: 'crop-field',
+            children: [cropLabel(label), input]
+        });
+    }
+
+    function cropIconButton(icon, label) {
+        return app.utils.dom.el('button', {
+            className: 'icon-button crop-icon-button',
+            text: icon,
+            attrs: { type: 'button', 'aria-label': label, title: label }
+        });
+    }
+
+    function steppedRotation(rotation, delta) {
+        var next = Number(rotation || 0) + delta;
+        while (next > 180) {
+            next -= 360;
+        }
+        while (next < -180) {
+            next += 360;
+        }
+        return next;
     }
 
     // 取得目前可用的影像尺寸；尚未載入圖時使用工作尺寸。
@@ -146,9 +176,7 @@
         panelRefs.aspectRatio.value = crop.aspectRatioId;
         panelRefs.zoom.setValue(Math.round((crop.zoom || 1) * 100));
         panelRefs.rotation.setValue(crop.rotation);
-        panelRefs.flipX.classList.toggle('is-active', Boolean(crop.flipX));
         panelRefs.flipX.setAttribute('aria-pressed', crop.flipX ? 'true' : 'false');
-        panelRefs.flipY.classList.toggle('is-active', Boolean(crop.flipY));
         panelRefs.flipY.setAttribute('aria-pressed', crop.flipY ? 'true' : 'false');
     }
 
@@ -257,15 +285,19 @@
             var rotationInput = ui.unitNumberInput(crop.rotation, -180, 180, 1, 'deg', function (value) {
                 controller.updateSetting('crop', 'rotation', value);
             });
-            var flipXButton = app.utils.dom.el('button', {
-                className: 'secondary-button',
-                text: 'Flip Horizontal',
-                attrs: { type: 'button', 'aria-pressed': crop.flipX ? 'true' : 'false' }
+            var rotateLeftButton = cropIconButton('↺', 'Rotate left 90 degrees');
+            var rotateRightButton = cropIconButton('↻', 'Rotate right 90 degrees');
+            var flipXButton = cropIconButton('⇄', 'Flip horizontal');
+            var flipYButton = cropIconButton('⇅', 'Flip vertical');
+            flipXButton.setAttribute('aria-pressed', crop.flipX ? 'true' : 'false');
+            flipYButton.setAttribute('aria-pressed', crop.flipY ? 'true' : 'false');
+            rotateLeftButton.addEventListener('click', function () {
+                var current = controller.state.settings.crop;
+                controller.updateSetting('crop', 'rotation', steppedRotation(current.rotation, -90));
             });
-            var flipYButton = app.utils.dom.el('button', {
-                className: 'secondary-button',
-                text: 'Flip Vertical',
-                attrs: { type: 'button', 'aria-pressed': crop.flipY ? 'true' : 'false' }
+            rotateRightButton.addEventListener('click', function () {
+                var current = controller.state.settings.crop;
+                controller.updateSetting('crop', 'rotation', steppedRotation(current.rotation, 90));
             });
             flipXButton.addEventListener('click', function () {
                 var current = controller.state.settings.crop;
@@ -294,10 +326,18 @@
             };
 
             return ui.section('panelCrop', [
-                ui.row('Aspect Ratio', aspectRatioInput),
-                ui.row('Zoom', zoomInput),
-                ui.row('Rotation', rotationInput),
-                app.utils.dom.el('div', { className: 'button-row', children: [flipXButton, flipYButton] })
+                app.utils.dom.el('div', {
+                    className: 'crop-quadrant-grid',
+                    children: [
+                        cropField('Ratio', aspectRatioInput),
+                        cropField('Zoom', zoomInput),
+                        cropField('Rotation', rotationInput),
+                        app.utils.dom.el('div', {
+                            className: 'crop-icon-button-row',
+                            children: [rotateLeftButton, rotateRightButton, flipXButton, flipYButton]
+                        })
+                    ]
+                })
             ], 'crop');
         },
         operation: {

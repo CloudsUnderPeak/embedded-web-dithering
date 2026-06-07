@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-05-21
+Last Updated: 2026-06-07
 Split From: SPEC_INDEX.md
 ```
 
@@ -16,6 +16,7 @@ Split From: SPEC_INDEX.md
 - 2026-05-16: 明確規範 Crop mode 不執行正式 preview pipeline，非允許工具與 action 必須由 controller guard；preview toolbar 必須由 mode 決定顯示列，未啟用列要真正 hidden，且各模式 toolbar 按鈕尺寸一致。
 - 2026-05-21: Empty 模式的 upload/drop affordance 由 `page.js` 掛在 preview stage 中央，支援 hidden file input 的 Browse File 與 drop event；Image Input panel 不應顯示 Choose/Drop controls，empty canvas placeholder 必須隱藏。
 - 2026-05-21: Image Input panel 的 `New Image` 改由 hidden file input 觸發本機圖片選擇，取代舊 `Choose Image` row；目前 UI 不暴露 blank canvas 建立入口。
+- 2026-06-07: Crop 面板新增左轉 90 / 右轉 90 圖示按鈕，Flip 改為圖示按鈕；旋轉按鈕只更新 `rotation`，Flip 仍使用同一次 settings update 同步鏡射 rotation / pan，且不套用持續 active 視覺狀態。
 
 ## Plug-and-Play 架構要求
 
@@ -1121,12 +1122,16 @@ Preview renderer 與正式 crop operation 必須套用同一套 transform 規則
 
 `viewport-renderer.js` 的 transform cache key 必須包含 `flipX` 與 `flipY`，否則切換反轉狀態可能不會重繪。
 
-Crop 面板的 `Flip Horizontal` / `Flip Vertical` button 必須用同一次 settings update 完成狀態切換：
+Crop 面板的左轉 90 / 右轉 90 button 必須只更新 `rotation`，以目前 rotation 為基準加減 90 度，並將結果維持在 `-180..180` 範圍。
+
+Crop 面板的 horizontal flip / vertical flip icon button 必須用同一次 settings update 完成狀態切換：
 
 - `Flip Horizontal`：切換 `flipX`、將 `rotation` 取反、將 `panX` 取反。
 - `Flip Vertical`：切換 `flipY`、將 `rotation` 取反、將 `panY` 取反。
 
 這個規則讓反轉以目前畫面座標為準；若只切換 `flipX` / `flipY` 而不處理 rotation，已旋轉圖片會呈現和使用者預期不同的鏡射方向。
+
+Flip icon button 可以用 `aria-pressed` 表示狀態，但視覺上必須和左轉 90 / 右轉 90 button 一樣，不套用持續 active color / background。
 
 Pipeline 執行器只根據 fixed before、可拖曳 effects order 與 fixed after 逐步套用：
 

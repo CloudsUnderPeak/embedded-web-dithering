@@ -58,6 +58,107 @@
     accent-color: var(--color-accent);
 }
 
+.crop-quadrant-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 22px;
+}
+
+.crop-field {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 4px;
+    align-items: center;
+    min-width: 0;
+}
+
+.crop-field label {
+    color: var(--color-muted);
+    font-size: 12px;
+    font-weight: 650;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.crop-field select {
+    width: 100%;
+    min-width: 0;
+    min-height: 34px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 6px;
+    padding: 6px 8px;
+    color: var(--color-text);
+    background: var(--color-surface);
+    text-align: center;
+    text-align-last: center;
+}
+
+.crop-field .unit-number-field {
+    display: grid;
+    grid-template-columns: minmax(42px, 1fr) max-content 22px;
+    column-gap: 8px;
+    align-items: center;
+    min-width: 0;
+    min-height: 34px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 6px;
+    background: var(--color-surface);
+    overflow: hidden;
+}
+
+.crop-field .unit-number-field input {
+    width: 100%;
+    min-width: 0;
+    min-height: 32px;
+    border: 0;
+    padding: 6px 8px;
+    background: transparent;
+}
+
+.crop-field .unit-number-field .unit-number-suffix {
+    position: static;
+    justify-self: center;
+    transform: none;
+}
+
+.crop-field .unit-number-field .unit-number-stepper {
+    position: static;
+    align-self: stretch;
+    height: auto;
+}
+
+.crop-icon-button-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    align-items: center;
+    min-width: 0;
+}
+
+.crop-icon-button {
+    display: inline-grid;
+    place-items: center;
+    width: 100%;
+    min-width: 0;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+}
+
+@media (max-width: 560px) {
+    .crop-quadrant-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .crop-field {
+        grid-template-columns: 70px minmax(0, 1fr);
+    }
+}
+
 .unit-number-field {
     /* 帶單位的數字欄位，給 crop zoom/rotation 使用。 */
     position: relative;
