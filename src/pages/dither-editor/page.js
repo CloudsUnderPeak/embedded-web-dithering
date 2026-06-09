@@ -84,27 +84,27 @@
                     if (!modeMachine().canUseTool(controller.state, tool.id)) {
                         return;
                     }
-                    if (tool.id === 'input') {
-                        if (controller.state.mode === modeMachine().modes.EMPTY) {
-                            modeMachine().enterEmpty(controller.state);
+                    if (modeMachine().isSourceTool(tool.id)) {
+                        if (!controller.state.sourceImageData) {
+                            modeMachine().enterSource(controller.state);
                             render(controller.state);
                             return;
                         }
-                        if (isToolOpen(controller.state, 'input')) {
-                            controller.state.openToolPanels.input = false;
+                        if (isToolOpen(controller.state, tool.id)) {
+                            controller.state.openToolPanels[tool.id] = false;
                             controller.state.activeTool = null;
                             syncLegacyPanelOpenFlag(controller.state);
                             render(controller.state);
                         } else {
-                            controller.openInputPanel();
+                            controller.openSourcePanel(tool.id);
                         }
                         return;
                     }
-                    if (tool.id === 'crop') {
-                        if (isToolOpen(controller.state, 'crop')) {
-                            controller.closeCropMode();
+                    if (modeMachine().isPrepareTool(tool.id)) {
+                        if (isToolOpen(controller.state, tool.id)) {
+                            controller.closePrepareMode();
                         } else {
-                            controller.openCropMode();
+                            controller.openPrepareMode();
                         }
                         return;
                     }
@@ -234,14 +234,14 @@
         if (!refs.previewToggleRow || !refs.cropControlRow) {
             return;
         }
-        var isCropMode = state.mode === modeMachine().modes.CROP;
-        var isEditMode = state.mode === modeMachine().modes.EDIT;
-        refs.previewToolbar.hidden = !isCropMode && !isEditMode;
-        refs.cropControlRow.hidden = !isCropMode;
+        var isPrepareMode = state.mode === modeMachine().groups.PREPARE;
+        var isEditMode = state.mode === modeMachine().groups.EDIT;
+        refs.previewToolbar.hidden = !isPrepareMode && !isEditMode;
+        refs.cropControlRow.hidden = !isPrepareMode;
         refs.previewToggleRow.hidden = !isEditMode;
-        refs.cropZoomInButton.disabled = !isCropMode;
-        refs.cropZoomOutButton.disabled = !isCropMode;
-        refs.cropOkButton.disabled = !isCropMode;
+        refs.cropZoomInButton.disabled = !isPrepareMode;
+        refs.cropZoomOutButton.disabled = !isPrepareMode;
+        refs.cropOkButton.disabled = !isPrepareMode;
         refs.originalButton.classList.toggle('is-active', state.viewMode === 'original');
         refs.resultButton.classList.toggle('is-active', state.viewMode !== 'original');
         refs.originalButton.disabled = !isEditMode;
@@ -249,7 +249,7 @@
     }
 
     function loadEmptyUploadFile(file) {
-        if (!file || !controller || !modeMachine().canUseTool(controller.state, "input")) {
+        if (!file || !controller || !modeMachine().canUseSource(controller.state)) {
             return;
         }
         controller.loadFile(file);
@@ -288,20 +288,22 @@
         if (!refs.emptyUpload || !refs.previewStage || !refs.canvas) {
             return;
         }
-        var isEmptyMode = state.mode === modeMachine().modes.EMPTY;
+        var isEmptyMode = !state.sourceImageData;
         refs.emptyUpload.hidden = !isEmptyMode;
         refs.canvas.hidden = isEmptyMode;
         refs.canvas.style.display = isEmptyMode ? "none" : "";
         refs.previewStage.classList.toggle("is-empty-upload", isEmptyMode);
 
-        var inputPanel = refs.panelSectionsByTool && refs.panelSectionsByTool.input;
-        if (inputPanel) {
-            inputPanel.classList.toggle("is-empty-upload-panel", isEmptyMode);
-        }
+        var sourceToolIds = modeMachine().sourceToolIds(state);
+        Object.keys(refs.panelSectionsByTool || {}).forEach(function (id) {
+            if (sourceToolIds.indexOf(id) !== -1) {
+                refs.panelSectionsByTool[id].classList.toggle("is-empty-upload-panel", isEmptyMode);
+            }
+        });
     }
 
     function adjustCropZoom(delta) {
-        if (!controller || controller.state.mode !== modeMachine().modes.CROP) {
+        if (!controller || controller.state.mode !== modeMachine().groups.PREPARE) {
             return;
         }
         controller.updateSetting('crop', 'zoom', Number(controller.state.settings.crop.zoom || 1) + delta);
@@ -309,7 +311,7 @@
 
     // 只有有來源圖片且 Crop 面板展開時才顯示裁切框。
     function shouldShowCropOverlay(state) {
-        return Boolean(state.sourceImageData && state.mode === modeMachine().modes.CROP);
+        return Boolean(state.sourceImageData && state.mode === modeMachine().groups.PREPARE);
     }
 
     // 將 crop 的 aspectRatioId 轉成使用者看得懂的比例文字。
@@ -435,7 +437,7 @@
         var drag = null;
 
         refs.cropOverlay.addEventListener('pointerdown', function (event) {
-            if (!controller.state.sourceImageData || controller.state.mode !== modeMachine().modes.CROP) {
+            if (!controller.state.sourceImageData || controller.state.mode !== modeMachine().groups.PREPARE) {
                 return;
             }
             event.preventDefault();
@@ -553,7 +555,7 @@
         if (state.status === 'empty') {
             return t('statusEmpty');
         }
-        if (state.mode === modeMachine().modes.CROP) {
+        if (state.mode === modeMachine().groups.PREPARE) {
             return t('statusCropMode');
         }
         return t('statusReady');
@@ -685,7 +687,7 @@
                 attrs: { type: 'button' }
             });
             cropOkButton.addEventListener('click', function () {
-                controller.closeCropMode();
+                controller.closePrepareMode();
             });
             refs.originalButton = originalButton;
             refs.resultButton = resultButton;
@@ -722,13 +724,13 @@
                 // Dither Editor 切到其他頁再回來時，使用 in-memory cachedState 還原工作區。
                 normalizeCachedStatus(controller.state);
                 modeMachine().normalize(controller.state);
-                if (controller.state.status === 'processing-preview' && controller.state.mode === modeMachine().modes.EDIT) {
+                if (controller.state.status === 'processing-preview' && controller.state.mode === modeMachine().groups.EDIT) {
                     controller.schedulePreview();
                 } else {
                     render(controller.state);
                 }
             } else {
-                modeMachine().enterEmpty(controller.state);
+                modeMachine().enterSource(controller.state);
                 render(controller.state);
             }
         },

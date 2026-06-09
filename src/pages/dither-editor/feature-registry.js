@@ -9,6 +9,13 @@
         effectsOrder: true,
         fixedAfter: true
     };
+    var PANEL_GROUP_NONE = 'none';
+    var VALID_PANEL_GROUPS = {
+        source: true,
+        prepare: true,
+        edit: true,
+        none: true
+    };
 
     // 註冊單一 feature，並把它的 operation 交給 operationRegistry。
     function register(feature) {
@@ -117,7 +124,10 @@
         if (feature.pipelineStage && !VALID_PIPELINE_STAGES[feature.pipelineStage]) {
             throw new Error('Invalid pipeline stage for feature ' + feature.id + ': ' + feature.pipelineStage);
         }
-        if (feature.dock !== false && (!feature.icon || !feature.labelKey)) {
+        if (feature.panelGroup && !VALID_PANEL_GROUPS[feature.panelGroup]) {
+            throw new Error('Invalid panel group for feature ' + feature.id + ': ' + feature.panelGroup);
+        }
+        if (feature.dock !== false && usesPanelGroup(feature) && (!feature.icon || !feature.labelKey)) {
             throw new Error('Dock feature requires icon and labelKey: ' + feature.id);
         }
         if (feature.pipelineStage && feature.id !== 'export' && !feature.operation) {
@@ -161,7 +171,7 @@
         // Export 由 feature action 外露，不放進 accordion tool list。
         var fixedTools = features
             .filter(function (feature) {
-                return feature.dock !== false && !feature.pipelineStage;
+                return feature.dock !== false && !feature.pipelineStage && usesPanelGroup(feature);
             })
             .sort(function (a, b) {
                 return (a.dockOrder || 0) - (b.dockOrder || 0);
@@ -170,7 +180,34 @@
         return fixedTools
             .concat(pipelineIds(pipeline, 'fixedBefore').map(get))
             .concat(pipelineIds(pipeline, 'effectsOrder').map(get))
-            .filter(Boolean);
+            .filter(function (feature) {
+                return feature && usesPanelGroup(feature);
+            });
+    }
+
+    function panelGroup(feature) {
+        if (!feature) {
+            return PANEL_GROUP_NONE;
+        }
+        return feature.panelGroup || PANEL_GROUP_NONE;
+    }
+
+    function usesPanelGroup(feature) {
+        return panelGroup(feature) !== PANEL_GROUP_NONE;
+    }
+
+    function panelGroupFor(id) {
+        return panelGroup(get(id));
+    }
+
+    function panelGroupIds(pipeline, group) {
+        return dockTools(pipeline)
+            .filter(function (feature) {
+                return panelGroup(feature) === group;
+            })
+            .map(function (feature) {
+                return feature.id;
+            });
     }
 
     // 判斷 feature 是否有可放進 pipeline 的 operation。
@@ -203,6 +240,8 @@
         assertRegistered: assertRegistered,
         pipelineIds: pipelineIds,
         dockTools: dockTools,
+        panelGroupFor: panelGroupFor,
+        panelGroupIds: panelGroupIds,
         dispatch: dispatch
     };
 })(window.DitherApp);

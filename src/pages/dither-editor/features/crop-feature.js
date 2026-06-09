@@ -215,6 +215,7 @@
         labelKey: 'panelCrop',
         pipelineStage: 'fixedBefore',
         pipelineOrder: 10,
+        panelGroup: 'prepare',
         // 建立 crop 預設設定，尺寸依目前 display profile。
         defaultSettings: function defaultSettings(context) {
             var state = {

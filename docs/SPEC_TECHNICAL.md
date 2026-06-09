@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-07
+Last Updated: 2026-06-09
 Split From: SPEC_INDEX.md
 ```
 
@@ -18,6 +18,7 @@ Split From: SPEC_INDEX.md
 - 2026-05-21: Image Input panel 的 `New Image` 改由 hidden file input 觸發本機圖片選擇，取代舊 `Choose Image` row；目前 UI 不暴露 blank canvas 建立入口。
 - 2026-06-07: Crop 面板新增左轉 90 / 右轉 90 圖示按鈕，Flip 改為圖示按鈕；旋轉按鈕只更新 `rotation`，Flip 仍使用同一次 settings update 同步鏡射 rotation / pan，且不套用持續 active 視覺狀態。
 - 2026-06-07: 左側 tool panel 展開預設集中到 mode state machine：`empty` 只開 Image Input、載圖或展開 Crop 只開 Crop、離開 Crop 進入 `edit` 時開 Resize / Adjust / Palette / Dither，手動展開 Image Input 或 Crop 時其他面板收合。
+- 2026-06-09: editor `mode` 改為以 feature group 為單位保存 `source`、`prepare`、`edit`；feature 必須明確宣告 `panelGroup` 才會進入左側 tool dock，未宣告時預設為 `none`。
 
 ## Plug-and-Play 架構要求
 
@@ -487,7 +488,7 @@ const defaultDitherOptions = {
 const editorState = {
     schemaVersion: 1,
     status: 'empty',
-    mode: 'empty',
+    mode: 'source',
     sourceImage: null,
     sourceImageData: null,
     previewImageData: null,
@@ -518,32 +519,34 @@ const editorState = {
 - feature 新增後，只要 manifest 啟用且 feature contract 合法，就自動建立 default settings。
 - Tool Panel 開啟狀態必須以 feature id 儲存在 state，例如 `openToolPanels[featureId] = true`；不可只用單一 `activeTool` 表示所有面板開合。
 - Dither Editor 頁面在 app menu 切到 `Web Setting`、`About`、`Help` 或其他頁面再切回來時，必須保留 editor state、圖片與目前 preview。此保留屬於頁面模組層級的 in-memory state cache，不是 IndexedDB 持久化。
-- `page.js` 在 `unmount()` 時應保存目前 `controller.state`；下次 `mount()` 時應把保存的 state 以 `initialState` 傳回 controller。第一次進入 Dither Editor 且沒有 cached state 時，必須停在 `empty`，不可自動建立 `New Image`。
+- `page.js` 在 `unmount()` 時應保存目前 `controller.state`；下次 `mount()` 時應把保存的 state 以 `initialState` 傳回 controller。第一次進入 Dither Editor 且沒有 cached state 時，必須停在 `source` group 且沒有來源圖片，不可自動建立 `New Image`。
 - 若切頁時狀態停在 `loading-image`、`processing-preview` 或 `exporting` 這類 transient status，回到 Dither Editor 時應正規化或重新排 preview，避免畫面卡在不可完成的中間狀態。
 - 載入舊文件時，已不存在的 feature settings 不可讓頁面 crash；應由 migration 忽略、保留到 unknown 區，或交給對應 feature 處理。
 
 ### Editor Mode State Machine
 
-`mode` 是使用者流程狀態，`status` 是 transient 執行狀態。模式轉換必須集中在 `editor-mode-state-machine.js` 與 controller 方法中，不應散落在 feature panel event handler。
+`mode` 是目前啟用的 feature group，`status` 是 transient 執行狀態。Group 轉換必須集中在 `editor-mode-state-machine.js` 與 controller 方法中，不應散落在 feature panel event handler。
 
-模式：
+Groups：
 
-- `empty`：`sourceImageData` 為 `null`，且只展開 `input`。只有 `input` tool 可操作，其他 tool、Export 與 Original / Result 必須停用或隱藏；右下角 preview toolbar 不可顯示任何按鈕。Preview stage 必須顯示中央 upload dropzone，支援 drop 與 Browse File；empty canvas 與 No image loaded placeholder 必須不可視；Image Input panel 不應重複顯示 Choose/Drop controls。
-- `crop`：有來源圖且只展開 `crop`。只有 `input` 與 `crop` tool 可操作；Preview 顯示 `sourceImageData` 加上 Crop transform，不跑完整 pipeline，也不套用 Resize、Adjust、Palette、Dither；右下角 preview toolbar 只能顯示 Zoom In、Zoom Out、OK。
-- `edit`：有來源圖且 Crop 收合。Preview / Export 使用正式 pipeline，右下角 preview toolbar 只能顯示 Original、Result。從 Crop 收合或 OK 進入 `edit` 時，應展開目前 enabled dock tools 中的 `resize`、`adjust`、`palette`、`dither`。
+- `source`：來源輸入 group。沒有來源圖片時只展開 `panelGroup: 'source'` 的 tool，且只有 `source` tool 可操作；右下角 preview toolbar 不可顯示任何按鈕。Preview stage 必須顯示中央 upload dropzone，支援 drop 與 Browse File；Image Input panel 不應重複顯示 Choose/Drop controls。有來源圖片時手動回到 `source` group 必須收合其他 group，preview toolbar 仍不顯示。
+- `prepare`：正式編輯前準備 group。有來源圖且只展開 `panelGroup: 'prepare'` 的 tool；目前 Crop feature 是唯一的 `prepare` tool。只有 `source` 與 `prepare` tool 可操作；Preview 顯示 `sourceImageData` 加上 Crop transform，不跑完整 pipeline，也不套用 Resize、Adjust、Palette、Dither；右下角 preview toolbar 只能顯示 Zoom In、Zoom Out、OK。
+- `edit`：有來源圖且 Crop 收合。Preview / Export 使用正式 pipeline，右下角 preview toolbar 只能顯示 Original、Result。從 Crop 收合或 OK 進入 `edit` 時，應展開目前 enabled dock tools 中明確宣告 `panelGroup: 'edit'` 的 panel group。
+- `none`：無面板流程歸屬。feature 未宣告 `panelGroup` 時預設屬於 `none`，不顯示在左側 tool dock，也不作為可切換的 editor mode。
 
 轉換規則：
 
-- 成功載入本機圖片或 demo 時，controller 必須重建 default editor state、清掉上一張圖的 settings/pipeline order/live preview 暫態，再寫入新 `sourceImageData` 並進入 `crop`。
+- 成功載入本機圖片或 demo 時，controller 必須重建 default editor state、清掉上一張圖的 settings/pipeline order/live preview 暫態，再寫入新 `sourceImageData` 並進入 `prepare`；若沒有 enabled `prepare` feature，則直接進入 `edit` 並排程正式 preview。
 - 重新載圖成功後，Resize、Adjust、Palette、Dither 等演算法 settings 必須回到 enabled feature default；不可沿用上一張圖的值。
-- 展開 Crop 必須進入 `crop`；收合 Crop 或按 OK 必須進入 `edit` 並排程正式 preview。
-- 成功載圖或手動展開 Crop 時，`editor-mode-state-machine.js` 必須將 `openToolPanels` 設為只包含 `crop`，不可保留 Image Input 或其他 edit panel 的展開狀態。
-- 收合 Crop 或按 OK 進入 `edit` 時，`editor-mode-state-machine.js` 必須展開 enabled dock tools 中的 `resize`、`adjust`、`palette`、`dither`。
-- 已有圖片時手動展開 Image Input 必須收合其他 tool panel；若當下是 `crop`，controller 必須先透過 state machine 離開 Crop，再排程正式 preview。
-- `crop` 中的 Crop setting 變更只能重畫 crop preview，不可排程完整 pipeline。離開 `crop` 後才依目前 settings 跑正式 preview。
-- `empty` 或 `crop` 中的非允許 tool/action event 必須被 controller guard 掉，即使 DOM disabled 被繞過也不可改 settings、reorder effects 或 export。
-- `page.js` 必須只根據 `mode` 決定 preview toolbar 內容：`empty` 隱藏整個 toolbar，`crop` 只顯示 Crop 控制列，`edit` 只顯示 Original / Result 切換列。
-- `page.js` 的 tool button handler 應只呼叫 controller 或 state machine 的語意入口（例如 open input、open crop、close crop）；不應在一般 feature panel event handler 中分散實作模式切換規則。
+- 展開 `prepare` tool 必須進入 `prepare`；收合 prepare tool 或按 OK 必須進入 `edit` 並排程正式 preview。
+- 成功載圖或手動展開 Crop 時，`editor-mode-state-machine.js` 必須透過 feature registry 查詢 `prepare` panel group，並將 `openToolPanels` 設為只包含該 group；不可保留 Image Input 或其他 edit panel 的展開狀態。
+- 收合 Crop 或按 OK 進入 `edit` 時，`editor-mode-state-machine.js` 必須透過 feature registry 展開 enabled dock tools 中的 `edit` panel group，不可硬寫特定 feature id 清單。
+- 已有圖片時手動展開 source tool 必須收合其他 tool panel；若當下是 `prepare`，controller 必須先透過 state machine 離開 prepare group，再排程正式 preview。
+- `prepare` 中的 Crop setting 變更只能重畫 crop preview，不可排程完整 pipeline。離開 `prepare` 後才依目前 settings 跑正式 preview。
+- `prepare` 中的 setting guard 必須依 feature 的 `panelGroup` 判斷可用 settings group，不可用 `group === 'crop'` 這類固定 id 比對。
+- 沒有來源圖片或 `prepare` 中的非允許 tool/action event 必須被 controller guard 掉，即使 DOM disabled 被繞過也不可改 settings、reorder effects 或 export。
+- `page.js` 必須只根據 `mode` 決定 preview toolbar 內容：`source` 隱藏整個 toolbar，`prepare` 只顯示 Crop 控制列，`edit` 只顯示 Original / Result 切換列。
+- `page.js` 的 tool button handler 應只呼叫 controller 或 state machine 的語意入口（例如 open source panel、open prepare mode、close prepare mode），並透過 `panelGroup` 判斷流程入口；不應在一般 feature panel event handler 中分散實作模式切換規則。
 - 非目前模式的 preview toolbar row 必須使用 `hidden` 真正移出 layout，不可只做 disabled 或透明處理。
 - Preview toolbar 內 button 必須共用固定尺寸設定，避免 mode 切換或 primary / secondary 樣式造成按鈕大小不同。
 
@@ -647,8 +650,8 @@ Palette feature 必須把 preset 與使用者自訂色票分清楚：
 - plug-and-play 是此區塊的主要目標；registry 必須讓 feature 的載入、註冊、初始化、停用、清理和遷移都有固定路徑。
 - `pages/dither-editor/operations/operation-registry.js` 負責保存 feature 註冊進來的 operation implementation；單一 operation 不應再拆成獨立 `*-operation.js` 檔。
 - `pages/dither-editor/feature-manifest.js` 負責宣告 Dither Editor 頁 enabled feature manifest，例如 `Image Input`、`Crop`、`Resize`、`Adjust`、`Palette`、`Dither`、`Export` 對應的 feature script path、`enabled`、`dependsOn` 與 `loadOrder`。
-- `pages/dither-editor/feature-registry.js` 負責驗證 feature contract、解析 manifest dependency/load order、註冊 feature、產生工具列、state settings、pipeline order 與 lifecycle dispatch。
-- 每個 `pages/dither-editor/features/*-feature.js` 必須是該 feature 的工具列定義、operation、panel builder、預設 settings、feature hook、工具圖示、labelKey、pipeline stage、pipeline order 與是否顯示在 dock 的單一來源；`page.js` 不可另寫一份固定工具清單或固定 panel builder map，`entry.js` 不可直接手寫每個 feature script。
+- `pages/dither-editor/feature-registry.js` 負責驗證 feature contract、解析 manifest dependency/load order、註冊 feature、產生工具列、state settings、pipeline order、panel group 與 lifecycle dispatch。
+- 每個 `pages/dither-editor/features/*-feature.js` 必須是該 feature 的工具列定義、operation、panel builder、預設 settings、feature hook、工具圖示、labelKey、pipeline stage、pipeline order、`panelGroup` 與是否顯示在 dock 的單一來源；`page.js` 不可另寫一份固定工具清單或固定 panel builder map，`entry.js` 不可直接手寫每個 feature script。
 - `Image Input`、`Export` 這類 UI action 不放進 pipeline operations，但仍必須以 feature script 管理，並由 `feature-manifest.js` 控制是否載入。
 - 要停用某個 feature，例如 `Crop`，預設做法是只在 `feature-manifest.js` 將該 feature 設為 `enabled: false`；停用後該工具不應出現在工具列、state settings、pipeline order，也不應載入對應 feature script。
 - `pages/dither-editor/operations/operation-registry.js` 的 operation metadata 負責定義該 operation 是否屬於可拖曳 pipeline effect，例如 `pipeline: { draggable: true }`。
@@ -695,6 +698,7 @@ app.pages.ditherEditor.featureRegistry.register({
     labelKey: 'toolAdjust',
     dock: true,
     dockOrder: 40,
+    panelGroup: 'edit',
     pipelineStage: 'effectsOrder',
     pipelineOrder: 10,
 
@@ -1023,7 +1027,7 @@ Crop -> Resize -> Dither -> Palette -> Adjust -> Export
 - enabled / disabled toggle。
 - 點選後顯示該步驟的參數面板。
 - 多個 Tool Panel 可以同時展開。
-- Image Input 與 Crop 是模式入口，手動展開時採互斥收合規則；Resize、Adjust、Palette、Dither 在 `edit` 中可以多個同時展開。
+- `panelGroup: 'source'` 與 `panelGroup: 'prepare'` 是流程入口，手動展開時採互斥收合規則；`panelGroup: 'edit'` 的 panels 在 `edit` 中可以多個同時展開。未宣告 `panelGroup` 的 feature 預設屬於 `none`，不顯示在左側 tool dock。
 - 顯示是否有錯誤設定。
 
 ### Effects Drag Feel
@@ -1365,7 +1369,7 @@ const PREVIEW_SLOW_THRESHOLD_MS = 500;
 
 規則：
 
-- `crop` mode 不執行正式 preview pipeline；page 只用 `viewport-renderer.renderTransformed()` 顯示來源圖與 Crop transform。按 OK 或收合 Crop 進入 `edit` 後，才從 `sourceImageData` 跑正式 pipeline。
+- `prepare` group 不執行正式 preview pipeline；page 只用 `viewport-renderer.renderTransformed()` 顯示來源圖與 Crop transform。按 OK 或收合 prepare tool 進入 `edit` 後，才從 `sourceImageData` 跑正式 pipeline。
 - 使用者調整 slider、select、color、effects order 時，不立即每次重算，先 debounce `PREVIEW_DEBOUNCE_MS`。
 - 正式 preview 使用 working image 的完整尺寸，不使用降低解析度的 `ImageData` 當成使用者可見的最終預覽，避免拖曳中與放開後出現不可信的跳變。
 - export 永遠從工作圖和完整 pipeline 重新計算，不使用暫存 preview 結果。
@@ -1598,7 +1602,7 @@ New Image 規則：
 - 編輯區提供 `New Image`。
 - `New Image` 必須觸發隱藏的 file input，讓使用者選擇本機圖片。
 - `Image Input` panel 不可顯示獨立的 `Choose Image` row 或 panel drop zone。
-- 成功選擇圖片後，必須走與一般 upload 相同的 `controller.loadFile()` 流程，重建 default editor state 並進入 `crop`。
+- 成功選擇圖片後，必須走與一般 upload 相同的 `controller.loadFile()` 流程，重建 default editor state 並進入 `prepare`；若沒有 enabled `prepare` feature，則直接進入 `edit`。
 - 目前版本不在 UI 暴露空白 canvas 建立入口。
 
 ## 離線資源策略

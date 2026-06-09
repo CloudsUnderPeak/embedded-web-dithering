@@ -10,6 +10,7 @@
         pipelineOrder: 10,
         actionOrder: 10,
         dock: false,
+        panelGroup: 'none',
         // 目前固定 PNG；保留 settings 結構方便未來新增格式。
         defaultSettings: function defaultSettings() {
             return { format: 'png' };

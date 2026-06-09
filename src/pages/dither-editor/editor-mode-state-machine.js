@@ -1,8 +1,8 @@
 (function (app) {
-    var MODE_EMPTY = 'empty';
-    var MODE_CROP = 'crop';
-    var MODE_EDIT = 'edit';
-    var EDIT_PANEL_IDS = ['resize', 'adjust', 'palette', 'dither'];
+    var MODE_GROUP_SOURCE = 'source';
+    var MODE_GROUP_PREPARE = 'prepare';
+    var MODE_GROUP_EDIT = 'edit';
+    var MODE_GROUP_NONE = 'none';
 
     function hasImage(state) {
         return Boolean(state && state.sourceImageData);
@@ -23,81 +23,143 @@
         syncLegacyPanelOpenFlag(state);
     }
 
-    function availablePanelIds(state, ids) {
+    function availablePanelIds(state) {
         var registry = app.pages.ditherEditor.featureRegistry;
         var tools = registry && registry.dockTools ? registry.dockTools(state.pipeline) : [];
-        var availableIds = tools.map(function (tool) {
+        return tools.map(function (tool) {
             return tool.id;
         });
-        return ids.filter(function (id) {
-            return availableIds.indexOf(id) !== -1;
+    }
+
+    function pruneUnavailablePanels(state) {
+        var availableIds = availablePanelIds(state);
+        state.openToolPanels = state.openToolPanels || {};
+        Object.keys(state.openToolPanels).forEach(function (id) {
+            if (availableIds.indexOf(id) === -1) {
+                delete state.openToolPanels[id];
+            }
         });
+    }
+
+    function panelGroupFor(id) {
+        var registry = app.pages.ditherEditor.featureRegistry;
+        return registry && registry.panelGroupFor ? registry.panelGroupFor(id) : null;
+    }
+
+    function panelIdsForGroup(state, group) {
+        var registry = app.pages.ditherEditor.featureRegistry;
+        return registry && registry.panelGroupIds ? registry.panelGroupIds(state.pipeline, group) : [];
+    }
+
+    function isToolInGroup(id, group) {
+        return panelGroupFor(id) === group;
+    }
+
+    function hasPanelGroup(state, group) {
+        return panelIdsForGroup(state, group).length > 0;
+    }
+
+    function hasOpenPanelGroup(state, group) {
+        var ids = panelIdsForGroup(state, group);
+        return ids.some(function (id) {
+            return state.openToolPanels && state.openToolPanels[id];
+        });
+    }
+
+    function closePanelGroup(state, group) {
+        panelIdsForGroup(state, group).forEach(function (id) {
+            state.openToolPanels[id] = false;
+        });
+    }
+
+    function openPanelGroup(state, group, activeTool) {
+        var ids = panelIdsForGroup(state, group);
+        var activeId = ids.indexOf(activeTool) !== -1 ? activeTool : ids[0];
+        openPanels(state, ids, activeId);
+        return ids;
     }
 
     function normalize(state) {
         if (!hasImage(state)) {
-            return enterEmpty(state);
+            return enterSource(state);
         }
-        if (state.mode === MODE_CROP || (state.openToolPanels && state.openToolPanels.crop)) {
-            enterCrop(state);
+        pruneUnavailablePanels(state);
+        if (state.mode === MODE_GROUP_PREPARE || hasOpenPanelGroup(state, MODE_GROUP_PREPARE)) {
+            enterPrepare(state);
+            return state.mode;
+        }
+        if (hasOpenPanelGroup(state, MODE_GROUP_EDIT)) {
+            normalizeEdit(state);
+            return state.mode;
+        }
+        if (hasOpenPanelGroup(state, MODE_GROUP_SOURCE)) {
+            normalizeSource(state);
             return state.mode;
         }
         normalizeEdit(state);
         return state.mode;
     }
 
-    function enterEmpty(state) {
-        state.mode = MODE_EMPTY;
-        openPanels(state, ['input'], 'input');
-        state.viewMode = 'result';
+    function enterSource(state, activeTool) {
+        state.mode = MODE_GROUP_SOURCE;
+        openPanelGroup(state, MODE_GROUP_SOURCE, activeTool);
+        state.viewMode = hasImage(state) && state.viewMode === 'original' ? 'original' : 'result';
         return state.mode;
     }
 
-    function enterCrop(state) {
+    function normalizeSource(state) {
+        state.mode = MODE_GROUP_SOURCE;
+        state.openToolPanels = state.openToolPanels || {};
+        pruneUnavailablePanels(state);
+        closePanelGroup(state, MODE_GROUP_PREPARE);
+        state.viewMode = hasImage(state) && state.viewMode === 'original' ? 'original' : 'result';
+        syncLegacyPanelOpenFlag(state);
+        return state.mode;
+    }
+
+    function enterPrepare(state) {
         if (!hasImage(state)) {
-            return enterEmpty(state);
+            return enterSource(state);
         }
-        state.mode = MODE_CROP;
-        openPanels(state, ['crop'], 'crop');
+        if (!hasPanelGroup(state, MODE_GROUP_PREPARE)) {
+            return enterEdit(state);
+        }
+        state.mode = MODE_GROUP_PREPARE;
+        openPanelGroup(state, MODE_GROUP_PREPARE);
         state.viewMode = 'result';
         return state.mode;
     }
 
     function enterEdit(state) {
         if (!hasImage(state)) {
-            return enterEmpty(state);
+            return enterSource(state);
         }
-        var editPanelIds = availablePanelIds(state, EDIT_PANEL_IDS);
         normalizeEdit(state);
-        openPanels(state, editPanelIds, editPanelIds[0]);
+        openPanelGroup(state, MODE_GROUP_EDIT);
         return state.mode;
     }
 
     function normalizeEdit(state) {
-        state.mode = MODE_EDIT;
+        state.mode = MODE_GROUP_EDIT;
         state.openToolPanels = state.openToolPanels || {};
-        state.openToolPanels.crop = false;
+        pruneUnavailablePanels(state);
+        closePanelGroup(state, MODE_GROUP_PREPARE);
+        closePanelGroup(state, MODE_GROUP_SOURCE);
         state.viewMode = state.viewMode === 'original' ? 'original' : 'result';
         syncLegacyPanelOpenFlag(state);
         return state.mode;
     }
 
-    function openInputPanel(state) {
-        if (!hasImage(state)) {
-            return enterEmpty(state);
-        }
-        state.mode = MODE_EDIT;
-        openPanels(state, ['input'], 'input');
-        state.viewMode = state.viewMode === 'original' ? 'original' : 'result';
-        return state.mode;
+    function openSourcePanel(state, activeTool) {
+        return enterSource(state, activeTool);
     }
 
     function canUseTool(state, id) {
-        if (!hasImage(state) || state.mode === MODE_EMPTY) {
-            return id === 'input';
+        if (!hasImage(state)) {
+            return isToolInGroup(id, MODE_GROUP_SOURCE);
         }
-        if (state.mode === MODE_CROP) {
-            return id === 'input' || id === 'crop';
+        if (state.mode === MODE_GROUP_PREPARE) {
+            return isToolInGroup(id, MODE_GROUP_SOURCE) || isToolInGroup(id, MODE_GROUP_PREPARE);
         }
         return true;
     }
@@ -106,22 +168,55 @@
         if (!hasImage(state)) {
             return false;
         }
-        return state.mode === MODE_EDIT || id === 'input';
+        return state.mode === MODE_GROUP_EDIT || isToolInGroup(id, MODE_GROUP_SOURCE);
+    }
+
+    function canUseSource(state) {
+        return panelIdsForGroup(state, MODE_GROUP_SOURCE).some(function (id) {
+            return canUseTool(state, id);
+        });
+    }
+
+    function sourceToolIds(state) {
+        return panelIdsForGroup(state, MODE_GROUP_SOURCE);
+    }
+
+    function canUseSettingGroup(state, id) {
+        if (!hasImage(state)) {
+            return false;
+        }
+        if (!state.settings || !Object.prototype.hasOwnProperty.call(state.settings, id)) {
+            return false;
+        }
+        if (state.mode === MODE_GROUP_PREPARE) {
+            return isToolInGroup(id, MODE_GROUP_PREPARE);
+        }
+        return state.mode === MODE_GROUP_EDIT;
     }
 
     app.pages.ditherEditor = app.pages.ditherEditor || {};
     app.pages.ditherEditor.editorModeStateMachine = {
-        modes: {
-            EMPTY: MODE_EMPTY,
-            CROP: MODE_CROP,
-            EDIT: MODE_EDIT
+        groups: {
+            SOURCE: MODE_GROUP_SOURCE,
+            PREPARE: MODE_GROUP_PREPARE,
+            EDIT: MODE_GROUP_EDIT,
+            NONE: MODE_GROUP_NONE
         },
         normalize: normalize,
-        enterEmpty: enterEmpty,
-        enterCrop: enterCrop,
+        enterSource: enterSource,
+        enterPrepare: enterPrepare,
         enterEdit: enterEdit,
-        openInputPanel: openInputPanel,
+        openSourcePanel: openSourcePanel,
+        isSourceTool: function isSourceTool(id) {
+            return isToolInGroup(id, MODE_GROUP_SOURCE);
+        },
+        isPrepareTool: function isPrepareTool(id) {
+            return isToolInGroup(id, MODE_GROUP_PREPARE);
+        },
         canUseTool: canUseTool,
-        canUseAction: canUseAction
+        canUseAction: canUseAction,
+        canUseSource: canUseSource,
+        sourceToolIds: sourceToolIds,
+        canUseSettingGroup: canUseSettingGroup
     };
 })(window.DitherApp);

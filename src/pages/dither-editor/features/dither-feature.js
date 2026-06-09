@@ -7,6 +7,7 @@
         id: 'dither',
         icon: '..',
         labelKey: 'panelDither',
+        panelGroup: 'edit',
         pipelineStage: 'effectsOrder',
         pipelineOrder: 30,
         // 預設不套用 dithering；palette 由 palette feature 同步。

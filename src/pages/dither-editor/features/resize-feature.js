@@ -7,6 +7,7 @@
         id: 'resize',
         icon: '<>',
         labelKey: 'panelResize',
+        panelGroup: 'edit',
         pipelineStage: 'fixedBefore',
         pipelineOrder: 20,
         // 預設輸出尺寸跟 display profile 一致。

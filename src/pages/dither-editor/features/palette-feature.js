@@ -275,6 +275,7 @@
         id: 'palette',
         icon: '#',
         labelKey: 'panelPalette',
+        panelGroup: 'edit',
         pipelineStage: 'effectsOrder',
         pipelineOrder: 20,
         // 預設顯示 Original 代表色，不套用 palette operation。

@@ -133,6 +133,7 @@
         id: 'adjust',
         icon: '~~',
         labelKey: 'panelAdjust',
+        panelGroup: 'edit',
         pipelineStage: 'effectsOrder',
         pipelineOrder: 10,
         defaultSettings: createDefaultSettings,

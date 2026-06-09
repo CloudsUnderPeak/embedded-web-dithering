@@ -26,8 +26,12 @@
         this.state.workingSize = result.workingSize;
         this.runFeatureHook('onImageLoaded', { result: result });
         this.state.status = 'ready';
-        app.pages.ditherEditor.editorModeStateMachine.enterCrop(this.state);
-        // 新圖載入後直接跳到 Crop；若使用者再展開 Image Input，其他面板會收合。
+        app.pages.ditherEditor.editorModeStateMachine.enterPrepare(this.state);
+        // 新圖載入後若有 prepare 入口就直接跳到 prepare；否則進入 edit 並排正式 preview。
+        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.EDIT) {
+            this.schedulePreview();
+            return;
+        }
         this.render(this.state);
     };
 
@@ -95,14 +99,14 @@
 
     // 更新單一 feature setting，觸發 feature hook、重繪與排程 preview。
     DitherEditorController.prototype.updateSetting = function updateSetting(group, key, value) {
-        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.modes.CROP && group !== 'crop') {
+        if (!app.pages.ditherEditor.editorModeStateMachine.canUseSettingGroup(this.state, group)) {
             return;
         }
         var previous = Object.assign({}, this.state.settings[group]);
         this.state.settings[group][key] = value;
         // previous 讓 feature 可以在 normalize 或 UI sync 時知道變更前狀態。
         this.runFeatureHook('onSettingChanged', { id: group, key: key, value: value, previous: previous });
-        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.modes.CROP) {
+        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE) {
             this.state.status = 'ready';
             this.render(this.state);
             return;
@@ -112,13 +116,13 @@
 
     // 一次更新多個 setting，給 flip/rotation/pan 等需要同步修改的操作使用。
     DitherEditorController.prototype.updateSettings = function updateSettings(group, values) {
-        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.modes.CROP && group !== 'crop') {
+        if (!app.pages.ditherEditor.editorModeStateMachine.canUseSettingGroup(this.state, group)) {
             return;
         }
         var previous = Object.assign({}, this.state.settings[group]);
         Object.assign(this.state.settings[group], values);
         this.runFeatureHook('onSettingChanged', { id: group, key: null, values: values, previous: previous });
-        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.modes.CROP) {
+        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE) {
             this.state.status = 'ready';
             this.render(this.state);
             return;
@@ -183,7 +187,7 @@
 
     // 啟用或停用 pipeline 中的某個 operation。
     DitherEditorController.prototype.toggleOperation = function toggleOperation(id, enabled) {
-        if (this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.modes.EDIT) {
+        if (this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.groups.EDIT) {
             return;
         }
         this.state.pipeline.enabled[id] = enabled;
@@ -192,7 +196,7 @@
 
     // 接收 sortable list 回傳的新順序，更新 effectsOrder。
     DitherEditorController.prototype.reorderEffects = function reorderEffects(order) {
-        if (this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.modes.EDIT) {
+        if (this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.groups.EDIT) {
             return;
         }
         this.state.pipeline.effectsOrder = order.slice();
@@ -201,14 +205,14 @@
 
     // 切換 Original/Result 檢視，不改變 pipeline 結果。
     DitherEditorController.prototype.setViewMode = function setViewMode(mode) {
-        if (this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.modes.EDIT) {
+        if (this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.groups.EDIT) {
             return;
         }
         this.state.viewMode = mode;
         this.render(this.state);
     };
 
-    DitherEditorController.prototype.openCropMode = function openCropMode() {
+    DitherEditorController.prototype.openPrepareMode = function openPrepareMode() {
         if (!this.state.sourceImageData) {
             return;
         }
@@ -216,21 +220,25 @@
         this.previewTimer = null;
         this.state.livePreview = null;
         this.state.status = 'ready';
-        app.pages.ditherEditor.editorModeStateMachine.enterCrop(this.state);
-        this.render(this.state);
-    };
-
-    DitherEditorController.prototype.openInputPanel = function openInputPanel() {
-        var wasCropMode = this.state.mode === app.pages.ditherEditor.editorModeStateMachine.modes.CROP;
-        app.pages.ditherEditor.editorModeStateMachine.openInputPanel(this.state);
-        if (wasCropMode && this.state.mode === app.pages.ditherEditor.editorModeStateMachine.modes.EDIT) {
+        app.pages.ditherEditor.editorModeStateMachine.enterPrepare(this.state);
+        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.EDIT) {
             this.schedulePreview();
             return;
         }
         this.render(this.state);
     };
 
-    DitherEditorController.prototype.closeCropMode = function closeCropMode() {
+    DitherEditorController.prototype.openSourcePanel = function openSourcePanel(activeTool) {
+        var wasPrepareMode = this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE;
+        app.pages.ditherEditor.editorModeStateMachine.openSourcePanel(this.state, activeTool);
+        if (wasPrepareMode && this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.SOURCE) {
+            this.schedulePreview();
+            return;
+        }
+        this.render(this.state);
+    };
+
+    DitherEditorController.prototype.closePrepareMode = function closePrepareMode() {
         if (!this.state.sourceImageData) {
             return;
         }
@@ -241,7 +249,7 @@
     // 將正式 preview 計算 debounce，避免連續設定變更時每次都重跑 pipeline。
     DitherEditorController.prototype.schedulePreview = function schedulePreview() {
         var self = this;
-        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.modes.CROP) {
+        if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE) {
             this.state.status = 'ready';
             this.render(this.state);
             return;
@@ -291,7 +299,7 @@
     // 匯出目前結果；若尚未有 result，會先同步跑一次 preview。
     DitherEditorController.prototype.exportPng = function exportPng() {
         var self = this;
-        if (!this.state.sourceImageData || this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.modes.EDIT) {
+        if (!this.state.sourceImageData || this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.groups.EDIT) {
             return Promise.resolve();
         }
         this.state.status = 'exporting';

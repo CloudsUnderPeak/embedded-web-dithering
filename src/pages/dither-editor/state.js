@@ -41,7 +41,7 @@
         return {
             schemaVersion: 1,
             status: 'empty',
-            mode: app.pages.ditherEditor.editorModeStateMachine.modes.EMPTY,
+            mode: app.pages.ditherEditor.editorModeStateMachine.groups.SOURCE,
             fileName: 'Untitled',
             sourceImageData: null,
             previewImageData: null,

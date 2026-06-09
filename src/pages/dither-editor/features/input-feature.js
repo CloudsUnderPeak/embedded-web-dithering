@@ -10,6 +10,7 @@
         icon: '+',
         labelKey: 'panelImageInput',
         dockOrder: 10,
+        panelGroup: 'source',
         // 建立圖片輸入面板，所有輸入來源最後都交給 controller。
         buildPanel: function buildPanel(context) {
             var controller = context.controller;
