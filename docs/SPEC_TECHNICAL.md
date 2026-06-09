@@ -19,6 +19,10 @@ Split From: SPEC_INDEX.md
 - 2026-06-07: Crop 面板新增左轉 90 / 右轉 90 圖示按鈕，Flip 改為圖示按鈕；旋轉按鈕只更新 `rotation`，Flip 仍使用同一次 settings update 同步鏡射 rotation / pan，且不套用持續 active 視覺狀態。
 - 2026-06-07: 左側 tool panel 展開預設集中到 mode state machine：`empty` 只開 Image Input、載圖或展開 Crop 只開 Crop、離開 Crop 進入 `edit` 時開 Resize / Adjust / Palette / Dither，手動展開 Image Input 或 Crop 時其他面板收合。
 - 2026-06-09: editor `mode` 改為以 feature group 為單位保存 `source`、`prepare`、`edit`；feature 必須明確宣告 `panelGroup` 才會進入左側 tool dock，未宣告時預設為 `none`。
+- 2026-06-09: Crop 預設比例改為 16:9，prepare toolbar 的 crop zoom 以 `+` / `-` 顯示；Resize 固定等比且移除 Fit；Adjust 移除 Reset Default 並在 slider 左側顯示數值。
+- 2026-06-09: `onSettingChanged` lifecycle 改為廣播給 enabled features，由 feature 依 `context.id` 判斷是否處理，支援跨 feature setting 同步且避免 controller 硬寫 feature id。
+- 2026-06-09: Crop preview toolbar 的 `+` / `-` 使用 compact square button；Resize output 單邊尺寸上限集中到 `MAX_RESIZE_OUTPUT_SIZE`。
+- 2026-06-09: `constants.js` 提前於 feature scripts 載入；Resize width / height controls 改用同列 `unitNumberInput(..., 'px', ...)` 並共用 Crop 數字輸入樣式。
 
 ## Plug-and-Play 架構要求
 
@@ -212,6 +216,7 @@ src/pages/{page-id}/
 規則：
 
 - `entry.js` 負責載入該頁自己的 config、algorithms、feature manifest、feature registry、enabled feature scripts、viewport、controller、state 與 `page.js`；feature scripts 必須從 `feature-manifest.js` 經由 `feature-registry.js` 解析產生，不直接逐一硬寫 operation 或 panel 檔。
+- `constants.js` 必須在 feature scripts 前載入，讓 feature 可安全讀取頁面級限制值，例如 resize output size limit。
 - `entry.js` 最後負責讓頁面模組可被 app registry 註冊。
 - `page.js` 只負責該頁的 mount / unmount 與頁面 DOM 組合。
 - `index.html` 不可直接列出某頁內部的 operation、algorithm、panel、viewport 檔案。
@@ -544,7 +549,7 @@ const editorState = {
 Groups：
 
 - `source`：來源輸入 group。沒有來源圖片時只展開 `panelGroup: 'source'` 的 tool，且只有 `source` tool 可操作；右下角 preview toolbar 不可顯示任何按鈕。Preview stage 必須顯示中央 upload dropzone，支援 drop 與 Browse File；Image Input panel 不應重複顯示 Choose/Drop controls。有來源圖片時手動回到 `source` group 必須收合其他 group，preview toolbar 仍不顯示。
-- `prepare`：正式編輯前準備 group。有來源圖且只展開 `panelGroup: 'prepare'` 的 tool；目前 Crop feature 是唯一的 `prepare` tool。只有 `source` 與 `prepare` tool 可操作；Preview 顯示 `sourceImageData` 加上 Crop transform，不跑完整 pipeline，也不套用 Resize、Adjust、Palette、Dither；右下角 preview toolbar 只能顯示 Zoom In、Zoom Out、OK。
+- `prepare`：正式編輯前準備 group。有來源圖且只展開 `panelGroup: 'prepare'` 的 tool；目前 Crop feature 是唯一的 `prepare` tool。只有 `source` 與 `prepare` tool 可操作；Preview 顯示 `sourceImageData` 加上 Crop transform，不跑完整 pipeline，也不套用 Resize、Adjust、Palette、Dither；右下角 preview toolbar 只能顯示 `+`、`-`、OK。
 - `edit`：有來源圖且 Crop 收合。Preview / Export 使用正式 pipeline，右下角 preview toolbar 只能顯示 Original、Result。從 Crop 收合或 OK 進入 `edit` 時，應展開目前 enabled dock tools 中明確宣告 `panelGroup: 'edit'` 的 panel group。
 - `none`：無面板流程歸屬。feature 未宣告 `panelGroup` 時預設屬於 `none`，不顯示在左側 tool dock，也不作為可切換的 editor mode。
 
@@ -562,7 +567,7 @@ Groups：
 - `page.js` 必須只根據 `mode` 決定 preview toolbar 內容：`source` 隱藏整個 toolbar，`prepare` 只顯示 Crop 控制列，`edit` 只顯示 Original / Result 切換列。
 - `page.js` 的 tool button handler 應只呼叫 controller 或 state machine 的語意入口（例如 open source panel、open prepare mode、close prepare mode），並透過 `panelGroup` 判斷流程入口；不應在一般 feature panel event handler 中分散實作模式切換規則。
 - 非目前模式的 preview toolbar row 必須使用 `hidden` 真正移出 layout，不可只做 disabled 或透明處理。
-- Preview toolbar 內 button 必須共用固定尺寸設定，避免 mode 切換或 primary / secondary 樣式造成按鈕大小不同。
+- `edit` 的 Original / Result buttons 必須共用固定尺寸設定；`prepare` 的 Crop zoom `+` / `-` buttons 使用 compact square size，OK button 使用 primary action size。
 
 `schemaVersion` 必須同步用於 `settings-store.js` 與 `document-store.js`。讀取儲存資料時：
 
@@ -771,6 +776,8 @@ register
   -> onUnmount
   -> dispose
 ```
+
+`onSettingChanged(context)` 必須廣播給 enabled features。`context.id` 代表實際被修改的 settings group；feature 必須自行判斷是否處理該事件。需要監聽其他 feature 的同步邏輯，例如 Resize 跟隨 Crop 輸出比例，應留在監聽 feature 自己的 `*-feature.js`，不可寫成 controller special case。
 
 `dispose` 用於清理 event listener、object URL、timer、worker、temporary canvas、cached ImageData 等資源。
 
@@ -1127,7 +1134,7 @@ Crop feature 的 transform settings 必須由 `crop-feature.js` 自己定義與 
 
 ```js
 {
-    aspectRatioId: '5-3',
+    aspectRatioId: '16-9',
     panX: 0,
     panY: 0,
     zoom: 1,
@@ -1136,6 +1143,8 @@ Crop feature 的 transform settings 必須由 `crop-feature.js` 自己定義與 
     flipY: false,
 }
 ```
+
+Crop 預設 `aspectRatioId` 必須是 `16-9`。若舊 settings 或無效 settings 找不到對應 ratio，應 fallback 到 16:9。
 
 Preview renderer 與正式 crop operation 必須套用同一套 transform 規則：
 
@@ -1156,6 +1165,28 @@ Crop 面板的 horizontal flip / vertical flip icon button 必須用同一次 se
 這個規則讓反轉以目前畫面座標為準；若只切換 `flipX` / `flipY` 而不處理 rotation，已旋轉圖片會呈現和使用者預期不同的鏡射方向。
 
 Flip icon button 可以用 `aria-pressed` 表示狀態，但視覺上必須和左轉 90 / 右轉 90 button 一樣，不套用持續 active color / background。
+
+### Resize Controls
+
+Resize feature 固定維持等比 resize，不提供 Fit / Stretch / Contain / Cover 選單。
+
+- `resize` settings 至少包含 `width`、`height` 與內部使用的 `aspectRatio`。
+- Resize output 的合法尺寸範圍是 `1..MAX_RESIZE_OUTPUT_SIZE`，目前 `MAX_RESIZE_OUTPUT_SIZE = 4096`。
+- 新圖片載入後，Resize 預設尺寸應跟目前 Crop 輸出尺寸同步；若 Crop feature 不存在，才 fallback 到 working image size。
+- Resize width / height controls 必須顯示在同一列。
+- 使用者調整 `width` 時，`height` 必須立即依 `aspectRatio` 更新。
+- 使用者調整 `height` 時，`width` 必須立即依 `aspectRatio` 更新。
+- Resize width / height controls 必須使用 `panelUtils.unitNumberInput(..., 'px', ...)`，以和 Crop zoom / rotation 共用數字輸入樣式與長按 stepper 行為。
+- 等比換算若會讓另一邊超過 `MAX_RESIZE_OUTPUT_SIZE`，正在調整的尺寸也必須 clamp 到可維持比例的最大值。
+- Crop ratio 改變時，Resize 應以目前 resize width 為錨點更新 `aspectRatio` 與對應 height，避免 pipeline 把 crop 結果拉伸成不同輸出比例。
+
+### Adjust Controls
+
+Adjust feature 只提供 brightness、contrast、saturation 三個 slider，不提供 Reset Default button。
+
+- 三個設定預設值必須都是 `0`，代表 identity。
+- 每個 slider 左側必須顯示目前數值。
+- Range input 必須能拖曳到最小與最大端點；樣式不可用 padding 或 border 壓縮可拖曳範圍。
 
 Pipeline 執行器只根據 fixed before、可拖曳 effects order 與 fixed after 逐步套用：
 

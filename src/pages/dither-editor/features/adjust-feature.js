@@ -129,6 +129,21 @@
         return Math.max(0.01, 1 + value / 100);
     }
 
+    function valueRangeInput(value, min, max, step, onChange, options) {
+        var valueLabel = app.utils.dom.el('span', {
+            className: 'adjust-range-value',
+            text: String(Number(value) || 0)
+        });
+        var input = ui.rangeInput(value, min, max, step, function (nextValue) {
+            valueLabel.textContent = String(nextValue);
+            onChange(nextValue);
+        }, options);
+        return app.utils.dom.el('div', {
+            className: 'adjust-range-control',
+            children: [valueLabel, input]
+        });
+    }
+
     app.pages.ditherEditor.featureRegistry.register({
         id: 'adjust',
         icon: '~~',
@@ -139,7 +154,7 @@
         defaultSettings: createDefaultSettings,
         createLivePreviewBase: createLivePreviewBase,
         livePreviewFilter: livePreviewFilter,
-        // 建立亮度、對比、飽和度滑桿與回預設按鈕。
+        // 建立亮度、對比、飽和度滑桿。
         buildPanel: function buildPanel(context) {
             var state = context.state;
             var controller = context.controller;
@@ -151,34 +166,19 @@
                     controller.endPreviewHold();
                 }
             };
-            var brightnessInput = ui.rangeInput(state.settings.adjust.brightness, -100, 100, 1, function (value) {
+            var brightnessInput = valueRangeInput(state.settings.adjust.brightness, -100, 100, 1, function (value) {
                 controller.updateSetting('adjust', 'brightness', value);
             }, previewHold);
-            var contrastInput = ui.rangeInput(state.settings.adjust.contrast, -100, 100, 1, function (value) {
+            var contrastInput = valueRangeInput(state.settings.adjust.contrast, -100, 100, 1, function (value) {
                 controller.updateSetting('adjust', 'contrast', value);
             }, previewHold);
-            var saturationInput = ui.rangeInput(state.settings.adjust.saturation, -100, 100, 1, function (value) {
+            var saturationInput = valueRangeInput(state.settings.adjust.saturation, -100, 100, 1, function (value) {
                 controller.updateSetting('adjust', 'saturation', value);
             }, previewHold);
-            var resetButton = app.utils.dom.el('button', {
-                className: 'secondary-button',
-                text: ui.t('actionResetDefault'),
-                attrs: { type: 'button' }
-            });
-            resetButton.addEventListener('click', function () {
-                var defaults = createDefaultSettings();
-                brightnessInput.value = defaults.brightness;
-                contrastInput.value = defaults.contrast;
-                saturationInput.value = defaults.saturation;
-                Object.keys(defaults).forEach(function (key) {
-                    controller.updateSetting('adjust', key, defaults[key]);
-                });
-            });
             return ui.section('panelAdjust', [
                 ui.row('Brightness', brightnessInput),
                 ui.row('Contrast', contrastInput),
-                ui.row('Saturation', saturationInput),
-                app.utils.dom.el('div', { className: 'button-row', children: [resetButton] })
+                ui.row('Saturation', saturationInput)
             ], 'adjust');
         },
         operation: {

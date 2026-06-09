@@ -105,7 +105,7 @@
         var previous = Object.assign({}, this.state.settings[group]);
         this.state.settings[group][key] = value;
         // previous 讓 feature 可以在 normalize 或 UI sync 時知道變更前狀態。
-        this.runFeatureHook('onSettingChanged', { id: group, key: key, value: value, previous: previous });
+        this.runFeatureHook('onSettingChanged', { id: group, key: key, value: value, previous: previous }, { broadcast: true });
         if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE) {
             this.state.status = 'ready';
             this.render(this.state);
@@ -121,7 +121,7 @@
         }
         var previous = Object.assign({}, this.state.settings[group]);
         Object.assign(this.state.settings[group], values);
-        this.runFeatureHook('onSettingChanged', { id: group, key: null, values: values, previous: previous });
+        this.runFeatureHook('onSettingChanged', { id: group, key: null, values: values, previous: previous }, { broadcast: true });
         if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE) {
             this.state.status = 'ready';
             this.render(this.state);
@@ -177,11 +177,13 @@
     };
 
     // 封裝 feature lifecycle hook 呼叫，並自動補上 state/controller。
-    DitherEditorController.prototype.runFeatureHook = function runFeatureHook(name, context) {
+    DitherEditorController.prototype.runFeatureHook = function runFeatureHook(name, context, options) {
+        context = context || {};
+        options = options || {};
         app.pages.ditherEditor.featureRegistry.dispatch(
             name,
             Object.assign({ state: this.state }, context),
-            { id: context.id }
+            options.broadcast ? null : { id: context.id }
         );
     };
 

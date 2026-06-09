@@ -4,7 +4,7 @@
     // Crop feature 同時提供固定比例設定、crop preview 幾何與正式裁切 operation。
     // 外部只透過 app.pages.ditherEditor.crop 的小 API 使用幾何計算，不在 page.js 重寫 crop 規則。
     var ui = app.pages.ditherEditor.panelUtils;
-    var DEFAULT_ASPECT_RATIO_ID = '5-3';
+    var DEFAULT_ASPECT_RATIO_ID = '16-9';
     var MIN_ZOOM = 1;
     var MAX_ZOOM = 8;
     var panelRefs = null;
@@ -19,7 +19,7 @@
         { id: '9-16', label: '9 : 16', width: 9, height: 16 }
     ];
 
-    // 依 id 取得固定比例設定；找不到時回到預設 5:3。
+    // 依 id 取得固定比例設定；找不到時回到預設 16:9。
     function ratioFor(id) {
         return ASPECT_RATIOS.find(function (ratio) {
             return ratio.id === id;
@@ -259,6 +259,9 @@
         },
         // 任一 crop 設定變更後都重新正規化，確保 pan/zoom 不超界。
         onSettingChanged: function onSettingChanged(context) {
+            if (context.id !== 'crop') {
+                return;
+            }
             applyNormalizedCrop(context.state);
         },
         // 每次渲染後同步 panel refs。

@@ -666,17 +666,17 @@
                 controller.setViewMode('result');
             });
             var cropZoomInButton = app.utils.dom.el('button', {
-                className: 'secondary-button',
-                text: t('actionCropZoomIn'),
-                attrs: { type: 'button' }
+                className: 'secondary-button crop-zoom-button',
+                text: '+',
+                attrs: { type: 'button', title: t('actionCropZoomIn'), 'aria-label': t('actionCropZoomIn') }
             });
             cropZoomInButton.addEventListener('click', function () {
                 adjustCropZoom(0.1);
             });
             var cropZoomOutButton = app.utils.dom.el('button', {
-                className: 'secondary-button',
-                text: t('actionCropZoomOut'),
-                attrs: { type: 'button' }
+                className: 'secondary-button crop-zoom-button',
+                text: '-',
+                attrs: { type: 'button', title: t('actionCropZoomOut'), 'aria-label': t('actionCropZoomOut') }
             });
             cropZoomOutButton.addEventListener('click', function () {
                 adjustCropZoom(-0.1);

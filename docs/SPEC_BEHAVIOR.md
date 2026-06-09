@@ -19,6 +19,9 @@ Split From: SPEC_INDEX.md
 - 2026-06-07: Crop 面板改為 2x2 象限控制，右下旋轉與 Flip 圖示按鈕等寬平分；Flip 圖示按下後不顯示持續高亮。
 - 2026-06-07: 左側工具面板新增模式化展開規則：初始只展開 Image Input，載圖後只展開 Crop，離開 Crop 後展開 Resize / Adjust / Palette / Dither；手動回到 Image Input 或 Crop 時其他面板收合。
 - 2026-06-09: 左側工具面板改為以 feature group 管理 `source` / `prepare` / `edit` 流程；未宣告 `panelGroup` 的 feature 屬於 `none`，不顯示在工具面板項目中。
+- 2026-06-09: Crop 預設比例改為 16:9，preview toolbar 的 crop zoom 使用 `+` / `-`；Resize 移除 Fit 選單並鎖定等比；Adjust 移除 Reset Default 並在 slider 左側顯示數值。
+- 2026-06-09: Crop preview toolbar 的 `+` / `-` 改為 compact square buttons；Resize width / height 限制在合法輸出尺寸內。
+- 2026-06-09: Resize width / height 改為同列顯示，並使用和 Crop zoom / rotation 一致的長按連續調整數字輸入樣式。
 
 ## 產品目標
 
@@ -134,6 +137,7 @@ As a user, I want to crop with fixed aspect ratios, so that the output matches c
 Acceptance:
 
 - The user can choose one of the supported fixed ratios.
+- The default crop ratio is 16:9.
 - The crop overlay remains centered and represents the final output area.
 - Dragging in the preview moves the image under the fixed crop frame, not the crop frame itself.
 - Zoom, rotation, horizontal flip, and vertical flip affect the image transform without changing the selected crop ratio.
@@ -146,7 +150,12 @@ As a user, I want to set output width and height, so that the exported image mat
 
 Acceptance:
 
-- The user can set output width, output height, and fit mode.
+- The user can set output width and output height.
+- Width and height stay locked to the same aspect ratio; changing either value updates the other immediately.
+- Width and height are shown on the same row.
+- Width and height use the same repeated-step unit-number input style as Crop zoom and rotation.
+- Width and height values are constrained to the supported output size range.
+- Resize does not expose a Fit selector in the MVP.
 - Preview and export use the resize settings consistently.
 - The exported PNG dimensions match the configured output dimensions.
 
@@ -157,7 +166,9 @@ As a user, I want to adjust brightness, contrast, and saturation, so that I can 
 Acceptance:
 
 - The user can change brightness, contrast, and saturation.
-- Reset to default returns Adjust to an identity state.
+- Brightness, contrast, and saturation default to `0`.
+- Each slider shows its current numeric value on the left.
+- Each slider can be dragged to its minimum and maximum ends.
 - Preview updates should match the final pipeline result; if live feedback would be misleading, final-result consistency wins.
 
 ### US-09 Edit Palette
@@ -262,7 +273,7 @@ Dither Editor 主畫面包含：
 Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工具面板中的 feature 分類：
 
 - `source`：來源輸入流程。沒有來源圖片時，Image Input 面板自動展開並保持可用；Crop、Resize、Adjust、Palette、Dither、Effects Order、Export 與 Original / Result 反灰或隱藏，不可設定；右下角 preview toolbar 不顯示任何按鈕。已有來源圖片時手動回到 `source`，其他 tool panel 必須收合，preview toolbar 仍不顯示。
-- `prepare`：正式編輯前準備流程。目前 Crop 是唯一的 `prepare` tool。Preview 顯示原圖與 crop transform，不套用 Resize、Adjust、Palette、Dither 或其他非 Crop 演算法。只有 Image Input 與 Crop 可操作，右下角 preview toolbar 只顯示 Zoom In、Zoom Out、OK 三個按鈕。
+- `prepare`：正式編輯前準備流程。目前 Crop 是唯一的 `prepare` tool。Preview 顯示原圖與 crop transform，不套用 Resize、Adjust、Palette、Dither 或其他非 Crop 演算法。只有 Image Input 與 Crop 可操作，右下角 preview toolbar 只顯示 `+`、`-`、OK 三個按鈕。
 - `edit`：Crop 已確認或收合。App 以 Crop 範圍作為 pipeline 輸入，依目前演算法設定更新 Result；從 Crop 進入 `edit` 時，Resize、Adjust、Palette、Dither 預設展開，右下角 preview toolbar 顯示 Original 與 Result。
 - `none`：無工具面板流程歸屬。未宣告 `panelGroup` 的 feature 不顯示在左側工具面板，也不形成使用者可切換的流程。
 
@@ -323,6 +334,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 限制：
 
 - MVP 不提供 Free 自由比例。
+- 預設固定比例為 16:9。
 - Crop 面板不顯示 X、Y、Width、Height 或 Lock ratio。
 - 使用者拖曳的是原圖位置，不是裁切框。
 - Crop overlay 固定代表最後輸出的裁切範圍。
@@ -336,9 +348,16 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 
 - output width。
 - output height。
-- fit mode。
 
-驗收重點：輸出的圖片尺寸要符合設定。
+行為要求：
+
+- Width 與 Height 固定等比連動。
+- 使用者調整任一尺寸時，另一個尺寸必須立即依目前比例更新。
+- Width 與 Height 必須顯示在同一列。
+- Width 與 Height 必須使用和 Crop zoom / rotation 一致的數字輸入樣式；按住上下箭頭時數值必須連續增減。
+- Width 與 Height 必須限制在 `1..4096px` 的合法輸出尺寸內；等比換算時若另一邊會超過上限，使用者正在調整的那一邊也必須被壓回可維持比例的最大值。
+- Resize 不顯示 Fit 選單。
+- 輸出的圖片尺寸要符合設定。
 
 ### Adjust
 
@@ -351,7 +370,9 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 行為要求：
 
 - 預設值必須是不改變圖片的 identity 狀態。
-- 必須提供 reset to default。
+- 預設值必須為 `0`。
+- 每個 slider 左側必須顯示目前數值。
+- slider 必須可拉到最小與最大端點。
 - 若 live feedback 和正式 pipeline 結果會跳變，應以正式結果一致性優先。
 - Gamma 不作為主要控制項。
 
@@ -409,9 +430,9 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 - 在 `prepare` 顯示 crop overlay。
 - 讓使用者拖曳原圖位置並看到即時位置變化。
 - 在 `source` 右下角 preview toolbar 不顯示任何按鈕。
-- 在 `prepare` 右下角 preview toolbar 只能顯示 Zoom In、Zoom Out、OK 三個按鈕。
+- 在 `prepare` 右下角 preview toolbar 只能顯示 `+`、`-`、OK 三個按鈕。
 - 在 `edit` 右下角 preview toolbar 只能顯示 Original、Result 兩個按鈕。
-- Preview toolbar 內所有按鈕尺寸必須一致，不可因 mode、文字長度或 primary / secondary 樣式造成按鈕大小不同。
+- `edit` 的 Original / Result buttons 尺寸必須一致；`prepare` 的 `+` / `-` buttons 必須是 compact square buttons，OK button 可維持較寬的 primary action 尺寸。
 
 Crop preview 要求：
 

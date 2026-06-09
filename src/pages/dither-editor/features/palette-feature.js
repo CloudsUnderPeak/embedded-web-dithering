@@ -294,7 +294,7 @@
         },
         // 只處理 presetId 變更；色票直接編輯由 setCustomPalette 管理。
         onSettingChanged: function onSettingChanged(context) {
-            if (context.key !== 'presetId') {
+            if (context.id !== 'palette' || context.key !== 'presetId') {
                 return;
             }
             var presetId = normalizePresetId(context.value);

@@ -17,6 +17,7 @@
                 'src/pages/dither-editor/dither/pattern-dither.js',
                 'src/pages/dither-editor/gpu/adjust-processor.js',
                 'src/pages/dither-editor/operations/operation-registry.js',
+                'src/pages/dither-editor/constants.js',
                 'src/pages/dither-editor/feature-manifest.js',
                 'src/pages/dither-editor/feature-registry.js',
                 'src/pages/dither-editor/panel-utils.js'
@@ -31,7 +32,6 @@
             .then(function () {
                 return app.app.scriptLoader.loadMany([
                     'src/pages/dither-editor/operations/pipeline-runner.js',
-                    'src/pages/dither-editor/constants.js',
                     'src/pages/dither-editor/editor-mode-state-machine.js',
                     'src/pages/dither-editor/state.js',
                     'src/pages/dither-editor/viewport/viewport-renderer.js',

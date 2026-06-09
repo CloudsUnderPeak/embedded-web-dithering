@@ -11,7 +11,8 @@ GitHub repository: `https://github.com/CloudsUnderPeak/embedded-web-dithering.gi
 
 - Open the app directly from `index.html`.
 - Load local images or project-bundled demo assets.
-- Edit images through crop, resize, adjustment, palette, and dithering tools.
+- Edit images through fixed-ratio crop, proportional resize, adjustment, palette, and dithering tools.
+- Use a feature-group flow: source input, crop preparation, then the editable processing stack.
 - Reorder supported image-processing effects.
 - Export the processed result as PNG.
 - Keep ESP32 / embedded-device integration as a future mode, not part of the current MVP.

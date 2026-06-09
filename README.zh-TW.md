@@ -11,7 +11,8 @@ GitHub repository：`https://github.com/CloudsUnderPeak/embedded-web-dithering.g
 
 - 直接從 `index.html` 開啟 app。
 - 載入本機圖片或專案內建 demo assets。
-- 透過 crop、resize、adjustment、palette、dithering 工具編輯圖片。
+- 透過固定比例 crop、等比 resize、adjustment、palette、dithering 工具編輯圖片。
+- 使用 feature group 流程：來源輸入、crop 準備、再進入可編輯的處理 stack。
 - 重新排序支援的圖片處理 effects。
 - 將處理後結果匯出為 PNG。
 - ESP32 / embedded-device integration 保留為未來模式，不列入目前 MVP。

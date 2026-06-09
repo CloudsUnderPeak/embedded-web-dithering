@@ -29,7 +29,6 @@
         actionExport: 'Export PNG',
         actionLoadDemo: 'Load Demo',
         actionBrowseFile: 'Browse File',
-        actionResetDefault: 'Reset Default',
         actionCropZoomIn: 'Zoom In',
         actionCropZoomOut: 'Zoom Out',
         actionCropOk: 'OK',
