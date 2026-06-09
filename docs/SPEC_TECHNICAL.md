@@ -277,6 +277,8 @@ embedded-web-dithering/
           error-diffusion.js
           ordered-dither.js
           pattern-dither.js
+        gpu/
+          adjust-processor.js
         panel-utils.js
         viewport/
           viewport-controller.js
@@ -339,6 +341,18 @@ embedded-web-dithering/
       math.js
       naming.js
 ```
+
+### Dither Editor 檔案分類規則
+
+`src/pages/dither-editor/` 根目錄只放頁面級協調檔：`entry.js`、`page.js`、`state.js`、`controller.js`、`constants.js`、`feature-manifest.js`、`feature-registry.js`、`editor-mode-state-machine.js` 與 `panel-utils.js`。如果檔案只服務單一 feature，預設不放在根目錄。
+
+- `features/` 是 feature 的單一 ownership 邊界。每個 `*-feature.js` 應集中保存該 feature 的 panel builder、settings default、operation、feature hooks、dock metadata 與 `panelGroup`。不應另建平行的 `panels/` 目錄存放 feature panel，避免停用或移除 feature 時需要同步多個位置。
+- `config/` 只放開發者可擴充設定，例如 palette preset、dither algorithm、pipeline preset、display profile；不放使用者目前工作區 state。
+- `operations/` 只放跨 feature 的 operation registry 與 pipeline runner；單一 feature 的 operation implementation 預設留在該 feature script。
+- `dither/` 放 dither 演算法核心與矩陣資料，不處理 DOM、feature registration 或 editor state。
+- `gpu/` 放可選硬體加速 processor，例如 WebGL adjust processor。GPU processor 必須有 CPU fallback，且不應直接操作 tool panel 或 editor mode。
+- `viewport/` 放 canvas render、overlay render、座標轉換與 preview viewport 相關邏輯；page 仍負責 DOM mount 與工具列組合。
+- 空目錄不應保留作為未來分類提示；需要對應功能時再建立實際檔案與規格。
 
 ## 命名與 Coding Style
 
