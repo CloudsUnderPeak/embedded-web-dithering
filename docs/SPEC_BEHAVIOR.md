@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-09
+Last Updated: 2026-06-13
 Split From: SPEC_INDEX.md
 ```
 
@@ -22,6 +22,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-09: Crop 預設比例改為 16:9，preview toolbar 的 crop zoom 使用 `+` / `-`；Resize 移除 Fit 選單並鎖定等比；Adjust 移除 Reset Default 並在 slider 左側顯示數值。
 - 2026-06-09: Crop preview toolbar 的 `+` / `-` 改為 compact square buttons；Resize width / height 限制在合法輸出尺寸內。
 - 2026-06-09: Resize width / height 改為同列顯示，並使用和 Crop zoom / rotation 一致的長按連續調整數字輸入樣式。
+- 2026-06-13: `prepare` 期間 edit tools 保持可選；從 `prepare` 點選單一 edit tool 時離開 Crop 並只展開該 edit panel。
 
 ## 產品目標
 
@@ -65,8 +66,8 @@ MVP 不包含：
 2. App 顯示 Dither Editor 頁面。
 3. 第一次進入且尚未載入圖片時，`source` group 的 Image Input 自動展開；只有來源輸入可操作，其餘工具與動作反灰停用。
 4. 使用者匯入本機圖片、選擇 demo，或建立新圖片。
-5. App 解碼圖片後自動進入 `prepare` group 並只展開 Crop；此時只有 Image Input 與 Crop 可操作。
-6. 使用者按下右下角顯眼的 OK，或自行收合 Crop，App 進入 `edit` group，並展開 Resize、Adjust、Palette、Dither。
+5. App 解碼圖片後自動進入 `prepare` group 並只展開 Crop；此時 Image Input、Crop 與 edit tools 可選。
+6. 使用者按下右下角顯眼的 OK 或自行收合 Crop 時，App 進入 `edit` group 並展開 Resize、Adjust、Palette、Dither；若使用者改點單一 edit tool，則只展開該 edit panel。
 7. `edit` group 會依 Crop 範圍與 Resize、Adjust、Palette、Dither 等設定更新 Result。
 8. 使用者可拖曳 Effects order，改變圖片處理順序。
 9. 使用者可在圖片呈現區右下角切換 Original / Result。
@@ -95,8 +96,9 @@ Acceptance:
 
 - Given a supported `PNG`, `JPEG/JPG`, or `WebP` file, when the user selects it from Image Input, then the preview area shows the image.
 - The editor enters the prepare flow after the image loads, with only Crop expanded and the OK button shown in the preview toolbar.
-- While the prepare flow is active, only Image Input and Crop controls can be operated.
+- While the prepare flow is active, Image Input, Crop, and edit tool rows can be selected.
 - After the user presses OK or collapses Crop, the editor enters the edit flow, expands Resize / Adjust / Palette / Dither, and applies the configured pipeline to the cropped range.
+- When the user selects one edit tool from the prepare flow, the editor enters the edit flow, collapses Crop, opens only the selected edit panel, and applies the configured pipeline.
 - When the user manually expands Image Input or Crop after an image is loaded, all other tool panels collapse.
 - The source image must not be uploaded to a server.
 
@@ -273,7 +275,7 @@ Dither Editor 主畫面包含：
 Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工具面板中的 feature 分類：
 
 - `source`：來源輸入流程。沒有來源圖片時，Image Input 面板自動展開並保持可用；Crop、Resize、Adjust、Palette、Dither、Effects Order、Export 與 Original / Result 反灰或隱藏，不可設定；右下角 preview toolbar 不顯示任何按鈕。已有來源圖片時手動回到 `source`，其他 tool panel 必須收合，preview toolbar 仍不顯示。
-- `prepare`：正式編輯前準備流程。目前 Crop 是唯一的 `prepare` tool。Preview 顯示原圖與 crop transform，不套用 Resize、Adjust、Palette、Dither 或其他非 Crop 演算法。只有 Image Input 與 Crop 可操作，右下角 preview toolbar 只顯示 `+`、`-`、OK 三個按鈕。
+- `prepare`：正式編輯前準備流程。目前 Crop 是唯一的 `prepare` tool。Preview 顯示原圖與 crop transform，不套用 Resize、Adjust、Palette、Dither 或其他非 Crop 演算法。Image Input、Crop 與 edit tool rows 可選；右下角 preview toolbar 只顯示 `+`、`-`、OK 三個按鈕。
 - `edit`：Crop 已確認或收合。App 以 Crop 範圍作為 pipeline 輸入，依目前演算法設定更新 Result；從 Crop 進入 `edit` 時，Resize、Adjust、Palette、Dither 預設展開，右下角 preview toolbar 顯示 Original 與 Result。
 - `none`：無工具面板流程歸屬。未宣告 `panelGroup` 的 feature 不顯示在左側工具面板，也不形成使用者可切換的流程。
 
@@ -281,6 +283,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 
 - 載入任何新圖片或 demo 後，App 必須重設演算法設定為 default，並進入 `prepare`；若沒有 enabled `prepare` tool，則直接進入 `edit`。
 - 在 `prepare` 按下 OK 或自行收合 Crop 後，App 進入 `edit` 並開始計算正式 preview。
+- 在 `prepare` 點選單一 edit tool 後，App 必須離開 `prepare`、收合 Crop、進入 `edit`，並只展開被點選的 edit panel。
 - 在 `edit` 重新展開 Crop，視同回到 `prepare`，並收合其他面板；此時停止顯示演算法結果，回到原圖 crop transform preview。
 - 在已載入圖片後手動展開 Image Input，Crop 與其他編輯面板必須收合；若原本在 `prepare`，視同離開 Crop 並回到正式 preview 流程。
 - 不支援格式載入失敗時，不應清掉上一個有效工作區；若沒有上一張圖，維持 `source`。

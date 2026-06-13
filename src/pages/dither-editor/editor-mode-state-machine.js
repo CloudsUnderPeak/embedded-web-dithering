@@ -139,6 +139,27 @@
         return state.mode;
     }
 
+    function openEditPanel(state, activeTool) {
+        if (!hasImage(state)) {
+            return enterSource(state);
+        }
+        if (!isToolInGroup(activeTool, MODE_GROUP_EDIT)) {
+            return enterEdit(state);
+        }
+        state.mode = MODE_GROUP_EDIT;
+        state.openToolPanels = state.openToolPanels || {};
+        pruneUnavailablePanels(state);
+        closePanelGroup(state, MODE_GROUP_PREPARE);
+        closePanelGroup(state, MODE_GROUP_SOURCE);
+        panelIdsForGroup(state, MODE_GROUP_EDIT).forEach(function (id) {
+            state.openToolPanels[id] = id === activeTool;
+        });
+        state.activeTool = activeTool;
+        state.viewMode = state.viewMode === 'original' ? 'original' : 'result';
+        syncLegacyPanelOpenFlag(state);
+        return state.mode;
+    }
+
     function normalizeEdit(state) {
         state.mode = MODE_GROUP_EDIT;
         state.openToolPanels = state.openToolPanels || {};
@@ -159,7 +180,9 @@
             return isToolInGroup(id, MODE_GROUP_SOURCE);
         }
         if (state.mode === MODE_GROUP_PREPARE) {
-            return isToolInGroup(id, MODE_GROUP_SOURCE) || isToolInGroup(id, MODE_GROUP_PREPARE);
+            return isToolInGroup(id, MODE_GROUP_SOURCE)
+                || isToolInGroup(id, MODE_GROUP_PREPARE)
+                || isToolInGroup(id, MODE_GROUP_EDIT);
         }
         return true;
     }
@@ -207,11 +230,15 @@
         enterPrepare: enterPrepare,
         enterEdit: enterEdit,
         openSourcePanel: openSourcePanel,
+        openEditPanel: openEditPanel,
         isSourceTool: function isSourceTool(id) {
             return isToolInGroup(id, MODE_GROUP_SOURCE);
         },
         isPrepareTool: function isPrepareTool(id) {
             return isToolInGroup(id, MODE_GROUP_PREPARE);
+        },
+        isEditTool: function isEditTool(id) {
+            return isToolInGroup(id, MODE_GROUP_EDIT);
         },
         canUseTool: canUseTool,
         canUseAction: canUseAction,

@@ -108,6 +108,11 @@
                         }
                         return;
                     }
+                    if (modeMachine().isEditTool(tool.id)
+                        && controller.state.mode === modeMachine().groups.PREPARE) {
+                        controller.openEditPanel(tool.id);
+                        return;
+                    }
                     controller.state.openToolPanels = controller.state.openToolPanels || {};
                     controller.state.openToolPanels[tool.id] = !isToolOpen(controller.state, tool.id);
                     controller.state.activeTool = tool.id;

@@ -240,6 +240,19 @@
         this.render(this.state);
     };
 
+    DitherEditorController.prototype.openEditPanel = function openEditPanel(activeTool) {
+        if (!this.state.sourceImageData) {
+            return;
+        }
+        var wasPrepareMode = this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE;
+        app.pages.ditherEditor.editorModeStateMachine.openEditPanel(this.state, activeTool);
+        if (wasPrepareMode && this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.EDIT) {
+            this.schedulePreview();
+            return;
+        }
+        this.render(this.state);
+    };
+
     DitherEditorController.prototype.closePrepareMode = function closePrepareMode() {
         if (!this.state.sourceImageData) {
             return;

@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-09
+Last Updated: 2026-06-13
 Split From: SPEC_INDEX.md
 ```
 
@@ -23,6 +23,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-09: `onSettingChanged` lifecycle 改為廣播給 enabled features，由 feature 依 `context.id` 判斷是否處理，支援跨 feature setting 同步且避免 controller 硬寫 feature id。
 - 2026-06-09: Crop preview toolbar 的 `+` / `-` 使用 compact square button；Resize output 單邊尺寸上限集中到 `MAX_RESIZE_OUTPUT_SIZE`。
 - 2026-06-09: `constants.js` 提前於 feature scripts 載入；Resize width / height controls 改用同列 `unitNumberInput(..., 'px', ...)` 並共用 Crop 數字輸入樣式。
+- 2026-06-13: `prepare` mode 放行 edit tool rows；從 `prepare` 開啟指定 edit tool 時，state machine 只展開該 edit panel 並切入正式 preview 流程。
 
 ## Plug-and-Play 架構要求
 
@@ -549,7 +550,7 @@ const editorState = {
 Groups：
 
 - `source`：來源輸入 group。沒有來源圖片時只展開 `panelGroup: 'source'` 的 tool，且只有 `source` tool 可操作；右下角 preview toolbar 不可顯示任何按鈕。Preview stage 必須顯示中央 upload dropzone，支援 drop 與 Browse File；Image Input panel 不應重複顯示 Choose/Drop controls。有來源圖片時手動回到 `source` group 必須收合其他 group，preview toolbar 仍不顯示。
-- `prepare`：正式編輯前準備 group。有來源圖且只展開 `panelGroup: 'prepare'` 的 tool；目前 Crop feature 是唯一的 `prepare` tool。只有 `source` 與 `prepare` tool 可操作；Preview 顯示 `sourceImageData` 加上 Crop transform，不跑完整 pipeline，也不套用 Resize、Adjust、Palette、Dither；右下角 preview toolbar 只能顯示 `+`、`-`、OK。
+- `prepare`：正式編輯前準備 group。有來源圖且只展開 `panelGroup: 'prepare'` 的 tool；目前 Crop feature 是唯一的 `prepare` tool。`source`、`prepare` 與 `edit` tool rows 可操作；Preview 顯示 `sourceImageData` 加上 Crop transform，不跑完整 pipeline，也不套用 Resize、Adjust、Palette、Dither；右下角 preview toolbar 只能顯示 `+`、`-`、OK。
 - `edit`：有來源圖且 Crop 收合。Preview / Export 使用正式 pipeline，右下角 preview toolbar 只能顯示 Original、Result。從 Crop 收合或 OK 進入 `edit` 時，應展開目前 enabled dock tools 中明確宣告 `panelGroup: 'edit'` 的 panel group。
 - `none`：無面板流程歸屬。feature 未宣告 `panelGroup` 時預設屬於 `none`，不顯示在左側 tool dock，也不作為可切換的 editor mode。
 
@@ -560,10 +561,11 @@ Groups：
 - 展開 `prepare` tool 必須進入 `prepare`；收合 prepare tool 或按 OK 必須進入 `edit` 並排程正式 preview。
 - 成功載圖或手動展開 Crop 時，`editor-mode-state-machine.js` 必須透過 feature registry 查詢 `prepare` panel group，並將 `openToolPanels` 設為只包含該 group；不可保留 Image Input 或其他 edit panel 的展開狀態。
 - 收合 Crop 或按 OK 進入 `edit` 時，`editor-mode-state-machine.js` 必須透過 feature registry 展開 enabled dock tools 中的 `edit` panel group，不可硬寫特定 feature id 清單。
+- 在 `prepare` 點選 `panelGroup: 'edit'` 的 tool row 時，controller 必須透過 state machine 離開 `prepare`，收合 source/prepare panels，只展開被點選的 edit panel，並排程正式 preview。
 - 已有圖片時手動展開 source tool 必須收合其他 tool panel；若當下是 `prepare`，controller 必須先透過 state machine 離開 prepare group，再排程正式 preview。
 - `prepare` 中的 Crop setting 變更只能重畫 crop preview，不可排程完整 pipeline。離開 `prepare` 後才依目前 settings 跑正式 preview。
 - `prepare` 中的 setting guard 必須依 feature 的 `panelGroup` 判斷可用 settings group，不可用 `group === 'crop'` 這類固定 id 比對。
-- 沒有來源圖片或 `prepare` 中的非允許 tool/action event 必須被 controller guard 掉，即使 DOM disabled 被繞過也不可改 settings、reorder effects 或 export。
+- 沒有來源圖片或目前 mode 不允許的 tool/action event 必須被 controller guard 掉，即使 DOM disabled 被繞過也不可改 settings、reorder effects 或 export。
 - `page.js` 必須只根據 `mode` 決定 preview toolbar 內容：`source` 隱藏整個 toolbar，`prepare` 只顯示 Crop 控制列，`edit` 只顯示 Original / Result 切換列。
 - `page.js` 的 tool button handler 應只呼叫 controller 或 state machine 的語意入口（例如 open source panel、open prepare mode、close prepare mode），並透過 `panelGroup` 判斷流程入口；不應在一般 feature panel event handler 中分散實作模式切換規則。
 - 非目前模式的 preview toolbar row 必須使用 `hidden` 真正移出 layout，不可只做 disabled 或透明處理。
