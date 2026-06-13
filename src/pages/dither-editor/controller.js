@@ -106,6 +106,7 @@
         this.state.settings[group][key] = value;
         // previous 讓 feature 可以在 normalize 或 UI sync 時知道變更前狀態。
         this.runFeatureHook('onSettingChanged', { id: group, key: key, value: value, previous: previous }, { broadcast: true });
+        this.invalidatePreparedPreview(group);
         if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE) {
             this.state.status = 'ready';
             this.render(this.state);
@@ -122,6 +123,7 @@
         var previous = Object.assign({}, this.state.settings[group]);
         Object.assign(this.state.settings[group], values);
         this.runFeatureHook('onSettingChanged', { id: group, key: null, values: values, previous: previous }, { broadcast: true });
+        this.invalidatePreparedPreview(group);
         if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE) {
             this.state.status = 'ready';
             this.render(this.state);
@@ -205,12 +207,40 @@
         this.schedulePreview();
     };
 
+    DitherEditorController.prototype.invalidatePreparedPreview = function invalidatePreparedPreview(group) {
+        if (app.pages.ditherEditor.featureRegistry.panelGroupFor(group)
+            === app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE) {
+            this.state.preparedImageData = null;
+        }
+    };
+
+    DitherEditorController.prototype.updatePreparedPreview = function updatePreparedPreview() {
+        if (!this.state.sourceImageData) {
+            this.state.preparedImageData = null;
+            return null;
+        }
+        this.state.preparedImageData = app.pages.ditherEditor.pipelineRunner.runPanelGroup(
+            this.state.sourceImageData,
+            this.state,
+            app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE
+        );
+        return this.state.preparedImageData;
+    };
+
     // 切換 Original/Result 檢視，不改變 pipeline 結果。
     DitherEditorController.prototype.setViewMode = function setViewMode(mode) {
         if (this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.groups.EDIT) {
             return;
         }
-        this.state.viewMode = mode;
+        try {
+            if (mode === 'original') {
+                this.updatePreparedPreview();
+            }
+            this.state.viewMode = mode;
+        } catch (error) {
+            this.state.status = 'error';
+            this.state.error = error.message;
+        }
         this.render(this.state);
     };
 
@@ -277,6 +307,16 @@
         }
         clearTimeout(this.previewTimer);
         this.state.status = 'processing-preview';
+        if (this.state.viewMode === 'original') {
+            try {
+                this.updatePreparedPreview();
+            } catch (error) {
+                this.state.status = 'error';
+                this.state.error = error.message;
+                this.render(this.state);
+                return;
+            }
+        }
         this.render(this.state);
         // debounce 避免 slider/select 每次 input 都立即跑完整 pipeline。
         this.previewTimer = setTimeout(function () {

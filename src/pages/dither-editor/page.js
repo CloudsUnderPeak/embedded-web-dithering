@@ -581,7 +581,7 @@
         var image = cropVisible
             ? state.sourceImageData
             : state.viewMode === 'original'
-                ? state.sourceImageData
+                ? state.preparedImageData || state.sourceImageData
                 : state.previewImageData || state.outputImageData || state.sourceImageData;
         var holdPendingPreview = shouldHoldPendingPreview(state, cropVisible);
         var cropMetrics = null;

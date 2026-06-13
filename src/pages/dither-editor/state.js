@@ -44,6 +44,7 @@
             mode: app.pages.ditherEditor.editorModeStateMachine.groups.SOURCE,
             fileName: 'Untitled',
             sourceImageData: null,
+            preparedImageData: null,
             previewImageData: null,
             outputImageData: null,
             livePreview: null,

@@ -28,6 +28,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-13: 已載入圖片的 `source` 流程預留 preview toolbar 高度但不顯示任何按鈕，避免切換流程時圖片縮放。
 - 2026-06-13: 從 `prepare` 進入 `edit` 時避免先顯示 source fallback 再切到 result，減少明顯圖片重載感。
 - 2026-06-13: prepare crop frame 與 edit preview 使用同一個 preview stage content-box 對齊基準，避免 1px 級切換位移。
+- 2026-06-13: `edit` 的 Original preview 改為顯示 prepare 後的原圖，而不是未經 prepare 的 source image。
 
 ## 產品目標
 
@@ -282,7 +283,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 
 - `source`：來源輸入流程。沒有來源圖片時，Image Input 面板自動展開並保持可用；Crop、Resize、Adjust、Palette、Dither、Effects Order、Export 與 Original / Result 反灰或隱藏，不可設定；右下角 preview toolbar 不顯示任何按鈕。已有來源圖片時手動回到 `source`，其他 tool panel 必須收合，preview toolbar 不顯示按鈕但保留高度。
 - `prepare`：正式編輯前準備流程。目前 Crop 是唯一的 `prepare` tool。Preview 顯示原圖與 crop transform，不套用 Resize、Adjust、Palette、Dither 或其他非 Crop 演算法。Image Input、Crop 與 edit tool rows 可選；右下角 preview toolbar 只顯示 `+`、`-`、OK 三個按鈕。
-- `edit`：Crop 已確認或收合。App 以 Crop 範圍作為 pipeline 輸入，依目前演算法設定更新 Result；從 Crop 進入 `edit` 時，Resize、Adjust、Palette、Dither 預設展開，右下角 preview toolbar 顯示 Original 與 Result。
+- `edit`：Crop 已確認或收合。App 以 Crop 範圍作為 pipeline 輸入，依目前演算法設定更新 Result；Original 顯示 prepare 後的原圖，不顯示未經 prepare 的 source image。從 Crop 進入 `edit` 時，Resize、Adjust、Palette、Dither 預設展開，右下角 preview toolbar 顯示 Original 與 Result。
 - `none`：無工具面板流程歸屬。未宣告 `panelGroup` 的 feature 不顯示在左側工具面板，也不形成使用者可切換的流程。
 
 流程轉換：
@@ -435,7 +436,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 
 - 顯示目前圖片。
 - 顯示處理後結果。
-- 在 `edit` 支援 Original / Result 切換。
+- 在 `edit` 支援 Original / Result 切換；Original 必須顯示 prepare 後、edit effects 前的原圖。
 - 支援 zoom / pan。
 - 在 `prepare` 顯示 crop overlay。
 - 讓使用者拖曳原圖位置並看到即時位置變化。
