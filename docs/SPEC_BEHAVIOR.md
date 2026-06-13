@@ -22,6 +22,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-09: Crop 預設比例改為 16:9，preview toolbar 的 crop zoom 使用 `+` / `-`；Resize 移除 Fit 選單並鎖定等比；Adjust 移除 Reset Default 並在 slider 左側顯示數值。
 - 2026-06-09: Crop preview toolbar 的 `+` / `-` 改為 compact square buttons；Resize width / height 限制在合法輸出尺寸內。
 - 2026-06-09: Resize width / height 改為同列顯示，並使用和 Crop zoom / rotation 一致的長按連續調整數字輸入樣式。
+- 2026-06-13: Resize width / height 中間新增等比連動提示圖示，讓固定比例關係更明確。
 - 2026-06-13: `prepare` 期間 edit tools 保持可選；從 `prepare` 點選單一 edit tool 時離開 Crop 並只展開該 edit panel。
 - 2026-06-13: Crop frame 與 edit preview 改用同一個有內距的預覽框尺寸，避免 prepare 與 edit 切換時圖片位置跳動。
 - 2026-06-13: 已載入圖片的 `source` 流程預留 preview toolbar 高度但不顯示任何按鈕，避免切換流程時圖片縮放。
@@ -159,6 +160,7 @@ Acceptance:
 - The user can set output width and output height.
 - Width and height stay locked to the same aspect ratio; changing either value updates the other immediately.
 - Width and height are shown on the same row.
+- Width and height show a linked-ratio indicator between the two controls.
 - Width and height use the same repeated-step unit-number input style as Crop zoom and rotation.
 - Width and height values are constrained to the supported output size range.
 - Resize does not expose a Fit selector in the MVP.
@@ -361,6 +363,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 - Width 與 Height 固定等比連動。
 - 使用者調整任一尺寸時，另一個尺寸必須立即依目前比例更新。
 - Width 與 Height 必須顯示在同一列。
+- Width 與 Height 中間必須顯示等比連動提示圖示。
 - Width 與 Height 必須使用和 Crop zoom / rotation 一致的數字輸入樣式；按住上下箭頭時數值必須連續增減。
 - Width 與 Height 必須限制在 `1..4096px` 的合法輸出尺寸內；等比換算時若另一邊會超過上限，使用者正在調整的那一邊也必須被壓回可維持比例的最大值。
 - Resize 不顯示 Fit 選單。

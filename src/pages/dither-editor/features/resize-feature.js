@@ -76,6 +76,18 @@
         });
     }
 
+    function linkedSizeIcon() {
+        return app.utils.dom.el('span', {
+            className: 'resize-size-link',
+            text: '↔',
+            attrs: {
+                role: 'img',
+                title: 'Width and height are linked',
+                'aria-label': 'Width and height are linked'
+            }
+        });
+    }
+
     app.pages.ditherEditor.featureRegistry.register({
         id: 'resize',
         icon: '<>',
@@ -143,6 +155,7 @@
                     className: 'resize-size-row',
                     children: [
                         sizeField('Width', widthInput),
+                        linkedSizeIcon(),
                         sizeField('Height', heightInput)
                     ]
                 })
