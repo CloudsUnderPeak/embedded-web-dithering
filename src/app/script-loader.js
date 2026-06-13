@@ -17,13 +17,12 @@
     };
 
     app.app.scriptLoader = {
-        // 依序載入 script，保證 classic script 依賴順序穩定。
+        load: loadScript,
+        // 同批 script 先全部插入，讓瀏覽器可並行下載；async=false 保持 classic script 執行順序。
         loadMany: function loadMany(paths) {
-            return paths.reduce(function (chain, path) {
-                return chain.then(function () {
-                    return loadScript(path);
-                });
-            }, Promise.resolve());
+            return Promise.all(paths.map(function (path) {
+                return loadScript(path);
+            }));
         }
     };
 

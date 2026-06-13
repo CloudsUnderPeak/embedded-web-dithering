@@ -2,6 +2,7 @@
     // 圖片載入入口：所有使用者圖片都必須先通過格式 gate，再轉成 origin-clean ImageData。
     // 只允許 PNG / JPEG / WebP，是為了讓後續 canvas 演算法流程穩定可預期。
     var DEMO_IMAGE_URL = 'assets/demo/demo-16x9.png';
+    var DEMO_IMAGE_DATA_SCRIPT = 'assets/demo/demo-16x9-data.js';
     var ACCEPTED_IMAGE_TYPES = 'image/png,image/jpeg,image/webp';
     var SUPPORTED_IMAGE_TYPES = {
         'image/png': true,
@@ -118,12 +119,7 @@
         return blobToImageData(file, maxLongEdge);
     }
 
-    // 載入專案內建 demo 圖；優先使用 data asset 避免 file:// 跨來源限制。
-    function loadDemoImage(maxLongEdge) {
-        var embeddedDemo = app.assets && app.assets.demoImages && app.assets.demoImages.demo16x9;
-        if (embeddedDemo) {
-            return loadDataUrlImage(embeddedDemo, maxLongEdge);
-        }
+    function loadDemoImageFile(maxLongEdge) {
         // 若 data asset 未載入，才退回同源 demo 檔；開發伺服器情境可用，file:// 可能被擋。
         if (!window.fetch) {
             return Promise.reject(new Error('Demo image data asset is missing.'));
@@ -138,6 +134,30 @@
             .then(function (blob) {
                 return blobToImageData(blob, maxLongEdge);
             });
+    }
+
+    // 載入專案內建 demo 圖；優先使用 data asset 避免 file:// 跨來源限制。
+    function loadDemoImage(maxLongEdge) {
+        var embeddedDemo = app.assets && app.assets.demoImages && app.assets.demoImages.demo16x9;
+        if (embeddedDemo) {
+            return loadDataUrlImage(embeddedDemo, maxLongEdge);
+        }
+        if (app.app && app.app.scriptLoader && app.app.scriptLoader.load) {
+            return app.app.scriptLoader.load(DEMO_IMAGE_DATA_SCRIPT)
+                .then(function () {
+                    var loadedDemo = app.assets
+                        && app.assets.demoImages
+                        && app.assets.demoImages.demo16x9;
+                    if (!loadedDemo) {
+                        throw new Error('Demo image data asset is missing.');
+                    }
+                    return loadDataUrlImage(loadedDemo, maxLongEdge);
+                })
+                .catch(function () {
+                    return loadDemoImageFile(maxLongEdge);
+                });
+        }
+        return loadDemoImageFile(maxLongEdge);
     }
 
     // 建立白底空白 ImageData；目前 UI 不直接暴露 blank canvas 建立入口。

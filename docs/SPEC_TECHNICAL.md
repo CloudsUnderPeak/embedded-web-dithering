@@ -28,6 +28,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-13: `source` group 載入圖片後保留 preview toolbar 高度但隱藏所有 button rows，避免切到 `prepare` / `edit` 時 preview stage 高度改變。
 - 2026-06-13: `viewport-renderer.js` 改為 buffer 組幀後提交可見 canvas；首次進入 `edit` 且 result 尚未完成時保留上一個 preview frame。
 - 2026-06-13: preview frame fit 改用 preview stage content-box 尺寸，避免 border-box 導致 prepare / edit 之間出現微小對齊差。
+- 2026-06-13: Demo data asset 改為按下 Load Demo 時才載入；動態 script loader 改為同批並行下載、依插入順序執行。
 
 ## Plug-and-Play 架構要求
 
@@ -488,7 +489,7 @@ const defaultDitherOptions = {
 <script src="src/main.js"></script>
 ```
 
-`entry.js` 可以透過動態插入 classic `<script>` 的方式依序載入該頁檔案。不得使用 ES Modules `import` / `export`，也不得用會被 `file://` CORS 擋住的 template/script `fetch()` 作為唯一載入方式。
+`entry.js` 可以透過動態插入 classic `<script>` 的方式載入該頁檔案；同批 scripts 可一次插入以便瀏覽器並行下載，但每支 script 必須設為 `async = false`，維持 classic script 依插入順序執行。不得使用 ES Modules `import` / `export`，也不得用會被 `file://` CORS 擋住的 template/script `fetch()` 作為唯一載入方式。
 
 每個檔案使用 IIFE 或清楚的 namespace assignment：
 
@@ -1455,7 +1456,7 @@ accept="image/png,image/jpeg,image/webp"
 
 禁止讓 `SVG`、遠端圖片 URL 或可引用外部資源的圖片進入 canvas 後再呼叫 `getImageData()`，因為它們可能造成 canvas taint。若 `getImageData()` 仍遇到 `SecurityError`，必須轉成使用者可理解的錯誤訊息，不能讓瀏覽器原始例外直接漏到 UI。
 
-內建 demo 應保留來源圖片於 `assets/demo/*`，並提供由該圖片產生的 JS data asset，例如 `assets/demo/demo-16x9-data.js`。Standalone `file://` 模式必須優先從 JS data asset 載入 demo，再轉成 `Blob -> createImageBitmap -> ImageData`；不可在 `file://` 下直接把相對路徑圖片畫進 canvas 後呼叫 `getImageData()`，否則瀏覽器可能因 origin 規則造成 canvas taint。
+內建 demo 應保留來源圖片於 `assets/demo/*`，並提供由該圖片產生的 JS data asset，例如 `assets/demo/demo-16x9-data.js`。JS data asset 不應阻塞首頁初載，應在使用者按下 Load Demo 時才透過 classic script lazy load；Standalone `file://` 模式必須優先從 JS data asset 載入 demo，再轉成 `Blob -> createImageBitmap -> ImageData`。不可在 `file://` 下直接把相對路徑圖片畫進 canvas 後呼叫 `getImageData()`，否則瀏覽器可能因 origin 規則造成 canvas taint。
 
 ## 圖片尺寸與效能策略
 
