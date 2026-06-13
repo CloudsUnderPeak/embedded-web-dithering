@@ -1,6 +1,6 @@
 ---
 name: staged-commit
-description: Create a commit from staged changes. Use when the user invokes `/commit`, `/commit all`, `$staged-commit`, or asks Codex to inspect the staging area, generate a `[Add]` or `[Fix]` commit title with numbered details, and commit staged changes. `/commit all` first stages all current changes.
+description: Create a commit from staged changes. Use when the user invokes `/commit`, `/commit all`, `$staged-commit`, or asks Codex to inspect the staging area, generate a `[Add]`, `[Modify]`, or `[Fix]` commit title with numbered details, and commit staged changes. `/commit all` first stages all current changes.
 ---
 
 # Staged Commit
@@ -30,6 +30,7 @@ Use this format:
 Allowed types:
 
 - `[Add]`: new capability, new documentation, new config, new structure, new asset, or intentional expansion.
+- `[Modify]`: change existing behavior, UI, documentation, config, structure, or implementation without primarily adding a new capability or fixing a defect.
 - `[Fix]`: bug fix, broken link fix, typo correction, behavior correction, or correction to existing documentation/config.
 
 Title rules:
@@ -56,6 +57,11 @@ Examples:
 2. Route New Image through the file picker
 3. Update behavior and technical specs
 
+[Modify] crop control layout
+1. Rework existing crop controls into an aligned grid
+2. Replace text actions with icon controls
+3. Update related specs
+
 [Fix] crop overlay rotation
 1. Keep the crop frame centered during rotation
 2. Prevent result controls from showing in crop mode
@@ -69,7 +75,8 @@ Examples:
 3. Run `git status --short`.
 4. Run `git diff --cached --stat`.
 5. Run `git diff --cached` and infer the main intent.
-6. Choose `[Add]` or `[Fix]`.
+6. Choose `[Add]`, `[Modify]`, or `[Fix]` by the staged diff's primary intent.
+   - Prefer `[Modify]` for changes to existing features, UI, docs, config, or structure that are neither a new capability nor a defect correction.
 7. Write concise numbered detail lines that summarize the staged diff.
 8. Show the full planned multiline commit message if the user did not explicitly ask to skip confirmation.
 9. Commit with exactly the staged changes using the exact multiline message.

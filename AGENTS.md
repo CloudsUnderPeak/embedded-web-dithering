@@ -25,14 +25,14 @@ Before changing requirements, specs, or behavior expectations, read `docs/SPEC_I
   - Read `.codex/skills/staged-commit/SKILL.md`.
   - Only inspect and commit staged changes.
   - Do not run `git add` for plain `/commit`.
-  - Use commit messages in `[Add] summary` or `[Fix] summary` format.
+  - Use commit messages in `[Add] summary`, `[Modify] summary`, or `[Fix] summary` format.
   - Use a concise commit-title summary.
 
 - `/commit all`
   - Treat as the all-changes variant of `/commit`.
   - First run `git add --all` to stage all current changes.
   - Then continue with the same staged commit workflow.
-  - Use commit messages in `[Add] summary` or `[Fix] summary` format.
+  - Use commit messages in `[Add] summary`, `[Modify] summary`, or `[Fix] summary` format.
   - Use a concise commit-title summary.
 
 ## Think Before Coding
