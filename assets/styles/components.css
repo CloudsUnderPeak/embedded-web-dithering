@@ -676,6 +676,10 @@ body.is-sorting * {
     display: none;
 }
 
+.preview-toolbar.is-reserved {
+    min-height: var(--preview-toolbar-button-height);
+}
+
 .preview-toolbar .button-row {
     flex-wrap: nowrap;
 }

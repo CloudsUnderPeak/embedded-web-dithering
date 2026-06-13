@@ -6,6 +6,8 @@
     var sortable = null;
     var refs = {};
     var cachedState = null;
+    var PREVIEW_FRAME_INSET = 32;
+    var NARROW_PREVIEW_FRAME_INSET = 16;
 
     // 取得 UI 文字，缺字串時回傳 key 方便除錯。
     function t(key) {
@@ -241,7 +243,10 @@
         }
         var isPrepareMode = state.mode === modeMachine().groups.PREPARE;
         var isEditMode = state.mode === modeMachine().groups.EDIT;
-        refs.previewToolbar.hidden = !isPrepareMode && !isEditMode;
+        var shouldReserveToolbar = Boolean(state.sourceImageData && !isPrepareMode && !isEditMode);
+        refs.previewToolbar.hidden = !isPrepareMode && !isEditMode && !shouldReserveToolbar;
+        refs.previewToolbar.classList.toggle('is-reserved', shouldReserveToolbar);
+        refs.previewToolbar.setAttribute('aria-hidden', shouldReserveToolbar ? 'true' : 'false');
         refs.cropControlRow.hidden = !isPrepareMode;
         refs.previewToggleRow.hidden = !isEditMode;
         refs.cropZoomInButton.disabled = !isPrepareMode;
@@ -328,6 +333,27 @@
         return ratio ? ratio.label : '';
     }
 
+    function previewFrameInset(isNarrowScreen) {
+        return isNarrowScreen ? NARROW_PREVIEW_FRAME_INSET : PREVIEW_FRAME_INSET;
+    }
+
+    function fitPreviewFrame(width, height, stageRect, inset) {
+        if (!width || !height || !stageRect.width || !stageRect.height) {
+            return null;
+        }
+        var maxWidth = Math.max(1, stageRect.width - inset * 2);
+        var maxHeight = Math.max(1, stageRect.height - inset * 2);
+        var scale = Math.min(1, maxWidth / width, maxHeight / height);
+        if (!Number.isFinite(scale) || scale <= 0) {
+            return null;
+        }
+        return {
+            scale: scale,
+            width: width * scale,
+            height: height * scale
+        };
+    }
+
     // 計算 crop preview canvas 與 overlay 在畫面上的縮放比例。
     function cropDisplayMetrics(state) {
         // Crop overlay 的 CSS 尺寸與 canvas 內部尺寸分開計算。
@@ -346,22 +372,21 @@
         };
         var stageRect = refs.previewStage.getBoundingClientRect();
         var isNarrowScreen = window.matchMedia('(max-width: 920px)').matches;
-        var scale = isNarrowScreen
-            ? stageRect.width / layout.frame.width
-            : Math.min(
-                1,
-                stageRect.width / state.sourceImageData.width,
-                stageRect.height / state.sourceImageData.height
-            );
-        // 桌面版不改變 crop frame scale，但允許內部 canvas 覆蓋整個 preview stage，
-        // 讓左右/上下 checkerboard 空間可以被 pan/rotation 利用。
-        var stageWidthInImageSpace = stageRect.width / scale;
-        if (!isNarrowScreen && Number.isFinite(stageWidthInImageSpace) && stageWidthInImageSpace > layout.width) {
+        var inset = previewFrameInset(isNarrowScreen);
+        var frameFit = fitPreviewFrame(
+            layout.frame.width,
+            layout.frame.height,
+            stageRect,
+            inset
+        ) || { scale: 1 };
+        var scale = frameFit.scale;
+        var stageWidthInImageSpace = Math.max(1, stageRect.width) / scale;
+        if (Number.isFinite(stageWidthInImageSpace) && stageWidthInImageSpace > layout.width) {
             layout.frame.x += (stageWidthInImageSpace - layout.width) / 2;
             layout.width = stageWidthInImageSpace;
         }
-        var stageHeightInImageSpace = stageRect.height / scale;
-        if (!isNarrowScreen && Number.isFinite(stageHeightInImageSpace) && stageHeightInImageSpace > layout.height) {
+        var stageHeightInImageSpace = Math.max(1, stageRect.height) / scale;
+        if (Number.isFinite(stageHeightInImageSpace) && stageHeightInImageSpace > layout.height) {
             layout.frame.y += (stageHeightInImageSpace - layout.height) / 2;
             layout.height = stageHeightInImageSpace;
         }
@@ -372,6 +397,20 @@
             scale: scale,
             isNarrowScreen: isNarrowScreen
         };
+    }
+
+    function previewDisplayMetrics(imageData) {
+        if (!imageData || !refs.previewStage) {
+            return null;
+        }
+        var stageRect = refs.previewStage.getBoundingClientRect();
+        var isNarrowScreen = window.matchMedia('(max-width: 920px)').matches;
+        return fitPreviewFrame(
+            imageData.width,
+            imageData.height,
+            stageRect,
+            previewFrameInset(isNarrowScreen)
+        );
     }
 
     // 將固定比例裁切框定位到 preview stage 中央，並更新狀態標籤。
@@ -401,28 +440,26 @@
     }
 
     // 根據是否進入 crop 模式，調整 canvas/stage 的 CSS 尺寸。
-    function updateCanvasDisplay(state, cropVisible) {
+    function updateCanvasDisplay(state, cropVisible, imageData) {
         if (!refs.canvas || !refs.previewStage) {
             return;
         }
         refs.previewStage.classList.toggle('is-crop-preview', cropVisible);
+        refs.previewStage.classList.toggle('is-sized-preview', Boolean(cropVisible || imageData));
         if (!cropVisible || !state.sourceImageData) {
             refs.canvas.style.width = '';
             refs.canvas.style.height = '';
             refs.previewStage.style.height = '';
+            var previewMetrics = previewDisplayMetrics(imageData);
+            if (previewMetrics) {
+                refs.canvas.style.width = previewMetrics.width + 'px';
+                refs.canvas.style.height = previewMetrics.height + 'px';
+            }
             return null;
         }
 
         refs.previewStage.style.height = '';
         var metrics = cropDisplayMetrics(state);
-        if (metrics.isNarrowScreen) {
-            // 手機版 crop frame 必須 fit 可視寬度；只在需要時補 stage 高度。
-            refs.previewStage.style.height = Math.ceil(
-                Math.max(metrics.stageRect.height, metrics.layout.frame.height * metrics.scale)
-            ) + 'px';
-        } else {
-            refs.previewStage.style.height = '';
-        }
         refs.canvas.style.width = (metrics.layout.width * metrics.scale) + 'px';
         refs.canvas.style.height = (metrics.layout.height * metrics.scale) + 'px';
         return metrics;
@@ -506,12 +543,16 @@
     function render(state) {
         modeMachine().normalize(state);
         ensureControlRevision(state);
+        renderActiveTool(state);
+        renderEmptyUpload(state);
+        renderFeatureActions(state);
+        renderPreviewToolbar(state);
         var cropVisible = shouldShowCropOverlay(state);
         var image = cropVisible
             ? state.sourceImageData
             : state.viewMode === 'original'
                 ? state.sourceImageData
-                : state.previewImageData;
+                : state.previewImageData || state.outputImageData || state.sourceImageData;
         var cropMetrics = null;
         if (cropVisible) {
             // Crop 開啟時 preview 必須顯示 source + crop transform，不顯示已跑完的 pipeline 結果。
@@ -519,7 +560,7 @@
             renderer.renderTransformed(image, state.settings.crop, cropMetrics.layout);
         } else {
             renderer.render(image);
-            updateCanvasDisplay(state, false);
+            updateCanvasDisplay(state, false, image);
         }
         if (cropVisible) {
             renderer.setFilter('');
@@ -527,10 +568,6 @@
             renderLivePreview(state);
         }
         refs.error.textContent = state.status === 'error' ? state.error || 'Error' : '';
-        renderActiveTool(state);
-        renderEmptyUpload(state);
-        renderFeatureActions(state);
-        renderPreviewToolbar(state);
         renderCropOverlay(state, cropMetrics);
         app.pages.ditherEditor.featureRegistry.dispatch('onRender', { state: state, controller: controller });
         if (refs.status) {

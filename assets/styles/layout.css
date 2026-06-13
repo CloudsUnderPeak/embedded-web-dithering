@@ -201,6 +201,7 @@
     image-rendering: pixelated;
 }
 
+.preview-stage.is-sized-preview canvas,
 .preview-stage.is-crop-preview canvas {
     max-width: none;
     max-height: none;

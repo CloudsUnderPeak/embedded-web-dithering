@@ -24,6 +24,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-09: Crop preview toolbar 的 `+` / `-` 使用 compact square button；Resize output 單邊尺寸上限集中到 `MAX_RESIZE_OUTPUT_SIZE`。
 - 2026-06-09: `constants.js` 提前於 feature scripts 載入；Resize width / height controls 改用同列 `unitNumberInput(..., 'px', ...)` 並共用 Crop 數字輸入樣式。
 - 2026-06-13: `prepare` mode 放行 edit tool rows；從 `prepare` 開啟指定 edit tool 時，state machine 只展開該 edit panel 並切入正式 preview 流程。
+- 2026-06-13: Crop frame 與 edit preview display size 統一由有內距的 preview frame fit 計算，避免模式切換時 canvas 位置或尺寸跳動。
+- 2026-06-13: `source` group 載入圖片後保留 preview toolbar 高度但隱藏所有 button rows，避免切到 `prepare` / `edit` 時 preview stage 高度改變。
 
 ## Plug-and-Play 架構要求
 
@@ -549,7 +551,7 @@ const editorState = {
 
 Groups：
 
-- `source`：來源輸入 group。沒有來源圖片時只展開 `panelGroup: 'source'` 的 tool，且只有 `source` tool 可操作；右下角 preview toolbar 不可顯示任何按鈕。Preview stage 必須顯示中央 upload dropzone，支援 drop 與 Browse File；Image Input panel 不應重複顯示 Choose/Drop controls。有來源圖片時手動回到 `source` group 必須收合其他 group，preview toolbar 仍不顯示。
+- `source`：來源輸入 group。沒有來源圖片時只展開 `panelGroup: 'source'` 的 tool，且只有 `source` tool 可操作；右下角 preview toolbar 不可顯示任何按鈕。Preview stage 必須顯示中央 upload dropzone，支援 drop 與 Browse File；Image Input panel 不應重複顯示 Choose/Drop controls。有來源圖片時手動回到 `source` group 必須收合其他 group，preview toolbar 不顯示按鈕但保留 toolbar 高度。
 - `prepare`：正式編輯前準備 group。有來源圖且只展開 `panelGroup: 'prepare'` 的 tool；目前 Crop feature 是唯一的 `prepare` tool。`source`、`prepare` 與 `edit` tool rows 可操作；Preview 顯示 `sourceImageData` 加上 Crop transform，不跑完整 pipeline，也不套用 Resize、Adjust、Palette、Dither；右下角 preview toolbar 只能顯示 `+`、`-`、OK。
 - `edit`：有來源圖且 Crop 收合。Preview / Export 使用正式 pipeline，右下角 preview toolbar 只能顯示 Original、Result。從 Crop 收合或 OK 進入 `edit` 時，應展開目前 enabled dock tools 中明確宣告 `panelGroup: 'edit'` 的 panel group。
 - `none`：無面板流程歸屬。feature 未宣告 `panelGroup` 時預設屬於 `none`，不顯示在左側 tool dock，也不作為可切換的 editor mode。
@@ -566,7 +568,7 @@ Groups：
 - `prepare` 中的 Crop setting 變更只能重畫 crop preview，不可排程完整 pipeline。離開 `prepare` 後才依目前 settings 跑正式 preview。
 - `prepare` 中的 setting guard 必須依 feature 的 `panelGroup` 判斷可用 settings group，不可用 `group === 'crop'` 這類固定 id 比對。
 - 沒有來源圖片或目前 mode 不允許的 tool/action event 必須被 controller guard 掉，即使 DOM disabled 被繞過也不可改 settings、reorder effects 或 export。
-- `page.js` 必須只根據 `mode` 決定 preview toolbar 內容：`source` 隱藏整個 toolbar，`prepare` 只顯示 Crop 控制列，`edit` 只顯示 Original / Result 切換列。
+- `page.js` 必須只根據 `mode` 決定 preview toolbar 內容：`source` 隱藏所有 button rows，且已有來源圖片時保留空 toolbar 高度；`prepare` 只顯示 Crop 控制列，`edit` 只顯示 Original / Result 切換列。
 - `page.js` 的 tool button handler 應只呼叫 controller 或 state machine 的語意入口（例如 open source panel、open prepare mode、close prepare mode），並透過 `panelGroup` 判斷流程入口；不應在一般 feature panel event handler 中分散實作模式切換規則。
 - 非目前模式的 preview toolbar row 必須使用 `hidden` 真正移出 layout，不可只做 disabled 或透明處理。
 - `edit` 的 Original / Result buttons 必須共用固定尺寸設定；`prepare` 的 Crop zoom `+` / `-` buttons 使用 compact square size，OK button 使用 primary action size。
@@ -1417,6 +1419,8 @@ const PREVIEW_SLOW_THRESHOLD_MS = 500;
 規則：
 
 - `prepare` group 不執行正式 preview pipeline；page 只用 `viewport-renderer.renderTransformed()` 顯示來源圖與 Crop transform。按 OK 或收合 prepare tool 進入 `edit` 後，才從 `sourceImageData` 跑正式 pipeline。
+- `prepare` 的 crop frame scale 必須用 crop frame fit preview stage 內的固定內距區域計算，不可用 source image 盲目 fit 整個 stage；`edit` preview canvas 必須使用同一個 fit rule，讓相同比例的 crop frame 與 result image 保持相同顯示位置與尺寸。
+- `prepare` 的 transformed canvas layout 可以在 crop frame 外延伸到完整 preview stage，用於顯示 zoom / pan 的原圖周邊脈絡；延伸 layout 時只能調整 `layout.width` / `layout.height` 與 `layout.frame.x` / `layout.frame.y`，不可改變 crop frame scale。
 - 使用者調整 slider、select、color、effects order 時，不立即每次重算，先 debounce `PREVIEW_DEBOUNCE_MS`。
 - 正式 preview 使用 working image 的完整尺寸，不使用降低解析度的 `ImageData` 當成使用者可見的最終預覽，避免拖曳中與放開後出現不可信的跳變。
 - export 永遠從工作圖和完整 pipeline 重新計算，不使用暫存 preview 結果。

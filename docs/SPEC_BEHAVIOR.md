@@ -23,6 +23,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-09: Crop preview toolbar 的 `+` / `-` 改為 compact square buttons；Resize width / height 限制在合法輸出尺寸內。
 - 2026-06-09: Resize width / height 改為同列顯示，並使用和 Crop zoom / rotation 一致的長按連續調整數字輸入樣式。
 - 2026-06-13: `prepare` 期間 edit tools 保持可選；從 `prepare` 點選單一 edit tool 時離開 Crop 並只展開該 edit panel。
+- 2026-06-13: Crop frame 與 edit preview 改用同一個有內距的預覽框尺寸，避免 prepare 與 edit 切換時圖片位置跳動。
+- 2026-06-13: 已載入圖片的 `source` 流程預留 preview toolbar 高度但不顯示任何按鈕，避免切換流程時圖片縮放。
 
 ## 產品目標
 
@@ -274,7 +276,7 @@ Dither Editor 主畫面包含：
 
 Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工具面板中的 feature 分類：
 
-- `source`：來源輸入流程。沒有來源圖片時，Image Input 面板自動展開並保持可用；Crop、Resize、Adjust、Palette、Dither、Effects Order、Export 與 Original / Result 反灰或隱藏，不可設定；右下角 preview toolbar 不顯示任何按鈕。已有來源圖片時手動回到 `source`，其他 tool panel 必須收合，preview toolbar 仍不顯示。
+- `source`：來源輸入流程。沒有來源圖片時，Image Input 面板自動展開並保持可用；Crop、Resize、Adjust、Palette、Dither、Effects Order、Export 與 Original / Result 反灰或隱藏，不可設定；右下角 preview toolbar 不顯示任何按鈕。已有來源圖片時手動回到 `source`，其他 tool panel 必須收合，preview toolbar 不顯示按鈕但保留高度。
 - `prepare`：正式編輯前準備流程。目前 Crop 是唯一的 `prepare` tool。Preview 顯示原圖與 crop transform，不套用 Resize、Adjust、Palette、Dither 或其他非 Crop 演算法。Image Input、Crop 與 edit tool rows 可選；右下角 preview toolbar 只顯示 `+`、`-`、OK 三個按鈕。
 - `edit`：Crop 已確認或收合。App 以 Crop 範圍作為 pipeline 輸入，依目前演算法設定更新 Result；從 Crop 進入 `edit` 時，Resize、Adjust、Palette、Dither 預設展開，右下角 preview toolbar 顯示 Original 與 Result。
 - `none`：無工具面板流程歸屬。未宣告 `panelGroup` 的 feature 不顯示在左側工具面板，也不形成使用者可切換的流程。
@@ -432,7 +434,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 - 支援 zoom / pan。
 - 在 `prepare` 顯示 crop overlay。
 - 讓使用者拖曳原圖位置並看到即時位置變化。
-- 在 `source` 右下角 preview toolbar 不顯示任何按鈕。
+- 在 `source` 右下角 preview toolbar 不顯示任何按鈕；已有來源圖片時仍需預留 toolbar 高度，避免切換到 `prepare` 或 `edit` 後圖片重新縮放。
 - 在 `prepare` 右下角 preview toolbar 只能顯示 `+`、`-`、OK 三個按鈕。
 - 在 `edit` 右下角 preview toolbar 只能顯示 Original、Result 兩個按鈕。
 - `edit` 的 Original / Result buttons 尺寸必須一致；`prepare` 的 `+` / `-` buttons 必須是 compact square buttons，OK button 可維持較寬的 primary action 尺寸。
@@ -440,6 +442,8 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 Crop preview 要求：
 
 - crop overlay 固定在中央並代表輸出裁切範圍。
+- prepare 的 crop frame 與 edit 的 preview image 在相同比例下必須維持同一個中央位置與顯示尺寸，且不可貼齊 preview stage 邊界。
+- prepare 的 crop canvas 可以延伸到 crop frame 外並覆蓋 preview stage，讓 zoom / pan 時看得到原圖周邊脈絡；這個延伸不可改變 crop frame 本身的尺寸或位置。
 - 旋轉、zoom、pan 都應作用在原圖 transform。
 - 左右/上下反轉也應作用在原圖 transform，並且 preview 與正式輸出結果一致。
 - 若使用者已旋轉原圖，點擊左右/上下反轉後，畫面應以目前可見座標鏡射，不應突然變成以未旋轉原圖座標鏡射。
