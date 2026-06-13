@@ -25,6 +25,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-13: `prepare` 期間 edit tools 保持可選；從 `prepare` 點選單一 edit tool 時離開 Crop 並只展開該 edit panel。
 - 2026-06-13: Crop frame 與 edit preview 改用同一個有內距的預覽框尺寸，避免 prepare 與 edit 切換時圖片位置跳動。
 - 2026-06-13: 已載入圖片的 `source` 流程預留 preview toolbar 高度但不顯示任何按鈕，避免切換流程時圖片縮放。
+- 2026-06-13: 從 `prepare` 進入 `edit` 時避免先顯示 source fallback 再切到 result，減少明顯圖片重載感。
+- 2026-06-13: prepare crop frame 與 edit preview 使用同一個 preview stage content-box 對齊基準，避免 1px 級切換位移。
 
 ## 產品目標
 
@@ -444,6 +446,8 @@ Crop preview 要求：
 - crop overlay 固定在中央並代表輸出裁切範圍。
 - prepare 的 crop frame 與 edit 的 preview image 在相同比例下必須維持同一個中央位置與顯示尺寸，且不可貼齊 preview stage 邊界。
 - prepare 的 crop canvas 可以延伸到 crop frame 外並覆蓋 preview stage，讓 zoom / pan 時看得到原圖周邊脈絡；這個延伸不可改變 crop frame 本身的尺寸或位置。
+- 從 prepare 進入 edit 且 result 尚未完成時，畫面應保留上一個可見 preview，不應短暫跳回 source fallback。
+- prepare 與 edit 的 preview 對齊必須使用同一個 preview stage content-box，不可讓 border-box 差異造成微小位移。
 - 旋轉、zoom、pan 都應作用在原圖 transform。
 - 左右/上下反轉也應作用在原圖 transform，並且 preview 與正式輸出結果一致。
 - 若使用者已旋轉原圖，點擊左右/上下反轉後，畫面應以目前可見座標鏡射，不應突然變成以未旋轉原圖座標鏡射。

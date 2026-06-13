@@ -26,6 +26,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-13: `prepare` mode 放行 edit tool rows；從 `prepare` 開啟指定 edit tool 時，state machine 只展開該 edit panel 並切入正式 preview 流程。
 - 2026-06-13: Crop frame 與 edit preview display size 統一由有內距的 preview frame fit 計算，避免模式切換時 canvas 位置或尺寸跳動。
 - 2026-06-13: `source` group 載入圖片後保留 preview toolbar 高度但隱藏所有 button rows，避免切到 `prepare` / `edit` 時 preview stage 高度改變。
+- 2026-06-13: `viewport-renderer.js` 改為 buffer 組幀後提交可見 canvas；首次進入 `edit` 且 result 尚未完成時保留上一個 preview frame。
+- 2026-06-13: preview frame fit 改用 preview stage content-box 尺寸，避免 border-box 導致 prepare / edit 之間出現微小對齊差。
 
 ## Plug-and-Play 架構要求
 
@@ -1421,6 +1423,9 @@ const PREVIEW_SLOW_THRESHOLD_MS = 500;
 - `prepare` group 不執行正式 preview pipeline；page 只用 `viewport-renderer.renderTransformed()` 顯示來源圖與 Crop transform。按 OK 或收合 prepare tool 進入 `edit` 後，才從 `sourceImageData` 跑正式 pipeline。
 - `prepare` 的 crop frame scale 必須用 crop frame fit preview stage 內的固定內距區域計算，不可用 source image 盲目 fit 整個 stage；`edit` preview canvas 必須使用同一個 fit rule，讓相同比例的 crop frame 與 result image 保持相同顯示位置與尺寸。
 - `prepare` 的 transformed canvas layout 可以在 crop frame 外延伸到完整 preview stage，用於顯示 zoom / pan 的原圖周邊脈絡；延伸 layout 時只能調整 `layout.width` / `layout.height` 與 `layout.frame.x` / `layout.frame.y`，不可改變 crop frame scale。
+- `viewport-renderer.js` 必須先把一般 preview 與 crop transformed preview 畫到 buffer canvas，再提交到可見 canvas，避免 resize canvas 時露出清空畫面。
+- `page.js` 在 `edit` result 第一次算完前不可用 `sourceImageData` 當 result fallback 畫面；應保留上一個可見 preview frame，直到 pipeline 結果完成。
+- `page.js` 的 crop frame fit 與 edit preview fit 必須使用同一個 preview stage content-box 尺寸；若 stage 有 border，需排除 border 厚度再計算置中與縮放。
 - 使用者調整 slider、select、color、effects order 時，不立即每次重算，先 debounce `PREVIEW_DEBOUNCE_MS`。
 - 正式 preview 使用 working image 的完整尺寸，不使用降低解析度的 `ImageData` 當成使用者可見的最終預覽，避免拖曳中與放開後出現不可信的跳變。
 - export 永遠從工作圖和完整 pipeline 重新計算，不使用暫存 preview 結果。

@@ -354,6 +354,17 @@
         };
     }
 
+    function previewStageBox() {
+        var rect = refs.previewStage.getBoundingClientRect();
+        var style = window.getComputedStyle(refs.previewStage);
+        var borderX = (parseFloat(style.borderLeftWidth) || 0) + (parseFloat(style.borderRightWidth) || 0);
+        var borderY = (parseFloat(style.borderTopWidth) || 0) + (parseFloat(style.borderBottomWidth) || 0);
+        return {
+            width: Math.max(1, rect.width - borderX),
+            height: Math.max(1, rect.height - borderY)
+        };
+    }
+
     // 計算 crop preview canvas 與 overlay 在畫面上的縮放比例。
     function cropDisplayMetrics(state) {
         // Crop overlay 的 CSS 尺寸與 canvas 內部尺寸分開計算。
@@ -370,7 +381,7 @@
                 ratio: baseLayout.frame.ratio
             }
         };
-        var stageRect = refs.previewStage.getBoundingClientRect();
+        var stageRect = previewStageBox();
         var isNarrowScreen = window.matchMedia('(max-width: 920px)').matches;
         var inset = previewFrameInset(isNarrowScreen);
         var frameFit = fitPreviewFrame(
@@ -403,7 +414,7 @@
         if (!imageData || !refs.previewStage) {
             return null;
         }
-        var stageRect = refs.previewStage.getBoundingClientRect();
+        var stageRect = previewStageBox();
         var isNarrowScreen = window.matchMedia('(max-width: 920px)').matches;
         return fitPreviewFrame(
             imageData.width,
@@ -463,6 +474,25 @@
         refs.canvas.style.width = (metrics.layout.width * metrics.scale) + 'px';
         refs.canvas.style.height = (metrics.layout.height * metrics.scale) + 'px';
         return metrics;
+    }
+
+    function holdPendingPreviewDisplay() {
+        refs.previewStage.classList.remove('is-crop-preview');
+        refs.previewStage.classList.add('is-sized-preview');
+    }
+
+    function shouldHoldPendingPreview(state, cropVisible) {
+        return Boolean(
+            !cropVisible
+            && state.mode === modeMachine().groups.EDIT
+            && state.status === 'processing-preview'
+            && state.viewMode !== 'original'
+            && refs.canvas
+            && !refs.canvas.hidden
+            && refs.lastRenderedPreviewKind === 'prepare'
+            && refs.canvas.width
+            && refs.canvas.height
+        );
     }
 
     // 將畫面座標位移換算回 canvas 內部像素位移。
@@ -553,18 +583,30 @@
             : state.viewMode === 'original'
                 ? state.sourceImageData
                 : state.previewImageData || state.outputImageData || state.sourceImageData;
+        var holdPendingPreview = shouldHoldPendingPreview(state, cropVisible);
         var cropMetrics = null;
         if (cropVisible) {
             // Crop 開啟時 preview 必須顯示 source + crop transform，不顯示已跑完的 pipeline 結果。
             cropMetrics = updateCanvasDisplay(state, true);
             renderer.renderTransformed(image, state.settings.crop, cropMetrics.layout);
+            refs.lastRenderedPreviewKind = 'prepare';
+        } else if (holdPendingPreview) {
+            holdPendingPreviewDisplay();
+            renderer.setFilter('');
         } else {
             renderer.render(image);
             updateCanvasDisplay(state, false, image);
+            refs.lastRenderedPreviewKind = state.viewMode === 'original'
+                ? 'original'
+                : state.previewImageData || state.outputImageData
+                    ? 'result'
+                    : state.sourceImageData
+                        ? 'source'
+                        : 'empty';
         }
         if (cropVisible) {
             renderer.setFilter('');
-        } else {
+        } else if (!holdPendingPreview) {
             renderLivePreview(state);
         }
         refs.error.textContent = state.status === 'error' ? state.error || 'Error' : '';
