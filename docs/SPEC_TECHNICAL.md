@@ -41,6 +41,10 @@ Split From: SPEC_INDEX.md
 - 2026-06-14: 將 RgbQuant 以 MIT vendored library 納入 `src/vendor/`，由 `rgbquant-adapter.js` 統一提供 Original palette 萃取與支援的 Error Diffusion。
 - 2026-06-14: Error Strength 對齊 dithering-studio-main，統一以 `errorStrength / 100` 乘上 error diffusion 擴散係數，UI step 為 5%。
 - 2026-06-14: Dither 預設改回 `none`，Error Strength UI step 改為 1%。
+- 2026-06-14: Palette color input 的 `input` 事件只同步 state，不排正式 preview；`change` 時才排 preview，避免調色盤互動被 render 打斷。
+- 2026-06-14: Palette settings 新增 `originalPaletteSize`，Original palette 可用 Colors 在 2 到 32 色間重新萃取。
+- 2026-06-14: Palette swatches 使用 8 欄 grid，限制每列最多 8 個色票。
+- 2026-06-14: Dither 預設改回 `floyd-steinberg`。
 
 ## Plug-and-Play 架構要求
 
@@ -646,13 +650,16 @@ Palette feature 必須把 preset 與使用者自訂色票分清楚：
 - 固定 preset 只來自 `palette-presets.js`。
 - MVP 內建 fixed presets 至少包含 `monochrome`、`game-boy`、`warm-ink`、`e6-color-epaper`；`e6-color-epaper` 使用黑、白、紅、黃、藍、綠六色色票。
 - `Original` 是 Palette 的預設選項，色票從載入時的原始 `sourceImageData` 萃取，不考慮 crop、resize、adjust 或其他 pipeline step。
-- `Original` palette 萃取必須透過 `rgbquant-adapter.js` 呼叫 vendored RgbQuant，設定使用 `colors: 8`、`method: 2`、`boxSize: [8, 8]`、`boxPxls: 2`、`minHueCols: 2000` 與 `colorDist: 'euclidean'`。`ditherit-v2` options 雖包含 `initColors: 4096`，但 RgbQuant `method: 2` 的 `buildPal()` 實際使用完整 2D histogram，不以 `initColors` 截斷候選。
+- `Original` palette 萃取必須透過 `rgbquant-adapter.js` 呼叫 vendored RgbQuant，設定使用 `colors: settings.originalPaletteSize`、`method: 2`、`boxSize: [8, 8]`、`boxPxls: 2`、`minHueCols: 2000` 與 `colorDist: 'euclidean'`。`ditherit-v2` options 雖包含 `initColors: 4096`，但 RgbQuant `method: 2` 的 `buildPal()` 實際使用完整 2D histogram，不以 `initColors` 截斷候選。
+- `originalPaletteSize` 預設為 `8`，允許範圍為 `2..32`，面板必須在 Preset row 下方用短寬度、靠左的 `unitNumberInput` 呈現 Colors；當 `presetId` 不是 `original` 時，此控制必須隱藏。
 - `Original` 只負責顯示原始圖片代表色並同步給 `Dither`，palette operation 不主動改變圖片。
 - `Custom` 只代表目前 settings 中的色票陣列，不應被加入 `palette-presets.js`。
 - 選擇固定 preset 時，feature 應複製 preset colors 到目前 settings，避免使用者後續編輯污染 config。
 - `Palette` 不提供 `Quantize` 開關；Dither 啟用且 Dither operation 未被停用時，palette operation 不先量化像素，只同步有效色票給 Dither。
 - Dither 為 `none` 或 Dither operation 被停用時，選擇固定 preset 或 `Custom` 後，palette operation 直接把像素映射到目前色票中最接近的顏色。
-- 使用者新增、刪除或編輯色票後，feature 應把 `presetId` 設為 `custom`，立即排程 preview，並讓 `Dither` 使用同一份有效 palette。
+- 使用者新增、刪除或完成編輯色票後，feature 應把 `presetId` 設為 `custom`，排程 preview，並讓 `Dither` 使用同一份有效 palette。
+- 原生 color picker 的 `input` 事件只能更新 palette state 與 Dither palette，不應排程 preview 或重建色票 DOM；`change` 事件才排正式 preview。
+- `.palette-swatches` 必須用 8 欄 grid 排列，讓每列最多 8 個色票或新增按鈕。
 - 色票陣列為空時，feature 應回到 `presetId: 'original'`；`Original` 不主動改圖。
 - `palette-utils` 必須集中管理 palette 最近色判斷；預設使用 RgbQuant-style Euclidean BT.709 distance，並支援由 Dither settings 指定其他 Color Distance。
 
@@ -674,7 +681,7 @@ Palette feature 必須把 preset 與使用者自訂色票分清楚：
 })(window.DitherApp);
 ```
 
-Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `none`，且 `serpentine` 預設為 `false`。`DEFAULT_DITHER_ERROR_STRENGTH` 目前為 `100`，代表標準 error diffusion 擴散強度。Dither 啟用時 output 必須以目前有效 Palette 作為固定輸出色，不自行產生新的顏色。
+Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-steinberg`，且 `serpentine` 預設為 `false`。`DEFAULT_DITHER_ERROR_STRENGTH` 目前為 `100`，代表標準 error diffusion 擴散強度。Dither 啟用時 output 必須以目前有效 Palette 作為固定輸出色，不自行產生新的顏色。
 
 `color-distance-metrics.js` 宣告使用者可選的最近色距離公式。Dither feature 預設使用 `DEFAULT_COLOR_DISTANCE_ID`，目前為 `euclidean-bt709`。同一個 `colorDistance` 必須傳給 Error Diffusion、Ordered Dither、Pattern Dither，以及 Dither 關閉時 Palette operation 的直接最近色映射。`euclidean-bt709` 是 RgbQuant-style BT.709 weighted euclidean distance；`euclidean-rgb` 是未加權 RGB squared distance；`manhattan-bt709` 是 BT.709 weighted Manhattan distance；`manhattan-rgb` 是未加權 Manhattan distance。舊 id `euclidean` / `bt709` 應正規化到 `euclidean-bt709`，舊 id `rgb` 應正規化到 `euclidean-rgb`，舊 id `manhattan` 應正規化到 `manhattan-rgb`。
 

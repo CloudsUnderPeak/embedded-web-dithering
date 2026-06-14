@@ -40,6 +40,9 @@ Split From: SPEC_INDEX.md
 - 2026-06-14: 專案改為直接使用 vendored RgbQuant 萃取 Original palette，並優先以 RgbQuant 執行支援的 Error Diffusion。
 - 2026-06-14: Error Strength 對齊 dithering-studio-main 的控制語意，使用 0% 到 150%、每次 5% 的誤差擴散倍率。
 - 2026-06-14: Dither 預設改回 None，Error Strength slider step 改為 1%。
+- 2026-06-14: Palette color picker 調色時不立即重跑 preview，避免原生調色盤被關閉而無法微調。
+- 2026-06-14: Original Palette 新增 Colors 控制，可在 2 到 32 色間重新萃取，切到 Custom 或固定 preset 時隱藏。
+- 2026-06-14: Palette 色票排列改為每列最多 8 個。
 
 ## 產品目標
 
@@ -419,9 +422,12 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 
 - Palette 預設為 Original。
 - Original palette 必須使用專案內 vendored RgbQuant 的代表色萃取流程，而不是手寫明暗錨點 heuristic。
-- Original palette 應以原始來源圖的區塊統計、hue retention 與 BT.709 euclidean 色距合併產生 8 色代表色。
+- Original palette 應以原始來源圖的區塊統計、hue retention 與 BT.709 euclidean 色距合併產生代表色。
+- Original palette 的 Colors 預設為 8，可調範圍為 2 到 32；此控制位於 Preset 下方，且只在 Palette 為 Original 時顯示。
 - Original 不主動改變圖片。
 - 手動變更色票後，狀態切換為 Custom。
+- 使用原生 color picker 微調色票時，調色盤必須維持開啟直到使用者完成選色。
+- Palette 色票每列最多顯示 8 個，超過時換到下一列。
 - Custom 是目前工作區設定，不是固定 preset。
 - 色票被刪到空時，回到 Original。
 - Palette 當前有效色票必須同步給 Dither 使用。

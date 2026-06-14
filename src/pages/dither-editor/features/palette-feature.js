@@ -2,8 +2,20 @@
     // Palette feature 管理色票 UI、原圖代表色萃取，以及 Dither 關閉時的 palette quantization。
     // Dither 啟用時，preset/custom 色票只作為 Dither 的固定目標色集合。
     var ui = app.pages.ditherEditor.panelUtils;
+    var constants = app.pages.ditherEditor.constants;
     var ORIGINAL_PRESET_ID = 'original';
     var CUSTOM_PRESET_ID = 'custom';
+
+    function normalizeOriginalPaletteSize(value) {
+        var size = Number(value);
+        if (!Number.isFinite(size)) {
+            return constants.DEFAULT_ORIGINAL_PALETTE_SIZE;
+        }
+        return Math.max(
+            constants.MIN_ORIGINAL_PALETTE_SIZE,
+            Math.min(constants.MAX_ORIGINAL_PALETTE_SIZE, Math.round(size))
+        );
+    }
 
     // 將色彩通道限制成 0-255 整數。
     function clampByte(value) {
@@ -55,15 +67,24 @@
         };
     }
 
-    function extractOriginalPalette(imageData) {
+    function extractOriginalPalette(imageData, paletteSize) {
         // Original palette 直接使用 vendored RgbQuant，避免手寫 reducer 與 ditherit-v2 漂移。
-        return app.pages.ditherEditor.rgbQuantAdapter.extractPalette(imageData);
+        return app.pages.ditherEditor.rgbQuantAdapter.extractPalette(
+            imageData,
+            paletteSize
+        );
     }
 
     // Original palette samples the loaded source image, not crop/resize/adjust output.
     // 重新從來源圖片萃取 Original 色票。
     function refreshOriginalPalette(state, imageData) {
-        state.settings.palette.originalPalette = extractOriginalPalette(imageData || state.sourceImageData);
+        state.settings.palette.originalPaletteSize = normalizeOriginalPaletteSize(
+            state.settings.palette.originalPaletteSize
+        );
+        state.settings.palette.originalPalette = extractOriginalPalette(
+            imageData || state.sourceImageData,
+            state.settings.palette.originalPaletteSize
+        );
     }
 
     // 面板打開時若尚未萃取色票，就補萃取一次。
@@ -117,10 +138,15 @@
         context.state.settings.palette.presetId = colors.length ? CUSTOM_PRESET_ID : ORIGINAL_PRESET_ID;
         syncDitherPalette(context.state);
         context.presetInput.value = context.state.settings.palette.presetId;
+        if (context.updateOriginalControls) {
+            context.updateOriginalControls();
+        }
         if (!options || options.render !== false) {
             context.renderSwatches();
         }
-        context.controller.schedulePreview();
+        if (!options || options.preview !== false) {
+            context.controller.schedulePreview();
+        }
     }
 
     function buildPaletteEditor(context) {
@@ -149,6 +175,10 @@
                     }
                 });
                 colorInput.addEventListener('input', function () {
+                    colors[index] = hexToColor(colorInput.value);
+                    setCustomPalette(context, colors, { render: false, preview: false });
+                });
+                colorInput.addEventListener('change', function () {
                     colors[index] = hexToColor(colorInput.value);
                     setCustomPalette(context, colors, { render: false });
                 });
@@ -191,7 +221,12 @@
         pipelineOrder: 20,
         // 預設顯示 Original 代表色，不先套用固定色盤。
         defaultSettings: function defaultSettings() {
-            return { presetId: ORIGINAL_PRESET_ID, palette: null, originalPalette: null };
+            return {
+                presetId: ORIGINAL_PRESET_ID,
+                palette: null,
+                originalPalette: null,
+                originalPaletteSize: constants.DEFAULT_ORIGINAL_PALETTE_SIZE
+            };
         },
         // 新圖片載入後重新萃取 Original 色票，並同步給 dither。
         onImageLoaded: function onImageLoaded(context) {
@@ -233,6 +268,9 @@
             var state = context.state;
             var controller = context.controller;
             state.settings.palette.presetId = normalizePresetId(state.settings.palette.presetId);
+            state.settings.palette.originalPaletteSize = normalizeOriginalPaletteSize(
+                state.settings.palette.originalPaletteSize
+            );
             ensureOriginalPalette(state);
             syncDitherPalette(state);
             var options = [
@@ -247,16 +285,42 @@
                 state: state,
                 controller: controller,
                 presetInput: null,
-                renderSwatches: null
+                renderSwatches: null,
+                updateOriginalControls: null
+            };
+            var originalSizeInput = ui.unitNumberInput(
+                state.settings.palette.originalPaletteSize,
+                constants.MIN_ORIGINAL_PALETTE_SIZE,
+                constants.MAX_ORIGINAL_PALETTE_SIZE,
+                1,
+                '',
+                function (value) {
+                    state.settings.palette.originalPaletteSize = normalizeOriginalPaletteSize(value);
+                    refreshOriginalPalette(state, state.sourceImageData);
+                    syncDitherPalette(state);
+                    paletteContext.renderSwatches();
+                    controller.schedulePreview();
+                }
+            );
+            var originalSizeRow = ui.row(ui.t('labelNumberOfColors'), originalSizeInput);
+            originalSizeRow.classList.add('palette-colors-row');
+            paletteContext.updateOriginalControls = function updateOriginalControls() {
+                originalSizeRow.style.display = normalizePresetId(state.settings.palette.presetId) === ORIGINAL_PRESET_ID
+                    ? ''
+                    : 'none';
             };
             var presetInput = ui.selectInput(state.settings.palette.presetId, options, function (value) {
                 controller.updateSetting('palette', 'presetId', value);
                 paletteContext.renderSwatches();
+                paletteContext.updateOriginalControls();
             });
+            var presetRow = ui.row('Preset', presetInput);
             paletteContext.presetInput = presetInput;
+            paletteContext.updateOriginalControls();
             return ui.section('panelPalette', [
                 buildPaletteEditor(paletteContext),
-                ui.row('Preset', presetInput)
+                presetRow,
+                originalSizeRow
             ], 'palette');
         },
         operation: {

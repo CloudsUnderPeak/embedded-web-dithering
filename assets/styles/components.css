@@ -270,6 +270,11 @@
     border-top: 5px solid currentColor;
 }
 
+.palette-colors-row .unit-number-field {
+    width: 96px;
+    justify-self: start;
+}
+
 .button-row {
     display: flex;
     flex-wrap: wrap;
@@ -329,10 +334,11 @@
 
 .palette-swatches {
     /* 色票可換色、可新增刪除；刪除鈕在 hover/focus 時才顯示。 */
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(8, 32px);
     gap: 8px;
     align-items: center;
+    justify-content: start;
 }
 
 .palette-swatch {

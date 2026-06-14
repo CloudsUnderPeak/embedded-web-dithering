@@ -43,6 +43,7 @@
         paletteGameBoy: 'Game Boy',
         paletteWarmInk: 'Warm Ink',
         paletteE6ColorEpaper: 'E6 Color E-Paper',
+        labelNumberOfColors: 'Colors',
         labelColorDistance: 'Color Distance',
         labelErrorStrength: 'Error Strength',
         colorDistanceEuclideanBt709: 'Euclidean BT.709',
