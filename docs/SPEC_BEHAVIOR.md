@@ -48,6 +48,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-14: Crop 新增 transform fill color，使用 Black / White / Custom select 搭配 color picker，填補旋轉或移動後原圖未覆蓋的區域。
 - 2026-06-14: Crop preview overlay 改以 canvas 內的 crop frame 對齊，避免手機或平板長條圖框選與正式 crop output 偏移。
 - 2026-06-14: Edit effects order 改為固定順序，關閉工具列拖曳排序。
+- 2026-06-14: Slider 與 Toggle Switch 改用較淡的 control accent 色。
+- 2026-06-14: Edit preview 的 Original / Result 切換改用 Theme choice 風格。
 
 ## 產品目標
 
@@ -491,7 +493,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 - 在 `source` 右下角 preview toolbar 不顯示任何按鈕；已有來源圖片時仍需預留 toolbar 高度，避免切換到 `prepare` 或 `edit` 後圖片重新縮放。
 - 在 `prepare` 右下角 preview toolbar 只能顯示 `+`、`-`、OK 三個按鈕。
 - 在 `edit` 右下角 preview toolbar 只能顯示 Original、Result 兩個按鈕。
-- `edit` 的 Original / Result buttons 尺寸必須一致；`prepare` 的 `+` / `-` buttons 必須是 compact square buttons，OK button 可維持較寬的 primary action 尺寸。
+- `edit` 的 Original / Result 切換必須採用 Theme choice 風格且尺寸一致；`prepare` 的 `+` / `-` buttons 必須是 compact square buttons，OK button 可維持較寬的 primary action 尺寸。
 
 Crop preview 要求：
 
@@ -510,7 +512,7 @@ Crop preview 要求：
 ## 預覽與狀態行為
 
 使用者調整 slider、select、color 或 effects order 時，App 應更新 preview，但可以短暫 debounce，避免每一次輸入都完整重算。
-slider 控制的填色與 thumb 必須使用專案主題色，不使用瀏覽器預設藍色。
+slider 控制的填色與 thumb、Toggle Switch 的啟用狀態必須使用較淡的 control accent 主題色，不使用瀏覽器預設藍色。
 
 主要狀態：
 

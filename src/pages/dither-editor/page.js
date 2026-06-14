@@ -252,10 +252,10 @@
         refs.cropZoomInButton.disabled = !isPrepareMode;
         refs.cropZoomOutButton.disabled = !isPrepareMode;
         refs.cropOkButton.disabled = !isPrepareMode;
-        refs.originalButton.classList.toggle('is-active', state.viewMode === 'original');
-        refs.resultButton.classList.toggle('is-active', state.viewMode !== 'original');
-        refs.originalButton.disabled = !isEditMode;
-        refs.resultButton.disabled = !isEditMode;
+        refs.originalInput.checked = state.viewMode === 'original';
+        refs.resultInput.checked = state.viewMode !== 'original';
+        refs.originalInput.disabled = !isEditMode;
+        refs.resultInput.disabled = !isEditMode;
     }
 
     function loadEmptyUploadFile(file) {
@@ -746,21 +746,43 @@
             app.pages.ditherEditor.featureRegistry.dispatch('onMount', { state: state, controller: controller });
             rebuildControls(state);
 
-            var originalButton = app.utils.dom.el('button', {
-                className: 'secondary-button',
-                text: t('previewOriginal'),
-                attrs: { type: 'button' }
+            var originalInput = app.utils.dom.el('input', {
+                attrs: {
+                    type: 'radio',
+                    name: 'preview-view-mode',
+                    value: 'original'
+                }
             });
-            originalButton.addEventListener('click', function () {
-                controller.setViewMode('original');
+            originalInput.addEventListener('change', function () {
+                if (originalInput.checked) {
+                    controller.setViewMode('original');
+                }
             });
-            var resultButton = app.utils.dom.el('button', {
-                className: 'secondary-button',
-                text: t('previewResult'),
-                attrs: { type: 'button' }
+            var resultInput = app.utils.dom.el('input', {
+                attrs: {
+                    type: 'radio',
+                    name: 'preview-view-mode',
+                    value: 'result'
+                }
             });
-            resultButton.addEventListener('click', function () {
-                controller.setViewMode('result');
+            resultInput.addEventListener('change', function () {
+                if (resultInput.checked) {
+                    controller.setViewMode('result');
+                }
+            });
+            var originalButton = app.utils.dom.el('label', {
+                className: 'setting-choice preview-view-choice',
+                children: [
+                    originalInput,
+                    app.utils.dom.el('span', { text: t('previewOriginal') })
+                ]
+            });
+            var resultButton = app.utils.dom.el('label', {
+                className: 'setting-choice preview-view-choice',
+                children: [
+                    resultInput,
+                    app.utils.dom.el('span', { text: t('previewResult') })
+                ]
             });
             var cropZoomInButton = app.utils.dom.el('button', {
                 className: 'secondary-button crop-zoom-button',
@@ -786,8 +808,8 @@
             cropOkButton.addEventListener('click', function () {
                 controller.closePrepareMode();
             });
-            refs.originalButton = originalButton;
-            refs.resultButton = resultButton;
+            refs.originalInput = originalInput;
+            refs.resultInput = resultInput;
             refs.cropZoomInButton = cropZoomInButton;
             refs.cropZoomOutButton = cropZoomOutButton;
             refs.cropOkButton = cropOkButton;
@@ -796,7 +818,7 @@
                 children: [cropZoomInButton, cropZoomOutButton, cropOkButton]
             });
             refs.previewToggleRow = app.utils.dom.el('div', {
-                className: 'button-row',
+                className: 'setting-choice-list preview-view-choice-list',
                 children: [originalButton, resultButton]
             });
 

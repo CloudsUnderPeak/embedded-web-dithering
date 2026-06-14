@@ -50,6 +50,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-14: Crop settings 新增 `backgroundPreset` / `backgroundColor`，preview renderer 與正式 crop operation 共用 transform fill color。
 - 2026-06-14: Crop preview overlay 改以 canvas rect + `layout.frame` 對齊，修正窄版長條圖框選與正式 crop output 偏移。
 - 2026-06-14: 將 edit effects 的 `operation.pipeline.draggable` 改為 `false`，保留 sortable 架構但關閉目前工具列拖曳排序。
+- 2026-06-14: 新增 `--color-control-accent` / `--color-control-accent-strong`，讓 slider 與 Toggle Switch 使用較淡的控制元件 accent 色。
+- 2026-06-14: Edit preview 的 Original / Result 切換改用 `.setting-choice` radio 結構，對齊 Web Setting Theme 選項。
 
 ## Plug-and-Play 架構要求
 
@@ -688,7 +690,7 @@ Palette feature 必須把 preset 與使用者自訂色票分清楚：
 
 Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-steinberg`，且 `serpentine` 預設為 `false`。`DEFAULT_DITHER_ERROR_STRENGTH` 目前為 `100`，代表標準 error diffusion 擴散強度。Dither 啟用時 output 必須以目前有效 Palette 作為固定輸出色，不自行產生新的顏色。
 
-`serpentine` 的 panel control 必須使用 `panelUtils.toggleSwitchInput()`，避免和一般 checkbox 視覺混用。Adjust 與 Dither 的 range input 必須使用主題 `--color-accent`，不可落回瀏覽器預設藍色。
+`serpentine` 的 panel control 必須使用 `panelUtils.toggleSwitchInput()`，避免和一般 checkbox 視覺混用。Adjust 與 Dither 的 range input、Toggle Switch checked state 必須使用 `--color-control-accent` / `--color-control-accent-strong`，不可落回瀏覽器預設藍色或直接吃主 action accent。
 
 `color-distance-metrics.js` 宣告使用者可選的最近色距離公式。Dither feature 預設使用 `DEFAULT_COLOR_DISTANCE_ID`，目前為 `euclidean-bt709`。同一個 `colorDistance` 必須傳給 Error Diffusion、Ordered Dither、Pattern Dither，以及 Dither 關閉時 Palette operation 的直接最近色映射。`euclidean-bt709` 是 RgbQuant-style BT.709 weighted euclidean distance；`euclidean-rgb` 是未加權 RGB squared distance；`manhattan-bt709` 是 BT.709 weighted Manhattan distance；`manhattan-rgb` 是未加權 Manhattan distance。舊 id `euclidean` / `bt709` 應正規化到 `euclidean-bt709`，舊 id `rgb` 應正規化到 `euclidean-rgb`，舊 id `manhattan` 應正規化到 `manhattan-rgb`。
 
