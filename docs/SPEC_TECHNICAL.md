@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-14
+Last Updated: 2026-06-15
 Split From: SPEC_INDEX.md
 ```
 
@@ -52,6 +52,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-14: 將 edit effects 的 `operation.pipeline.draggable` 改為 `false`，保留 sortable 架構但關閉目前工具列拖曳排序。
 - 2026-06-14: 新增 `--color-control-accent` / `--color-control-accent-strong`，讓 slider 與 Toggle Switch 使用較淡的控制元件 accent 色。
 - 2026-06-14: Edit preview 的 Original / Result 切換改用 `.setting-choice` radio 結構，對齊 Web Setting Theme 選項。
+- 2026-06-15: Crop Fill 新增 `auto` preset，使用低解析 transformed crop frame 邊界取樣估算填色，並用小幅色差穩定化降低旋轉閃爍。
+- 2026-06-15: Crop Fill 預設 `backgroundPreset` 改為 `auto`。
 
 ## Plug-and-Play 架構要求
 
@@ -1181,12 +1183,13 @@ Crop feature 的 transform settings 必須由 `crop-feature.js` 自己定義與 
     rotation: 0,
     flipX: false,
     flipY: false,
-    backgroundPreset: 'white',
+    backgroundPreset: 'auto',
     backgroundColor: '#ffffff',
+    autoBackgroundColor: '#ffffff',
 }
 ```
 
-Crop 預設 `aspectRatioId` 必須是 `16-9`。若舊 settings 或無效 settings 找不到對應 ratio，應 fallback 到 16:9。Crop transform fill 預設為 white；`backgroundPreset` 僅允許 `black`、`white`、`custom`，`backgroundColor` 必須正規化為 `#rrggbb`。
+Crop 預設 `aspectRatioId` 必須是 `16-9`。若舊 settings 或無效 settings 找不到對應 ratio，應 fallback 到 16:9。Crop transform fill 預設為 auto；`backgroundPreset` 僅允許 `auto`、`black`、`white`、`custom`，`backgroundColor` 與 `autoBackgroundColor` 必須正規化為 `#rrggbb`。
 
 Preview renderer 與正式 crop operation 必須套用同一套 transform 規則：
 
@@ -1198,13 +1201,15 @@ Preview renderer 與正式 crop operation 必須套用同一套 transform 規則
 
 `viewport-renderer.renderTransformed()` 的 prepare preview canvas 可以大於 crop frame；此時 transform fill color 只能填在 `layout.frame` 內，frame 外必須保持透明，讓棋盤背景與原圖調整脈絡可見。正式 `cropToImageData()` 的 target canvas 本身就是 crop frame 尺寸，因此仍填滿整個 target。
 
-`viewport-renderer.js` 的 transform cache key 必須包含 `flipX`、`flipY` 與 crop transform fill color，否則切換反轉或底色狀態可能不會重繪。
+`viewport-renderer.js` 的 transform cache key 必須包含 `flipX`、`flipY` 與 crop transform fill color，否則切換反轉或底色狀態可能不會重繪。Fill 設為 `auto` 時，crop feature 必須依目前 source image、ratio、pan、zoom、rotation、flip 與 crop output size 建立 cache key；任一 transform 調整後都要重新估算。
+
+`auto` fill 必須以低解析 transformed crop frame 取樣估算，不可每次都掃完整輸出尺寸。演算法應找出來源圖覆蓋像素旁的透明邊界像素，使用簡單 trimmed average 產生代表色；若沒有邊界樣本，才 fallback 到 crop frame 外框樣本或目前保存的 fill color。Auto color 必須和上一個 auto color 比較，小幅差異沿用舊色，大幅差異才切換，避免旋轉連續調整時因樣本抖動造成閃爍。
 
 Crop 面板的左轉 90 / 右轉 90 button 必須只更新 `rotation`，以目前 rotation 為基準加減 90 度，並將結果維持在 `-180..180` 範圍。
 
 Crop 面板在桌面與手機版都必須維持同一個兩欄 row 結構：Ratio / Zoom 同列、Rotate / Fill 同列、左轉 90 / 右轉 90 / horizontal flip / vertical flip button row 跨滿整列。手機版只能縮小欄距、label 欄寬或兩欄比例，不可退回單欄堆疊。
 
-Fill control 由 `select` 與 32x32 `input[type="color"]` 組成。選擇 `black` 或 `white` 時，color input 必須同步顯示對應顏色；使用者手動改 color input 時，`backgroundPreset` 必須切成 `custom`。
+Fill control 由 `select` 與 32x32 `input[type="color"]` 組成。選擇 `auto`、`black` 或 `white` 時，color input 必須同步顯示對應顏色；使用者手動改 color input 時，`backgroundPreset` 必須切成 `custom`。
 
 Crop Fill color input 的 `input` 事件只能同步 crop state 與 select 顯示，不應呼叫 controller update 或重建面板；`change` 事件才排正式更新，避免原生 color picker 被 render 打斷。
 

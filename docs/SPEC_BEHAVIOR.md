@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-14
+Last Updated: 2026-06-15
 Split From: SPEC_INDEX.md
 ```
 
@@ -50,6 +50,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-14: Edit effects order 改為固定順序，關閉工具列拖曳排序。
 - 2026-06-14: Slider 與 Toggle Switch 改用較淡的 control accent 色。
 - 2026-06-14: Edit preview 的 Original / Result 切換改用 Theme choice 風格。
+- 2026-06-15: Crop Fill 新增 Auto preset，以低解析邊界取樣快速估算填色，並用小幅色差穩定化降低旋轉閃爍。
+- 2026-06-15: Crop Fill 預設改為 Auto。
 
 ## 產品目標
 
@@ -506,6 +508,7 @@ Crop preview 要求：
 - 旋轉、zoom、pan 都應作用在原圖 transform。
 - 左右/上下反轉也應作用在原圖 transform，並且 preview 與正式輸出結果一致。
 - 若使用者已旋轉原圖，點擊左右/上下反轉後，畫面應以目前可見座標鏡射，不應突然變成以未旋轉原圖座標鏡射。
+- Fill 設為 Auto 時，ratio、zoom、rotation、pan、flip 調整後都應重新估算填色，且 preview 與 OK 後的正式 crop output 應一致。
 - canvas 尺寸變化不應抵消使用者看到的 zoom / pan 效果。
 - 桌面與手機版都不可因 `prepare` 中的 Crop 流程造成 preview stage 或整個 editor 高度被撐開。
 

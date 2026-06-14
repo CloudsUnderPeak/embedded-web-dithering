@@ -69,6 +69,7 @@
         // Crop 模式下 canvas 顯示的是「原圖被移動、縮放、旋轉後」的預覽。
         // 裁切框由 page.js 的 overlay 負責，所以這裡只處理影像本身的 transform。
         layout = layout || app.pages.ditherEditor.crop.previewLayout(imageData, settings);
+        var backgroundColor = app.pages.ditherEditor.crop.backgroundColor(settings, imageData);
         // transformKey 包含所有會影響 crop preview 的設定；漏掉 flip/rotation 會造成 UI 不更新。
         var transformKey = [
             settings.aspectRatioId,
@@ -78,7 +79,7 @@
             settings.rotation,
             settings.flipX,
             settings.flipY,
-            app.pages.ditherEditor.crop.backgroundColor(settings),
+            backgroundColor,
             layout.width,
             layout.height
         ].join('|');
@@ -94,7 +95,7 @@
 
         var ctx = this.prepareBuffer(layout.width, layout.height);
         var frame = layout.frame || { x: 0, y: 0, width: layout.width, height: layout.height };
-        ctx.fillStyle = app.pages.ditherEditor.crop.backgroundColor(settings);
+        ctx.fillStyle = backgroundColor;
         ctx.fillRect(frame.x, frame.y, frame.width, frame.height);
         ctx.save();
         ctx.translate(
