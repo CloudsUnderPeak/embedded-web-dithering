@@ -1,12 +1,9 @@
 (function (app) {
-    // Palette feature 同時管理色票 UI、原圖代表色萃取，以及 palette quantization operation。
-    // Original 只是顯示原圖代表色，不會套用量化；其他 preset/custom 才會改變像素。
+    // Palette feature 管理色票 UI、原圖代表色萃取，以及 Dither 關閉時的 palette quantization。
+    // Dither 啟用時，preset/custom 色票只作為 Dither 的固定目標色集合。
     var ui = app.pages.ditherEditor.panelUtils;
     var ORIGINAL_PRESET_ID = 'original';
     var CUSTOM_PRESET_ID = 'custom';
-    var ORIGINAL_PALETTE_SIZE = 8;
-    var ORIGINAL_SAMPLE_TARGET = 12000;
-    var MIN_COLOR_DISTANCE = 32;
 
     // 將色彩通道限制成 0-255 整數。
     function clampByte(value) {
@@ -58,103 +55,9 @@
         };
     }
 
-    // 計算平方距離，用於代表色去重。
-    function colorDistanceSquared(a, b) {
-        var dr = a.r - b.r;
-        var dg = a.g - b.g;
-        var db = a.b - b.b;
-        return dr * dr + dg * dg + db * db;
-    }
-
-    // 判斷新候選色是否和已選代表色相差足夠遠。
-    function isDistinctColor(color, selected) {
-        var minDistance = MIN_COLOR_DISTANCE * MIN_COLOR_DISTANCE;
-        for (var i = 0; i < selected.length; i += 1) {
-            if (colorDistanceSquared(color, selected[i]) < minDistance) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    // 依 hue 大致排序色票；灰階色放到彩色後面。
-    function colorSortValue(color) {
-        var r = color.r / 255;
-        var g = color.g / 255;
-        var b = color.b / 255;
-        var max = Math.max(r, g, b);
-        var min = Math.min(r, g, b);
-        var delta = max - min;
-        if (delta < 0.08) {
-            return 1000 + max;
-        }
-        if (max === r) {
-            return ((g - b) / delta + (g < b ? 6 : 0)) * 60;
-        }
-        if (max === g) {
-            return ((b - r) / delta + 2) * 60;
-        }
-        return ((r - g) / delta + 4) * 60;
-    }
-
     function extractOriginalPalette(imageData) {
-        // 從「原始匯入圖」抽樣估算代表色。這是給使用者辨識目前圖片色彩，不吃 crop/adjust 結果。
-        // 以 4-bit bucket 聚合顏色，避免完整 k-means 的成本，也足夠支撐小型色票預覽。
-        if (!imageData || !imageData.data || !imageData.width || !imageData.height) {
-            return [];
-        }
-
-        var data = imageData.data;
-        var pixelCount = imageData.width * imageData.height;
-        var step = Math.max(1, Math.floor(pixelCount / ORIGINAL_SAMPLE_TARGET));
-        var buckets = {};
-
-        for (var pixel = 0; pixel < pixelCount; pixel += step) {
-            var offset = pixel * 4;
-            if (data[offset + 3] < 16) {
-                continue;
-            }
-            var key = [
-                data[offset] >> 4,
-                data[offset + 1] >> 4,
-                data[offset + 2] >> 4
-            ].join('-');
-            if (!buckets[key]) {
-                buckets[key] = { count: 0, r: 0, g: 0, b: 0 };
-            }
-            buckets[key].count += 1;
-            buckets[key].r += data[offset];
-            buckets[key].g += data[offset + 1];
-            buckets[key].b += data[offset + 2];
-        }
-
-        var candidates = Object.keys(buckets).map(function (key) {
-            var bucket = buckets[key];
-            return {
-                count: bucket.count,
-                r: clampByte(bucket.r / bucket.count),
-                g: clampByte(bucket.g / bucket.count),
-                b: clampByte(bucket.b / bucket.count)
-            };
-        }).sort(function (a, b) {
-            return b.count - a.count;
-        });
-
-        var selected = [];
-        candidates.forEach(function (color) {
-            if (selected.length < ORIGINAL_PALETTE_SIZE && isDistinctColor(color, selected)) {
-                selected.push(color);
-            }
-        });
-        candidates.forEach(function (color) {
-            if (selected.length < ORIGINAL_PALETTE_SIZE && selected.indexOf(color) === -1) {
-                selected.push(color);
-            }
-        });
-
-        return selected.sort(function (a, b) {
-            return colorSortValue(a) - colorSortValue(b);
-        });
+        // Original palette 直接使用 vendored RgbQuant，避免手寫 reducer 與 ditherit-v2 漂移。
+        return app.pages.ditherEditor.rgbQuantAdapter.extractPalette(imageData);
     }
 
     // Original palette samples the loaded source image, not crop/resize/adjust output.
@@ -194,9 +97,17 @@
         return preset ? copyPalette(preset.colors) : [];
     }
 
-    // Original 只展示代表色，不執行像素量化。
-    function shouldApplyPalette(settings) {
-        return normalizePresetId(settings.presetId) !== ORIGINAL_PRESET_ID;
+    function ditherIsActive(context) {
+        var state = context && context.state;
+        var dither = state && state.settings && state.settings.dither;
+        var enabled = state && state.pipeline && state.pipeline.enabled;
+        return Boolean(dither && dither.algorithm && dither.algorithm !== 'none'
+            && (!enabled || enabled.dither !== false));
+    }
+
+    // Dither 啟用時由 Dither 依目前 palette 落色；Palette 不先量化，避免抖動前誤差被吃掉。
+    function shouldApplyPalette(settings, context) {
+        return normalizePresetId(settings.presetId) !== ORIGINAL_PRESET_ID && !ditherIsActive(context);
     }
 
     function setCustomPalette(context, palette, options) {
@@ -278,7 +189,7 @@
         panelGroup: 'edit',
         pipelineStage: 'effectsOrder',
         pipelineOrder: 20,
-        // 預設顯示 Original 代表色，不套用 palette operation。
+        // 預設顯示 Original 代表色，不先套用固定色盤。
         defaultSettings: function defaultSettings() {
             return { presetId: ORIGINAL_PRESET_ID, palette: null, originalPalette: null };
         },
@@ -352,18 +263,20 @@
             pipeline: {
                 draggable: true
             },
-            // Palette operation 會把每個像素替換成 palette 中的最近色。
-            run: function run(imageData, settings) {
+            // Dither 關閉時，Palette operation 會把每個像素替換成 palette 中的最近色。
+            run: function run(imageData, settings, context) {
                 var palette = currentPalette(settings);
-                if (!shouldApplyPalette(settings) || !palette.length) {
+                if (!shouldApplyPalette(settings, context) || !palette.length) {
                     return imageData;
                 }
                 var data = new Uint8ClampedArray(imageData.data);
+                var ditherSettings = context && context.state && context.state.settings.dither;
+                var colorDistance = app.core.paletteUtils.normalizeColorDistanceId(
+                    ditherSettings && ditherSettings.colorDistance
+                );
+                var nearestColor = app.core.paletteUtils.createNearestColorFinder(palette, colorDistance);
                 for (var i = 0; i < data.length; i += 4) {
-                    var nearest = app.core.paletteUtils.nearestColor(
-                        { r: data[i], g: data[i + 1], b: data[i + 2] },
-                        palette
-                    );
+                    var nearest = nearestColor({ r: data[i], g: data[i + 1], b: data[i + 2] });
                     data[i] = nearest.r;
                     data[i + 1] = nearest.g;
                     data[i + 2] = nearest.b;

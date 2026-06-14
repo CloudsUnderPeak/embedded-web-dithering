@@ -11,6 +11,7 @@
             var source = imageData.data;
             var output = new Uint8ClampedArray(source.length);
             var palette = options.palette;
+            var nearestColor = app.core.paletteUtils.createNearestColorFinder(palette, options.colorDistance);
 
             for (var y = 0; y < height; y += 1) {
                 for (var x = 0; x < width; x += 1) {
@@ -23,7 +24,7 @@
                         g: source[index + 1] + amount,
                         b: source[index + 2] + amount
                     };
-                    var nearest = app.core.paletteUtils.nearestColor(color, palette);
+                    var nearest = nearestColor(color);
                     output[index] = nearest.r;
                     output[index + 1] = nearest.g;
                     output[index + 2] = nearest.b;

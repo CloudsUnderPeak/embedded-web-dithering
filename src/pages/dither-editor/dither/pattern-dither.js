@@ -10,6 +10,7 @@
             var source = imageData.data;
             var output = new Uint8ClampedArray(source.length);
             var palette = options.palette;
+            var nearestColor = app.core.paletteUtils.createNearestColorFinder(palette, options.colorDistance);
 
             for (var y = 0; y < height; y += 1) {
                 for (var x = 0; x < width; x += 1) {
@@ -22,10 +23,7 @@
                     // dot 決定此像素是否位在圖案點上，藉此產生人工網點感。
                     var dot = (x % 3 === 1 && y % 3 === 1) || (x + y) % 7 === 0;
                     var adjusted = luma + (dot ? 34 : -18);
-                    var nearest = app.core.paletteUtils.nearestColor(
-                        { r: adjusted, g: adjusted, b: adjusted },
-                        palette
-                    );
+                    var nearest = nearestColor({ r: adjusted, g: adjusted, b: adjusted });
                     output[index] = nearest.r;
                     output[index + 1] = nearest.g;
                     output[index + 2] = nearest.b;

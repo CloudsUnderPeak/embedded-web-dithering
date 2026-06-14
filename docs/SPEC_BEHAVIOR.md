@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-13
+Last Updated: 2026-06-14
 Split From: SPEC_INDEX.md
 ```
 
@@ -29,6 +29,17 @@ Split From: SPEC_INDEX.md
 - 2026-06-13: 從 `prepare` 進入 `edit` 時避免先顯示 source fallback 再切到 result，減少明顯圖片重載感。
 - 2026-06-13: prepare crop frame 與 edit preview 使用同一個 preview stage content-box 對齊基準，避免 1px 級切換位移。
 - 2026-06-13: `edit` 的 Original preview 改為顯示 prepare 後的原圖，而不是未經 prepare 的 source image。
+- 2026-06-13: Palette 預設維持 Original；Dither 預設使用 Floyd-Steinberg error diffusion，並以目前 Palette 作為固定輸出色。
+- 2026-06-13: Original palette 萃取改為保留明暗錨點與高飽和代表色，避免小面積線材、燈色被大量背景色洗掉。
+- 2026-06-14: Dither 新增 Color Distance 選項，讓使用者調整 palette 最近色判斷方式；預設維持 RGB。
+- 2026-06-14: Original palette 萃取改為 RgbQuant-style 流程，使用 8x8 區塊統計、hue retention 與 BT.709 euclidean 合併產生代表色。
+- 2026-06-14: Color Distance 的 RgbQuant-style BT.709 距離改以 `Euclidean` 命名，並作為預設選項；`RGB` 保留為未加權 RGB 選項。
+- 2026-06-14: Color Distance 依是否套用 BT.709 權重拆分為 Euclidean BT.709 / Euclidean RGB 與 Manhattan BT.709 / Manhattan RGB，預設為 Euclidean BT.709。
+- 2026-06-14: Dither 新增 Error Strength，讓 error diffusion algorithm 可調整誤差擴散強度，預設維持 100%。
+- 2026-06-14: Original palette 重新對齊 ditherit-v2 / RgbQuant `method: 2`，使用完整 2D histogram 而非額外候選上限。
+- 2026-06-14: 專案改為直接使用 vendored RgbQuant 萃取 Original palette，並優先以 RgbQuant 執行支援的 Error Diffusion。
+- 2026-06-14: Error Strength 對齊 dithering-studio-main 的控制語意，使用 0% 到 150%、每次 5% 的誤差擴散倍率。
+- 2026-06-14: Dither 預設改回 None，Error Strength slider step 改為 1%。
 
 ## 產品目標
 
@@ -189,7 +200,9 @@ Acceptance:
 - Palette starts from `Original`.
 - The user can select a preset palette or switch to `Custom` by adding, deleting, or editing swatches.
 - Deleting all custom swatches returns the palette state to `Original`.
-- The currently effective palette is visible and is used by Dither.
+- The currently effective palette is visible and is used by Dither as its target color set.
+- When Dither is active, Palette supplies target colors and does not pre-quantize pixels before dithering.
+- When Dither is `None`, a fixed or custom Palette may directly map pixels to the nearest palette colors.
 
 ### US-10 Apply Dither
 
@@ -198,9 +211,15 @@ As a user, I want to choose a Dither algorithm, so that the preview and export s
 Acceptance:
 
 - Dither starts from `None`.
+- Serpentine starts disabled.
+- Color Distance starts from `Euclidean BT.709`.
+- Error Strength starts from `100%` and applies to Error Diffusion algorithms.
+- Error Strength is adjustable from `0%` to `150%` in `1%` steps.
 - Choosing an algorithm updates the result preview.
-- Returning to `None` disables dither output changes.
-- Dither uses the current effective palette.
+- Choosing a Color Distance updates the result preview.
+- Changing Error Strength updates the result preview when the selected algorithm uses Error Diffusion.
+- Returning to `None` disables dither output changes while leaving Palette behavior available.
+- Dither uses the current effective palette as fixed output colors.
 
 ### US-11 Reorder Effects
 
@@ -399,11 +418,16 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 行為要求：
 
 - Palette 預設為 Original。
+- Original palette 必須使用專案內 vendored RgbQuant 的代表色萃取流程，而不是手寫明暗錨點 heuristic。
+- Original palette 應以原始來源圖的區塊統計、hue retention 與 BT.709 euclidean 色距合併產生 8 色代表色。
 - Original 不主動改變圖片。
 - 手動變更色票後，狀態切換為 Custom。
 - Custom 是目前工作區設定，不是固定 preset。
 - 色票被刪到空時，回到 Original。
 - Palette 當前有效色票必須同步給 Dither 使用。
+- Dither 啟用時，Palette 不先量化像素；Dither 以目前有效色票產生固定色點陣結果。
+- Dither 為 None 時，固定 preset 或 Custom Palette 可直接把像素映射到最近色。
+- 最近色映射使用 Dither 面板目前選擇的 Color Distance；預設為 Euclidean BT.709。
 
 ### Dither
 
@@ -411,13 +435,19 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 
 - 選擇不套用 Dither。
 - 選擇支援的 Dither algorithm。
+- 調整 Error Diffusion 的 Error Strength。
 - 配合目前有效 palette 產生處理結果。
 
 行為要求：
 
 - Dither 預設為 None。
+- Serpentine 預設為關閉。
+- Color Distance 預設為 Euclidean BT.709，使用者可切換支援的距離公式。
+- Error Strength 預設為 100%，只影響 Error Diffusion algorithms；100% 代表標準擴散強度。
+- 選擇非 Error Diffusion algorithm 時，Error Strength 控制仍可見但不可調整。
 - None 不改變圖片。
-- Palette 與 Dither 即使預設不改圖，仍要留在可拖曳 effects 中。
+- Dither 使用目前有效 Palette 作為固定輸出色。
+- Palette 與 Dither 仍要留在可拖曳 effects 中。
 
 ### Export
 

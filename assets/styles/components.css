@@ -280,7 +280,8 @@
     display: none;
 }
 
-.adjust-range-control {
+.adjust-range-control,
+.dither-range-control {
     display: grid;
     grid-template-columns: 42px minmax(0, 1fr);
     gap: 10px;
@@ -288,20 +289,26 @@
     min-width: 0;
 }
 
-.adjust-range-value {
+.adjust-range-value,
+.dither-range-value {
     color: var(--color-muted);
     font-size: 12px;
     font-variant-numeric: tabular-nums;
     text-align: right;
 }
 
-.adjust-range-control input[type="range"] {
+.adjust-range-control input[type="range"],
+.dither-range-control input[type="range"] {
     width: 100%;
     min-width: 0;
     min-height: 34px;
     border: 0;
     padding: 0;
     background: transparent;
+}
+
+.dither-range-control.is-disabled {
+    opacity: 0.55;
 }
 
 .image-input-actions {

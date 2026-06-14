@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-13
+Last Updated: 2026-06-14
 Split From: SPEC_INDEX.md
 ```
 
@@ -30,6 +30,17 @@ Split From: SPEC_INDEX.md
 - 2026-06-13: preview frame fit 改用 preview stage content-box 尺寸，避免 border-box 導致 prepare / edit 之間出現微小對齊差。
 - 2026-06-13: Demo data asset 改為按下 Load Demo 時才載入；動態 script loader 改為同批並行下載、依插入順序執行。
 - 2026-06-13: `edit` 的 Original preview 改為使用 `prepare` group operations 產生的 `preparedImageData`，不直接顯示 raw source。
+- 2026-06-13: Palette 預設維持 Original；Dither 預設改為 Floyd-Steinberg error diffusion 且 Serpentine 關閉，Dither 啟用時 Palette 不先量化像素。
+- 2026-06-13: Original palette 萃取改為使用明暗錨點、灰階錨點、高飽和色相分區與加權填補，避免純頻率排序漏掉視覺重要色。
+- 2026-06-14: Dither settings 新增 `colorDistance`，由 `palette-utils` 統一提供 RGB、Manhattan、BT.709 與 CIEDE2000 最近色判斷。
+- 2026-06-14: Original palette 萃取改為 RgbQuant-style：8x8 box histogram、hue retention、`initColors: 4096` 候選上限與 BT.709 euclidean palette reduction。
+- 2026-06-14: Color Distance 將 RgbQuant-style BT.709 weighted distance 命名為 `euclidean`，`bt709` 舊 id 僅作為相容 alias。
+- 2026-06-14: Color Distance 拆成 `euclidean-bt709`、`euclidean-rgb`、`manhattan-bt709`、`manhattan-rgb` 與 `ciede2000`；舊 id 只作為 alias。
+- 2026-06-14: Dither settings 新增 `errorStrength`，Error Diffusion 以百分比控制誤差擴散倍率，預設 100%。
+- 2026-06-14: Original palette 重新對齊 RgbQuant `method: 2` 的 `buildPal()` 行為，完整排序 2D histogram 後再 reduce，不使用 `initColors` 候選截斷。
+- 2026-06-14: 將 RgbQuant 以 MIT vendored library 納入 `src/vendor/`，由 `rgbquant-adapter.js` 統一提供 Original palette 萃取與支援的 Error Diffusion。
+- 2026-06-14: Error Strength 對齊 dithering-studio-main，統一以 `errorStrength / 100` 乘上 error diffusion 擴散係數，UI step 為 5%。
+- 2026-06-14: Dither 預設改回 `none`，Error Strength UI step 改為 1%。
 
 ## Plug-and-Play 架構要求
 
@@ -223,7 +234,7 @@ src/pages/{page-id}/
 規則：
 
 - `entry.js` 負責載入該頁自己的 config、algorithms、feature manifest、feature registry、enabled feature scripts、viewport、controller、state 與 `page.js`；feature scripts 必須從 `feature-manifest.js` 經由 `feature-registry.js` 解析產生，不直接逐一硬寫 operation 或 panel 檔。
-- `constants.js` 必須在 feature scripts 前載入，讓 feature 可安全讀取頁面級限制值，例如 resize output size limit。
+- `constants.js` 必須在 feature scripts 前載入，讓 feature 可安全讀取頁面級限制值與預設目標，例如 resize output size limit、default dither algorithm id。
 - `entry.js` 最後負責讓頁面模組可被 app registry 註冊。
 - `page.js` 只負責該頁的 mount / unmount 與頁面 DOM 組合。
 - `index.html` 不可直接列出某頁內部的 operation、algorithm、panel、viewport 檔案。
@@ -246,6 +257,9 @@ embedded-web-dithering/
       components.css
       themes.css
   src/
+    vendor/
+      rgbquant.js
+      rgbquant.LICENSE.txt
     namespace.js
     main.js
     i18n/
@@ -285,6 +299,7 @@ embedded-web-dithering/
           operation-registry.js
           pipeline-runner.js
         dither/
+          rgbquant-adapter.js
           dither-matrices.js
           error-diffusion.js
           ordered-dither.js
@@ -364,6 +379,7 @@ embedded-web-dithering/
 - `dither/` 放 dither 演算法核心與矩陣資料，不處理 DOM、feature registration 或 editor state。
 - `gpu/` 放可選硬體加速 processor，例如 WebGL adjust processor。GPU processor 必須有 CPU fallback，且不應直接操作 tool panel 或 editor mode。
 - `viewport/` 放 canvas render、overlay render、座標轉換與 preview viewport 相關邏輯；page 仍負責 DOM mount 與工具列組合。
+- `src/vendor/` 只放第三方程式碼與對應授權檔。Feature 不應直接依賴 vendor 全域物件，必須透過頁面 adapter 或 core wrapper 存取。
 - 空目錄不應保留作為未來分類提示；需要對應功能時再建立實際檔案與規格。
 
 ## 命名與 Coding Style
@@ -630,12 +646,15 @@ Palette feature 必須把 preset 與使用者自訂色票分清楚：
 - 固定 preset 只來自 `palette-presets.js`。
 - MVP 內建 fixed presets 至少包含 `monochrome`、`game-boy`、`warm-ink`、`e6-color-epaper`；`e6-color-epaper` 使用黑、白、紅、黃、藍、綠六色色票。
 - `Original` 是 Palette 的預設選項，色票從載入時的原始 `sourceImageData` 萃取，不考慮 crop、resize、adjust 或其他 pipeline step。
+- `Original` palette 萃取必須透過 `rgbquant-adapter.js` 呼叫 vendored RgbQuant，設定使用 `colors: 8`、`method: 2`、`boxSize: [8, 8]`、`boxPxls: 2`、`minHueCols: 2000` 與 `colorDist: 'euclidean'`。`ditherit-v2` options 雖包含 `initColors: 4096`，但 RgbQuant `method: 2` 的 `buildPal()` 實際使用完整 2D histogram，不以 `initColors` 截斷候選。
 - `Original` 只負責顯示原始圖片代表色並同步給 `Dither`，palette operation 不主動改變圖片。
 - `Custom` 只代表目前 settings 中的色票陣列，不應被加入 `palette-presets.js`。
 - 選擇固定 preset 時，feature 應複製 preset colors 到目前 settings，避免使用者後續編輯污染 config。
-- `Palette` 不提供 `Quantize` 開關；選擇固定 preset 或 `Custom` 後，palette operation 直接把像素映射到目前色票中最接近的顏色。
+- `Palette` 不提供 `Quantize` 開關；Dither 啟用且 Dither operation 未被停用時，palette operation 不先量化像素，只同步有效色票給 Dither。
+- Dither 為 `none` 或 Dither operation 被停用時，選擇固定 preset 或 `Custom` 後，palette operation 直接把像素映射到目前色票中最接近的顏色。
 - 使用者新增、刪除或編輯色票後，feature 應把 `presetId` 設為 `custom`，立即排程 preview，並讓 `Dither` 使用同一份有效 palette。
-- 色票陣列為空時，feature 應回到 `presetId: 'original'`；`Original` 不主動改圖，固定 preset 或 `Custom` 則直接把像素映射到目前色票。
+- 色票陣列為空時，feature 應回到 `presetId: 'original'`；`Original` 不主動改圖。
+- `palette-utils` 必須集中管理 palette 最近色判斷；預設使用 RgbQuant-style Euclidean BT.709 distance，並支援由 Dither settings 指定其他 Color Distance。
 
 `dither-algorithms.js`：
 
@@ -654,6 +673,18 @@ Palette feature 必須把 preset 與使用者自訂色票分清楚：
     ];
 })(window.DitherApp);
 ```
+
+Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `none`，且 `serpentine` 預設為 `false`。`DEFAULT_DITHER_ERROR_STRENGTH` 目前為 `100`，代表標準 error diffusion 擴散強度。Dither 啟用時 output 必須以目前有效 Palette 作為固定輸出色，不自行產生新的顏色。
+
+`color-distance-metrics.js` 宣告使用者可選的最近色距離公式。Dither feature 預設使用 `DEFAULT_COLOR_DISTANCE_ID`，目前為 `euclidean-bt709`。同一個 `colorDistance` 必須傳給 Error Diffusion、Ordered Dither、Pattern Dither，以及 Dither 關閉時 Palette operation 的直接最近色映射。`euclidean-bt709` 是 RgbQuant-style BT.709 weighted euclidean distance；`euclidean-rgb` 是未加權 RGB squared distance；`manhattan-bt709` 是 BT.709 weighted Manhattan distance；`manhattan-rgb` 是未加權 Manhattan distance。舊 id `euclidean` / `bt709` 應正規化到 `euclidean-bt709`，舊 id `rgb` 應正規化到 `euclidean-rgb`，舊 id `manhattan` 應正規化到 `manhattan-rgb`。
+
+`rgbquant-adapter.js` 是 Dither Editor 使用 RgbQuant 的唯一入口。Adapter 必須：
+
+- 將專案 `{ r, g, b }` 色彩格式轉成 RgbQuant `[r, g, b]` tuple。
+- 將 `floydSteinberg`、`atkinson`、`jarvis`、`stucki` 映射到 RgbQuant kernel 名稱。
+- 將 `euclidean-bt709` 映射到 RgbQuant `euclidean`，將 `manhattan-bt709` 映射到 RgbQuant `manhattan`。
+- 對 RgbQuant 尚不支援的 `euclidean-rgb`、`manhattan-rgb`、`ciede2000` 保留既有 Error Diffusion fallback。
+- 複製輸入 `ImageData` 後再交給 RgbQuant reduce，避免 operation 修改 upstream pipeline input。
 
 `pipeline-presets.js`：
 
@@ -1104,6 +1135,7 @@ MVP 規則：
 - `resize` 固定在 `fixedBefore`，並在 `crop` 之後。
 - `adjust`、`palette`、`dither` 屬於 `effectsOrder`，可拖曳改變順序。
 - `export` 不在 pipeline list 中，它永遠使用目前 pipeline 結果。
+- 彩色電子紙預設流程中，`palette` 表示固定輸出色集合；`dither` 啟用時負責把像素落到該色集合並擴散誤差，避免 `palette` 先量化造成 dither 失去誤差。
 - 如果某效果順序可能造成品質問題，只提醒使用者，不強制阻擋。
 - 如果某 operation 需要前置資料不存在，該 operation 應回傳明確錯誤並在 UI 顯示。
 
@@ -1215,7 +1247,10 @@ function runPipeline(sourceImageData, state) {
         if (!operation) {
             throw new Error('Missing operation: ' + operationId);
         }
-        currentImageData = operation.run(currentImageData, state.settings[operationId] || {}, state);
+        currentImageData = operation.run(currentImageData, state.settings[operationId] || {}, {
+            id: operationId,
+            state: state,
+        });
     }
 
     return currentImageData;
@@ -1225,6 +1260,7 @@ function runPipeline(sourceImageData, state) {
 錯誤策略：
 
 - operation 設定無效時，應在 `run()` 內 throw 明確錯誤並停止 pipeline。
+- operation 的第三個參數是 pipeline context，只能用於讀取目前 operation id、state、settings 或 pipeline enabled 狀態；operation 不可透過 context 讀寫 DOM。
 - 不略過失敗 operation，避免輸出結果不可預期。
 - preview 時由 controller catch error，更新 `state.status = 'error'` 與 `state.error`。
 - export 時若 pipeline throw error，禁止輸出並要求使用者修正設定。
@@ -1496,6 +1532,8 @@ Error Diffusion algorithms：
 - Jarvis-Judice-Ninke。
 - Stucki。
 
+Error Diffusion processor 必須接受 `options.errorStrength` 百分比，將誤差擴散量乘上 `errorStrength / 100`。允許範圍為 `0` 到 `150`，UI step 為 `1`；缺值或無效值必須退回標準倍率 `1`。支援的 BT.709 Euclidean / Manhattan 路徑優先交給 RgbQuant reduce；RgbQuant 不支援的 color distance 使用既有 fallback processor。Ordered Dither 與 Pattern Dither 不套用 `errorStrength`。
+
 Dither function 不可讀 DOM，不可硬編碼寬高：
 
 ```js
@@ -1515,8 +1553,10 @@ function applyDither(imageData, options) {
 ```js
 const ditherSettings = {
     mode: 'error-diffusion',
-    algorithm: 'floyd-steinberg',
+    algorithm: 'none',
     serpentine: false,
+    colorDistance: 'euclidean-bt709',
+    errorStrength: 100,
     palette: [
         { r: 0, g: 0, b: 0 },
         { r: 255, g: 255, b: 255 },

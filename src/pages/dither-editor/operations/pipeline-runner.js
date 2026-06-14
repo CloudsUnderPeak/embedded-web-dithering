@@ -20,7 +20,10 @@
                 throw new Error('Missing operation: ' + order[i]);
             }
             // Operation 若改變 pixels 必須回傳新的 ImageData；若設定為 no-op，可回傳原物件。
-            current = operation.run(current, state.settings[order[i]] || {});
+            current = operation.run(current, state.settings[order[i]] || {}, {
+                id: order[i],
+                state: state
+            });
         }
         return current;
     }
