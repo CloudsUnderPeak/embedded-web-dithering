@@ -629,7 +629,7 @@ body.is-sorting * {
     background: var(--color-surface-alpha);
     font-size: 15px;
     font-weight: 700;
-    line-height: 1.2;
+    line-height: 1.4;
     padding: 0 11px;
     text-align: left;
 }
