@@ -102,7 +102,7 @@
 }
 
 .preview-stage {
-    /* 棋盤背景表示透明區域，也作為 crop preview 的可視舞台。 */
+    /* 柔和灰白細網格表示透明區域，也作為 crop preview 的可視舞台。 */
     position: relative;
     min-height: 0;
     display: grid;
@@ -111,13 +111,27 @@
     border: 1px solid var(--color-border);
     border-radius: 8px;
     background:
-        linear-gradient(45deg, var(--color-checker-a) 25%, transparent 25%),
-        linear-gradient(-45deg, var(--color-checker-a) 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, var(--color-checker-a) 75%),
-        linear-gradient(-45deg, transparent 75%, var(--color-checker-a) 75%);
-    background-color: var(--color-checker-bg);
-    background-size: 24px 24px;
-    background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+        repeating-linear-gradient(
+            to bottom,
+            var(--color-border) 0 1px,
+            transparent 1px 80px
+        ),
+        repeating-linear-gradient(
+            to right,
+            var(--color-border) 0 1px,
+            transparent 1px 80px
+        ),
+        repeating-linear-gradient(
+            to bottom,
+            var(--color-border-faint) 0 1px,
+            transparent 1px 16px
+        ),
+        repeating-linear-gradient(
+            to right,
+            var(--color-border-faint) 0 1px,
+            transparent 1px 16px
+        );
+    background-color: var(--color-surface-muted);
 }
 
 .preview-stage.is-empty-upload {

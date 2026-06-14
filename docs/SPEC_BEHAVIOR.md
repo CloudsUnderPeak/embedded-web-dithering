@@ -53,6 +53,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-15: Crop Fill 新增 Auto preset，以低解析邊界取樣快速估算填色，並用小幅色差穩定化降低旋轉閃爍。
 - 2026-06-15: Crop Fill 預設改為 Auto。
 - 2026-06-15: 手機版 empty upload dropzone 保留左右餘裕，不貼齊 preview stage 邊界。
+- 2026-06-15: Preview stage 透明區域背景改為柔和灰白細網格，並每 5x5 小格顯示一組主網格。
+- 2026-06-15: Preview stage 網格色彩改為沿用既有灰階 theme tokens，不另外維護 preview 專用色系。
 
 ## 產品目標
 
@@ -386,7 +388,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 - 左右/上下反轉必須作用在原圖 transform，preview 與正式輸出需一致。
 - 底色選項提供 Black、White、Custom；選 Black / White 時 color picker 顯示對應顏色，手動調整 color picker 時選項自動切成 Custom。
 - 使用原生 color picker 微調底色時，調色盤必須維持開啟直到使用者完成選色。
-- 底色只填補旋轉、平移、縮放或翻轉後原圖未覆蓋的 crop transform 區域，不是頁面背景；prepare 預覽時只顯示在 crop frame 內，frame 外仍可透出棋盤背景與原圖脈絡。
+- 底色只填補旋轉、平移、縮放或翻轉後原圖未覆蓋的 crop transform 區域，不是頁面背景；prepare 預覽時只顯示在 crop frame 內，frame 外仍可透出沿用既有灰階 theme tokens 的 5x5 分組網格背景與原圖脈絡。
 - 若原圖已有 rotation，點擊左右/上下反轉時 rotation 需同步取反，並鏡射對應 pan 軸，讓反轉以目前畫面座標為準。
 - 只要 Crop 展開，App 就是 `prepare` 流程，且其他 tool panel 必須收合；使用者可按 OK 或再次收合 Crop 進入 `edit`。
 

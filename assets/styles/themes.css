@@ -40,8 +40,6 @@ body[data-theme="light"] {
     --color-status-ready-fill: #2fa077;
     --color-status-busy-border: #2f6f95;
     --color-status-busy-fill: #59a6d9;
-    --color-checker-a: #e1e6ea;
-    --color-checker-bg: #f8fafb;
     --color-scroll-thumb: rgba(78, 93, 103, 0.38);
     --color-scroll-thumb-hover: rgba(78, 93, 103, 0.58);
     --color-crop-mask: rgba(11, 16, 22, 0.45);
@@ -88,8 +86,6 @@ body[data-theme="dark"] {
     --color-status-ready-fill: #42b883;
     --color-status-busy-border: #5c95bb;
     --color-status-busy-fill: #6db6df;
-    --color-checker-a: #26323c;
-    --color-checker-bg: #17212b;
     --color-scroll-thumb: rgba(168, 182, 192, 0.34);
     --color-scroll-thumb-hover: rgba(168, 182, 192, 0.56);
     --color-crop-mask: rgba(0, 0, 0, 0.55);

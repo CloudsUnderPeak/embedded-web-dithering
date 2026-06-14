@@ -54,6 +54,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-14: Edit preview 的 Original / Result 切換改用 `.setting-choice` radio 結構，對齊 Web Setting Theme 選項。
 - 2026-06-15: Crop Fill 新增 `auto` preset，使用低解析 transformed crop frame 邊界取樣估算填色，並用小幅色差穩定化降低旋轉閃爍。
 - 2026-06-15: Crop Fill 預設 `backgroundPreset` 改為 `auto`。
+- 2026-06-15: Preview stage 透明區域背景 token 改為柔和灰白 5x5 分組細網格 pattern，不再使用 checker token。
+- 2026-06-15: Preview stage 網格改為重用既有 surface / border 灰階 tokens，不新增 preview pattern 專用色彩 tokens。
 
 ## Plug-and-Play 架構要求
 
@@ -1199,7 +1201,7 @@ Preview renderer 與正式 crop operation 必須套用同一套 transform 規則
 4. 套用 signed scale：`flipX` 時 X scale 為 `-zoom`，否則為 `zoom`；`flipY` 時 Y scale 為 `-zoom`，否則為 `zoom`。
 5. 從原圖中心繪製來源圖片。
 
-`viewport-renderer.renderTransformed()` 的 prepare preview canvas 可以大於 crop frame；此時 transform fill color 只能填在 `layout.frame` 內，frame 外必須保持透明，讓棋盤背景與原圖調整脈絡可見。正式 `cropToImageData()` 的 target canvas 本身就是 crop frame 尺寸，因此仍填滿整個 target。
+`viewport-renderer.renderTransformed()` 的 prepare preview canvas 可以大於 crop frame；此時 transform fill color 只能填在 `layout.frame` 內，frame 外必須保持透明，讓 preview stage 的 5x5 分組細網格透明背景與原圖調整脈絡可見。該網格必須重用既有 `--color-surface-muted`、`--color-border-faint`、`--color-border` 等灰階 theme tokens，不新增 preview pattern 專用色彩 tokens。正式 `cropToImageData()` 的 target canvas 本身就是 crop frame 尺寸，因此仍填滿整個 target。
 
 `viewport-renderer.js` 的 transform cache key 必須包含 `flipX`、`flipY` 與 crop transform fill color，否則切換反轉或底色狀態可能不會重繪。Fill 設為 `auto` 時，crop feature 必須依目前 source image、ratio、pan、zoom、rotation、flip 與 crop output size 建立 cache key；任一 transform 調整後都要重新估算。
 
