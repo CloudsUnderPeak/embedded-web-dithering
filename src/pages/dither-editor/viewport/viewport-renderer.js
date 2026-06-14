@@ -78,6 +78,7 @@
             settings.rotation,
             settings.flipX,
             settings.flipY,
+            app.pages.ditherEditor.crop.backgroundColor(settings),
             layout.width,
             layout.height
         ].join('|');
@@ -92,6 +93,9 @@
         this.sourceCtx.putImageData(imageData, 0, 0);
 
         var ctx = this.prepareBuffer(layout.width, layout.height);
+        var frame = layout.frame || { x: 0, y: 0, width: layout.width, height: layout.height };
+        ctx.fillStyle = app.pages.ditherEditor.crop.backgroundColor(settings);
+        ctx.fillRect(frame.x, frame.y, frame.width, frame.height);
         ctx.save();
         ctx.translate(
             layout.width / 2 + Number(settings.panX || 0),

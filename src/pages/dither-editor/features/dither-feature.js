@@ -121,7 +121,7 @@
                         controller.updateSetting('dither', 'colorDistance', value);
                     }
                 )),
-                ui.row('Serpentine', ui.checkboxInput(state.settings.dither.serpentine, function (value) {
+                ui.row('Serpentine', ui.toggleSwitchInput(state.settings.dither.serpentine, function (value) {
                     controller.updateSetting('dither', 'serpentine', value);
                 })),
                 ui.row(ui.t('labelErrorStrength'), errorStrengthControl)

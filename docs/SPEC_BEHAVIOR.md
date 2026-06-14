@@ -43,6 +43,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-14: Palette color picker 調色時不立即重跑 preview，避免原生調色盤被關閉而無法微調。
 - 2026-06-14: Original Palette 新增 Colors 控制，可在 2 到 32 色間重新萃取，切到 Custom 或固定 preset 時隱藏。
 - 2026-06-14: Palette 色票排列改為每列最多 8 個。
+- 2026-06-14: Dither 預設改回 Floyd-Steinberg；Serpentine 改用 Toggle Switch，Crop 手機版維持 2x2 控制排列，slider 使用主題色。
+- 2026-06-14: Crop 新增 transform fill color，使用 Black / White / Custom select 搭配 color picker，填補旋轉或移動後原圖未覆蓋的區域。
 
 ## 產品目標
 
@@ -163,7 +165,9 @@ Acceptance:
 - The crop overlay remains centered and represents the final output area.
 - Dragging in the preview moves the image under the fixed crop frame, not the crop frame itself.
 - Zoom, rotation, horizontal flip, and vertical flip affect the image transform without changing the selected crop ratio.
-- The Crop panel uses a 2x2 quadrant layout: Ratio, Zoom, Rotation, and an equal-width icon button group for rotate-left 90, rotate-right 90, horizontal flip, and vertical flip.
+- The Crop panel uses a two-column layout: Ratio with Zoom, Rotate with Fill, and a full-width equal button row.
+- The Crop panel keeps the same row structure in mobile layouts.
+- Fill chooses the color for areas not covered by the source image after crop transform.
 - Flip icon buttons should behave visually like the rotate buttons and must not show a persistent active highlight after being pressed.
 
 ### US-07 Resize Output
@@ -213,7 +217,7 @@ As a user, I want to choose a Dither algorithm, so that the preview and export s
 
 Acceptance:
 
-- Dither starts from `None`.
+- Dither starts from Floyd-Steinberg.
 - Serpentine starts disabled.
 - Color Distance starts from `Euclidean BT.709`.
 - Error Strength starts from `100%` and applies to Error Diffusion algorithms.
@@ -360,6 +364,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 - 旋轉原圖。
 - 左右反轉原圖。
 - 上下反轉原圖。
+- 選擇 transform 後原圖未覆蓋區域的底色。
 - 在 preview 區拖曳原圖位置。
 - 在 crop overlay 上用滑鼠滾輪調整 zoom。
 
@@ -371,6 +376,9 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 - 使用者拖曳的是原圖位置，不是裁切框。
 - Crop overlay 固定代表最後輸出的裁切範圍。
 - 左右/上下反轉必須作用在原圖 transform，preview 與正式輸出需一致。
+- 底色選項提供 Black、White、Custom；選 Black / White 時 color picker 顯示對應顏色，手動調整 color picker 時選項自動切成 Custom。
+- 使用原生 color picker 微調底色時，調色盤必須維持開啟直到使用者完成選色。
+- 底色只填補旋轉、平移、縮放或翻轉後原圖未覆蓋的 crop transform 區域，不是頁面背景；prepare 預覽時只顯示在 crop frame 內，frame 外仍可透出棋盤背景與原圖脈絡。
 - 若原圖已有 rotation，點擊左右/上下反轉時 rotation 需同步取反，並鏡射對應 pan 軸，讓反轉以目前畫面座標為準。
 - 只要 Crop 展開，App 就是 `prepare` 流程，且其他 tool panel 必須收合；使用者可按 OK 或再次收合 Crop 進入 `edit`。
 
@@ -446,8 +454,9 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 
 行為要求：
 
-- Dither 預設為 None。
+- Dither 預設為 Floyd-Steinberg。
 - Serpentine 預設為關閉。
+- Serpentine 使用 Toggle Switch 呈現。
 - Color Distance 預設為 Euclidean BT.709，使用者可切換支援的距離公式。
 - Error Strength 預設為 100%，只影響 Error Diffusion algorithms；100% 代表標準擴散強度。
 - 選擇非 Error Diffusion algorithm 時，Error Strength 控制仍可見但不可調整。
@@ -497,6 +506,7 @@ Crop preview 要求：
 ## 預覽與狀態行為
 
 使用者調整 slider、select、color 或 effects order 時，App 應更新 preview，但可以短暫 debounce，避免每一次輸入都完整重算。
+slider 控制的填色與 thumb 必須使用專案主題色，不使用瀏覽器預設藍色。
 
 主要狀態：
 

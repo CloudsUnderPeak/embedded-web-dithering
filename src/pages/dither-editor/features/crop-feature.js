@@ -5,6 +5,11 @@
     // 外部只透過 app.pages.ditherEditor.crop 的小 API 使用幾何計算，不在 page.js 重寫 crop 規則。
     var ui = app.pages.ditherEditor.panelUtils;
     var DEFAULT_ASPECT_RATIO_ID = '16-9';
+    var BACKGROUND_PRESET_BLACK = 'black';
+    var BACKGROUND_PRESET_WHITE = 'white';
+    var BACKGROUND_PRESET_CUSTOM = 'custom';
+    var DEFAULT_BACKGROUND_PRESET = BACKGROUND_PRESET_WHITE;
+    var DEFAULT_BACKGROUND_COLOR = '#ffffff';
     var MIN_ZOOM = 1;
     var MAX_ZOOM = 8;
     var panelRefs = null;
@@ -17,6 +22,12 @@
         { id: '3-5', label: '3 : 5', width: 3, height: 5 },
         { id: '16-9', label: '16 : 9', width: 16, height: 9 },
         { id: '9-16', label: '9 : 16', width: 9, height: 16 }
+    ];
+
+    var BACKGROUND_PRESETS = [
+        { id: BACKGROUND_PRESET_BLACK, label: 'Black', color: '#000000' },
+        { id: BACKGROUND_PRESET_WHITE, label: 'White', color: '#ffffff' },
+        { id: BACKGROUND_PRESET_CUSTOM, label: 'Custom', color: DEFAULT_BACKGROUND_COLOR }
     ];
 
     // 依 id 取得固定比例設定；找不到時回到預設 16:9。
@@ -33,6 +44,30 @@
         return Math.max(min, Math.min(max, Number(value) || 0));
     }
 
+    function backgroundPresetFor(id) {
+        return BACKGROUND_PRESETS.find(function (preset) {
+            return preset.id === id;
+        }) || BACKGROUND_PRESETS.find(function (preset) {
+            return preset.id === DEFAULT_BACKGROUND_PRESET;
+        });
+    }
+
+    function normalizeHexColor(value) {
+        var text = String(value || '').trim();
+        if (/^#[0-9a-f]{6}$/i.test(text)) {
+            return text.toLowerCase();
+        }
+        return DEFAULT_BACKGROUND_COLOR;
+    }
+
+    function cropBackgroundColor(settings) {
+        var preset = backgroundPresetFor(settings && settings.backgroundPreset);
+        if (preset.id !== BACKGROUND_PRESET_CUSTOM) {
+            return preset.color;
+        }
+        return normalizeHexColor(settings && settings.backgroundColor);
+    }
+
     // 水平/垂直翻轉後，旋轉角度需要反向，讓視覺方向符合鏡像後的結果。
     function mirroredRotation(rotation) {
         return clamp(-Number(rotation || 0), -180, 180);
@@ -46,6 +81,13 @@
         return app.utils.dom.el('div', {
             className: 'crop-field',
             children: [cropLabel(label), input]
+        });
+    }
+
+    function cropBackgroundControl(select, colorInput) {
+        return app.utils.dom.el('div', {
+            className: 'crop-background-control',
+            children: [select, colorInput]
         });
     }
 
@@ -158,7 +200,9 @@
             zoom: Number(zoom.toFixed(2)),
             rotation: clamp(settings.rotation || 0, -180, 180),
             flipX: Boolean(settings.flipX),
-            flipY: Boolean(settings.flipY)
+            flipY: Boolean(settings.flipY),
+            backgroundPreset: backgroundPresetFor(settings.backgroundPreset).id,
+            backgroundColor: normalizeHexColor(settings.backgroundColor)
         };
     }
 
@@ -176,6 +220,8 @@
         panelRefs.aspectRatio.value = crop.aspectRatioId;
         panelRefs.zoom.setValue(Math.round((crop.zoom || 1) * 100));
         panelRefs.rotation.setValue(crop.rotation);
+        panelRefs.backgroundPreset.value = crop.backgroundPreset;
+        panelRefs.backgroundColor.value = cropBackgroundColor(crop);
         panelRefs.flipX.setAttribute('aria-pressed', crop.flipX ? 'true' : 'false');
         panelRefs.flipY.setAttribute('aria-pressed', crop.flipY ? 'true' : 'false');
     }
@@ -194,6 +240,8 @@
         var zoom = clamp(settings.zoom || 1, MIN_ZOOM, MAX_ZOOM);
 
         ctx.putImageData(imageData, 0, 0);
+        targetCtx.fillStyle = cropBackgroundColor(settings);
+        targetCtx.fillRect(0, 0, width, height);
         targetCtx.translate(width / 2 + Number(settings.panX || 0), height / 2 + Number(settings.panY || 0));
         targetCtx.rotate(rotation * Math.PI / 180);
         // signed scale 同時處理 zoom 與 flip，需與 viewport-renderer 的 preview transform 保持一致。
@@ -206,6 +254,7 @@
         ratios: ASPECT_RATIOS.slice(),
         frameForBounds: frameForBounds,
         previewLayout: previewLayout,
+        backgroundColor: cropBackgroundColor,
         normalize: applyNormalizedCrop
     };
 
@@ -233,7 +282,9 @@
                         zoom: 1,
                         rotation: 0,
                         flipX: false,
-                        flipY: false
+                        flipY: false,
+                        backgroundPreset: DEFAULT_BACKGROUND_PRESET,
+                        backgroundColor: DEFAULT_BACKGROUND_COLOR
                     }
                 }
             };
@@ -253,7 +304,9 @@
                 zoom: 1,
                 rotation: 0,
                 flipX: false,
-                flipY: false
+                flipY: false,
+                backgroundPreset: DEFAULT_BACKGROUND_PRESET,
+                backgroundColor: DEFAULT_BACKGROUND_COLOR
             };
             applyNormalizedCrop(context.state);
         },
@@ -288,6 +341,37 @@
             });
             var rotationInput = ui.unitNumberInput(crop.rotation, -180, 180, 1, 'deg', function (value) {
                 controller.updateSetting('crop', 'rotation', value);
+            });
+            var backgroundColorInput = app.utils.dom.el('input', {
+                className: 'crop-background-color',
+                attrs: { type: 'color', value: cropBackgroundColor(crop), 'aria-label': 'Crop fill color' }
+            });
+            var backgroundPresetInput = ui.selectInput(
+                crop.backgroundPreset,
+                BACKGROUND_PRESETS.map(function (preset) {
+                    return { value: preset.id, label: preset.label };
+                }),
+                function (value) {
+                    var preset = backgroundPresetFor(value);
+                    backgroundColorInput.value = preset.id === BACKGROUND_PRESET_CUSTOM
+                        ? normalizeHexColor(controller.state.settings.crop.backgroundColor)
+                        : preset.color;
+                    controller.updateSettings('crop', {
+                        backgroundPreset: preset.id,
+                        backgroundColor: backgroundColorInput.value
+                    });
+                }
+            );
+            backgroundColorInput.addEventListener('input', function () {
+                backgroundPresetInput.value = BACKGROUND_PRESET_CUSTOM;
+                state.settings.crop.backgroundPreset = BACKGROUND_PRESET_CUSTOM;
+                state.settings.crop.backgroundColor = normalizeHexColor(backgroundColorInput.value);
+            });
+            backgroundColorInput.addEventListener('change', function () {
+                controller.updateSettings('crop', {
+                    backgroundPreset: BACKGROUND_PRESET_CUSTOM,
+                    backgroundColor: normalizeHexColor(backgroundColorInput.value)
+                });
             });
             var rotateLeftButton = cropIconButton('↺', 'Rotate left 90 degrees');
             var rotateRightButton = cropIconButton('↻', 'Rotate right 90 degrees');
@@ -325,6 +409,8 @@
                 aspectRatio: aspectRatioInput,
                 zoom: zoomInput,
                 rotation: rotationInput,
+                backgroundPreset: backgroundPresetInput,
+                backgroundColor: backgroundColorInput,
                 flipX: flipXButton,
                 flipY: flipYButton
             };
@@ -335,7 +421,8 @@
                     children: [
                         cropField('Ratio', aspectRatioInput),
                         cropField('Zoom', zoomInput),
-                        cropField('Rotation', rotationInput),
+                        cropField('Rotate', rotationInput),
+                        cropField('Fill', cropBackgroundControl(backgroundPresetInput, backgroundColorInput)),
                         app.utils.dom.el('div', {
                             className: 'crop-icon-button-row',
                             children: [rotateLeftButton, rotateRightButton, flipXButton, flipYButton]

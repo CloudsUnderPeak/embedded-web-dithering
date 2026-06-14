@@ -39,6 +39,23 @@
         return input;
     }
 
+    function toggleSwitchInput(value, onChange) {
+        var input = app.utils.dom.el('input', {
+            attrs: { type: 'checkbox', role: 'switch' }
+        });
+        input.checked = Boolean(value);
+        input.addEventListener('change', function () {
+            onChange(input.checked);
+        });
+        return app.utils.dom.el('label', {
+            className: 'toggle-switch',
+            children: [
+                input,
+                app.utils.dom.el('span', { className: 'toggle-switch-track' })
+            ]
+        });
+    }
+
     function unitNumberInput(value, min, max, step, unit, onChange) {
         // 自製數字輸入是為了在數值旁顯示單位，並讓上下箭頭支援長按連續調整。
         // 原生 number input 在不同瀏覽器的 spinner 樣式和長按行為不一致。
@@ -157,6 +174,15 @@
             attrs: { type: 'range', value: value, min: min, max: max, step: step || 1 }
         });
         var holding = false;
+
+        function updateRangeProgress() {
+            var range = Number(max) - Number(min);
+            var progress = range > 0
+                ? (Number(input.value) - Number(min)) / range * 100
+                : 0;
+            input.style.setProperty('--range-progress', Math.max(0, Math.min(100, progress)) + '%');
+        }
+
         // 滑桿互動結束時通知 controller 可以跑正式 preview。
         function endInteraction() {
             if (!holding) {
@@ -182,10 +208,12 @@
             window.addEventListener('pointercancel', endInteraction);
         });
         input.addEventListener('input', function () {
+            updateRangeProgress();
             onChange(Number(input.value));
         });
         input.addEventListener('change', endInteraction);
         input.addEventListener('blur', endInteraction);
+        updateRangeProgress();
         return input;
     }
 
@@ -218,6 +246,7 @@
         section: section,
         row: row,
         numberInput: numberInput,
+        toggleSwitchInput: toggleSwitchInput,
         unitNumberInput: unitNumberInput,
         rangeInput: rangeInput,
         selectInput: selectInput,

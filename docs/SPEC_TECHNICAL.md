@@ -45,6 +45,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-14: Palette settings 新增 `originalPaletteSize`，Original palette 可用 Colors 在 2 到 32 色間重新萃取。
 - 2026-06-14: Palette swatches 使用 8 欄 grid，限制每列最多 8 個色票。
 - 2026-06-14: Dither 預設改回 `floyd-steinberg`。
+- 2026-06-14: Dither Serpentine 改用 `panelUtils.toggleSwitchInput()`；Crop 手機版維持 2x2 grid；range input 套用主題 accent 色。
+- 2026-06-14: Crop settings 新增 `backgroundPreset` / `backgroundColor`，preview renderer 與正式 crop operation 共用 transform fill color。
 
 ## Plug-and-Play 架構要求
 
@@ -683,6 +685,8 @@ Palette feature 必須把 preset 與使用者自訂色票分清楚：
 
 Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-steinberg`，且 `serpentine` 預設為 `false`。`DEFAULT_DITHER_ERROR_STRENGTH` 目前為 `100`，代表標準 error diffusion 擴散強度。Dither 啟用時 output 必須以目前有效 Palette 作為固定輸出色，不自行產生新的顏色。
 
+`serpentine` 的 panel control 必須使用 `panelUtils.toggleSwitchInput()`，避免和一般 checkbox 視覺混用。Adjust 與 Dither 的 range input 必須使用主題 `--color-accent`，不可落回瀏覽器預設藍色。
+
 `color-distance-metrics.js` 宣告使用者可選的最近色距離公式。Dither feature 預設使用 `DEFAULT_COLOR_DISTANCE_ID`，目前為 `euclidean-bt709`。同一個 `colorDistance` 必須傳給 Error Diffusion、Ordered Dither、Pattern Dither，以及 Dither 關閉時 Palette operation 的直接最近色映射。`euclidean-bt709` 是 RgbQuant-style BT.709 weighted euclidean distance；`euclidean-rgb` 是未加權 RGB squared distance；`manhattan-bt709` 是 BT.709 weighted Manhattan distance；`manhattan-rgb` 是未加權 Manhattan distance。舊 id `euclidean` / `bt709` 應正規化到 `euclidean-bt709`，舊 id `rgb` 應正規化到 `euclidean-rgb`，舊 id `manhattan` 應正規化到 `manhattan-rgb`。
 
 `rgbquant-adapter.js` 是 Dither Editor 使用 RgbQuant 的唯一入口。Adapter 必須：
@@ -1189,21 +1193,32 @@ Crop feature 的 transform settings 必須由 `crop-feature.js` 自己定義與 
     rotation: 0,
     flipX: false,
     flipY: false,
+    backgroundPreset: 'white',
+    backgroundColor: '#ffffff',
 }
 ```
 
-Crop 預設 `aspectRatioId` 必須是 `16-9`。若舊 settings 或無效 settings 找不到對應 ratio，應 fallback 到 16:9。
+Crop 預設 `aspectRatioId` 必須是 `16-9`。若舊 settings 或無效 settings 找不到對應 ratio，應 fallback 到 16:9。Crop transform fill 預設為 white；`backgroundPreset` 僅允許 `black`、`white`、`custom`，`backgroundColor` 必須正規化為 `#rrggbb`。
 
 Preview renderer 與正式 crop operation 必須套用同一套 transform 規則：
 
-1. 將輸出中心移到 crop frame 中心，並加上 `panX` / `panY`。
-2. 套用 `rotation`。
-3. 套用 signed scale：`flipX` 時 X scale 為 `-zoom`，否則為 `zoom`；`flipY` 時 Y scale 為 `-zoom`，否則為 `zoom`。
-4. 從原圖中心繪製來源圖片。
+1. 先用目前 crop transform fill color 填滿 target canvas，覆蓋旋轉、平移、縮放或翻轉後原圖未覆蓋的區域。
+2. 將輸出中心移到 crop frame 中心，並加上 `panX` / `panY`。
+3. 套用 `rotation`。
+4. 套用 signed scale：`flipX` 時 X scale 為 `-zoom`，否則為 `zoom`；`flipY` 時 Y scale 為 `-zoom`，否則為 `zoom`。
+5. 從原圖中心繪製來源圖片。
 
-`viewport-renderer.js` 的 transform cache key 必須包含 `flipX` 與 `flipY`，否則切換反轉狀態可能不會重繪。
+`viewport-renderer.renderTransformed()` 的 prepare preview canvas 可以大於 crop frame；此時 transform fill color 只能填在 `layout.frame` 內，frame 外必須保持透明，讓棋盤背景與原圖調整脈絡可見。正式 `cropToImageData()` 的 target canvas 本身就是 crop frame 尺寸，因此仍填滿整個 target。
+
+`viewport-renderer.js` 的 transform cache key 必須包含 `flipX`、`flipY` 與 crop transform fill color，否則切換反轉或底色狀態可能不會重繪。
 
 Crop 面板的左轉 90 / 右轉 90 button 必須只更新 `rotation`，以目前 rotation 為基準加減 90 度，並將結果維持在 `-180..180` 範圍。
+
+Crop 面板在桌面與手機版都必須維持同一個兩欄 row 結構：Ratio / Zoom 同列、Rotate / Fill 同列、左轉 90 / 右轉 90 / horizontal flip / vertical flip button row 跨滿整列。手機版只能縮小欄距、label 欄寬或兩欄比例，不可退回單欄堆疊。
+
+Fill control 由 `select` 與 32x32 `input[type="color"]` 組成。選擇 `black` 或 `white` 時，color input 必須同步顯示對應顏色；使用者手動改 color input 時，`backgroundPreset` 必須切成 `custom`。
+
+Crop Fill color input 的 `input` 事件只能同步 crop state 與 select 顯示，不應呼叫 controller update 或重建面板；`change` 事件才排正式更新，避免原生 color picker 被 render 打斷。
 
 Crop 面板的 horizontal flip / vertical flip icon button 必須用同一次 settings update 完成狀態切換：
 
