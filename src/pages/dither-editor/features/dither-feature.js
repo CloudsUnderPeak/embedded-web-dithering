@@ -130,7 +130,7 @@
         },
         operation: {
             pipeline: {
-                draggable: true
+                draggable: false
             },
             // 依演算法設定分派到 ordered、pattern 或 error diffusion processor。
             run: function run(imageData, settings) {

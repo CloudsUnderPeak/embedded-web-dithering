@@ -49,6 +49,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-14: Dither Serpentine 改用 `panelUtils.toggleSwitchInput()`；Crop 手機版維持 2x2 grid；range input 套用主題 accent 色。
 - 2026-06-14: Crop settings 新增 `backgroundPreset` / `backgroundColor`，preview renderer 與正式 crop operation 共用 transform fill color。
 - 2026-06-14: Crop preview overlay 改以 canvas rect + `layout.frame` 對齊，修正窄版長條圖框選與正式 crop output 偏移。
+- 2026-06-14: 將 edit effects 的 `operation.pipeline.draggable` 改為 `false`，保留 sortable 架構但關閉目前工具列拖曳排序。
 
 ## Plug-and-Play 架構要求
 
@@ -1041,23 +1042,23 @@ Display profile 以 `outputFormat` 指定 encoder。未來可能支援：
 
 瀏覽器端應輸出 display-ready payload，ESP32 端盡量只接收並寫入顯示器。
 
-## 圖片處理流程與可拖曳效果堆疊
+## 圖片處理流程與固定效果堆疊
 
-圖片處理流程順序會影響結果，但不是每個步驟都應該出現在同一個拖曳列表中。為了避免使用者看到「可拖曳列表中間卻卡固定步驟」的混亂體驗，流程切成三段：
+圖片處理流程順序會影響結果，但目前不提供使用者拖曳改變順序。為了避免 Palette / Dither 語意混亂，流程切成三段並以固定順序執行：
 
 ```text
 fixed before: Crop -> Resize
-draggable effects: Adjust / Palette / Dither / future effect features
+edit effects: Adjust -> Palette -> Dither
 fixed after: Export
 ```
 
 規則：
 
 - `crop` 和 `resize` 固定在效果演算法之前。
-- `export` 固定在最後，不出現在拖曳列表。
-- 使用者只能拖曳 `draggable effects` 中的項目。
-- 會因順序影響圖片呈現的演算法，盡量集中放在 `draggable effects`。
-- 未來新增 pixelation、threshold、blur、sharpen 等效果時，優先加入 `draggable effects`。
+- `adjust`、`palette`、`dither` 固定在 edit effects order 中。
+- `export` 固定在最後，不出現在圖片效果順序中。
+- Tool dock 仍透過 operation registry metadata 判斷可排序項目；目前 edit effects 的 `draggable` 為 `false`，因此不顯示 drag handle。
+- 未來若重新開放排序，必須重新定義 Original palette 是否跟隨前序 effects 重算。
 
 例如：
 
@@ -1065,39 +1066,23 @@ fixed after: Export
 Crop -> Resize -> Adjust -> Palette -> Dither -> Export
 ```
 
-和：
-
-```text
-Crop -> Resize -> Dither -> Palette -> Adjust -> Export
-```
-
-可能產生不同輸出。
-
 ### Effects Stack UI
 
-編輯區不建立獨立可見的 `pipeline-panel`。屬於 `draggable effects` 的工具列項目本身就是效果堆疊，使用者直接拖曳這些工具列項目改變順序。
+編輯區不建立獨立可見的 `pipeline-panel`。edit effects 的工具列項目本身就是效果堆疊，但只提供展開/收合與設定，不提供拖曳排序。
 
 ```text
-[~~] [⋮⋮] Adjust    enabled
-[# ] [⋮⋮] Palette   enabled
-[..] [⋮⋮] Dither    enabled
+[~~] Adjust    enabled
+[# ] Palette   enabled
+[..] Dither    enabled
 ```
 
-`Crop`、`Resize` 各自留在自己的固定工具列項目，不可拖曳。`Export` 不在 accordion 工具列內，而是固定外露動作。`Adjust`、`Palette`、`Dither` 是否可拖曳不由 UI 寫死，而是由 operation registry metadata 決定。
+`Crop`、`Resize` 各自留在自己的固定工具列項目，不可拖曳。`Export` 不在 accordion 工具列內，而是固定外露動作。`Adjust`、`Palette`、`Dither` 依 `effectsOrder` 固定執行，且 `operation.pipeline.draggable` 必須為 `false`。
 
 工具列順序、operation、panel builder、feature hook 與可見性必須由 feature script 產生，並由 `feature-manifest.js` 控制是否載入。若未來要移除 `Crop`，主要應只從 `feature-manifest.js` 停用或移除該 feature；`entry.js`、`pipeline-presets.js`、`page.js`、`controller.js` 不應還有另一份 `crop` 載入、順序、工具列、panel builder 或 image-loaded hook 定義需要同步刪除。
 
 每個項目需要：
 
 - 功能圖示。
-- 可拖曳項目才顯示 drag handle，位置在功能圖示後、文字前。
-- 拖曳 handle 必須限制在 Tool Row；Tool Panel 本身和面板內表單控制不可拖曳。
-- 滑鼠移到 drag handle 時才顯示 `grab` cursor；Tool Row 其他區域平常維持一般按鈕游標。
-- drag handle 可立即啟動拖曳；Tool Row 其他區域必須長按一小段時間後才啟動拖曳，避免一般點選展開 Tool Panel 時誤拖。
-- effects stack 拖曳不使用瀏覽器原生 HTML5 drag preview；避免出現不受控的殘影與游標變化。
-- effects stack 拖曳應使用 Pointer Events 實作，拖曳期間以 `grabbing` cursor 固定手感。
-- 拖曳項目移到其他 Tool Row 上方時，DOM 可以立即重排形成視覺排序；此階段不可每次 hover 都觸發完整 page render 或重新跑 pipeline。
-- pipeline order state 應在拖曳結束後才更新一次，避免排序過程中連續觸發 preview。
 - enabled / disabled toggle。
 - 點選後顯示該步驟的參數面板。
 - 多個 Tool Panel 可以同時展開。
@@ -1128,7 +1113,7 @@ body.is-sorting * {
 }
 ```
 
-調整原則：
+Sortable 機制保留在通用 UI 層；目前因 edit effects 的 `draggable` 為 `false`，tool dock 不會產生可排序項目。以下只保留為未來重新開放排序時的調整參考：
 
 - `DRAG_THRESHOLD` 控制按下後要移動多少像素才開始排序；數值越小越靈敏，越大越不容易誤拖。
 - `holdDelay` 控制從 Tool Row 非 drag handle 區域長按多久才進入拖曳；數值越小越容易誤拖，越大越接近純點擊展開。
@@ -1136,7 +1121,7 @@ body.is-sorting * {
 - animation cleanup timeout 必須略大於 transition duration，例如 transition `105ms` 時 cleanup 可約 `120ms`。
 - `.is-dragging` 只用來提示目前被拖曳的 Tool Row，不應製造另一個可見殘影。
 - `body.is-sorting` 必須鎖定 cursor，避免滑過 icon、label、button 或其他元素時游標樣式跳動。
-- `.tool-drag-handle` 是唯一平常顯示 `grab` 的區域；整個 `.tool-button` 不應預設顯示手握取游標。
+- 若重新顯示 `.tool-drag-handle`，它應是唯一平常顯示 `grab` 的區域；整個 `.tool-button` 不應預設顯示手握取游標。
 
 ### Pipeline 限制
 
@@ -1146,10 +1131,9 @@ MVP 規則：
 
 - `crop` 固定在 `fixedBefore` 第一段。
 - `resize` 固定在 `fixedBefore`，並在 `crop` 之後。
-- `adjust`、`palette`、`dither` 屬於 `effectsOrder`，可拖曳改變順序。
+- `adjust`、`palette`、`dither` 屬於 `effectsOrder`，但 `operation.pipeline.draggable` 必須為 `false`，UI 不開放拖曳改變順序。
 - `export` 不在 pipeline list 中，它永遠使用目前 pipeline 結果。
 - 彩色電子紙預設流程中，`palette` 表示固定輸出色集合；`dither` 啟用時負責把像素落到該色集合並擴散誤差，避免 `palette` 先量化造成 dither 失去誤差。
-- 如果某效果順序可能造成品質問題，只提醒使用者，不強制阻擋。
 - 如果某 operation 需要前置資料不存在，該 operation 應回傳明確錯誤並在 UI 顯示。
 
 ### Operation 介面
@@ -1253,7 +1237,7 @@ Adjust feature 只提供 brightness、contrast、saturation 三個 slider，不�
 - 每個 slider 左側必須顯示目前數值。
 - Range input 必須能拖曳到最小與最大端點；樣式不可用 padding 或 border 壓縮可拖曳範圍。
 
-Pipeline 執行器只根據 fixed before、可拖曳 effects order 與 fixed after 逐步套用：
+Pipeline 執行器只根據 fixed before、固定 effects order 與 fixed after 逐步套用：
 
 ```js
 function runPipeline(sourceImageData, state) {

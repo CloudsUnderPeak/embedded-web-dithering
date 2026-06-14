@@ -183,7 +183,7 @@
         },
         operation: {
             pipeline: {
-                draggable: true
+                draggable: false
             },
             // 正式 pipeline 執行 adjust；優先用 WebGL，失敗時 fallback 到 CPU。
             run: function run(imageData, settings) {

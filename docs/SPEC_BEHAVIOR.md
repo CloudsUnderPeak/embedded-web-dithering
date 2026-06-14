@@ -47,6 +47,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-14: Dither 預設改回 Floyd-Steinberg；Serpentine 改用 Toggle Switch，Crop 手機版維持 2x2 控制排列，slider 使用主題色。
 - 2026-06-14: Crop 新增 transform fill color，使用 Black / White / Custom select 搭配 color picker，填補旋轉或移動後原圖未覆蓋的區域。
 - 2026-06-14: Crop preview overlay 改以 canvas 內的 crop frame 對齊，避免手機或平板長條圖框選與正式 crop output 偏移。
+- 2026-06-14: Edit effects order 改為固定順序，關閉工具列拖曳排序。
 
 ## 產品目標
 
@@ -57,7 +58,7 @@ Split From: SPEC_INDEX.md
 1. 使用者不需要後端服務。
 2. 使用者不需要下載遠端資源，也不需要連接外部 API。
 3. 使用者可以用瀏覽器原生能力完成上傳、編輯、預覽與輸出。
-4. 使用者可以調整會影響圖片結果的效果順序。
+4. App 以固定順序套用會影響圖片結果的效果，避免 palette / dither 語意混亂。
 5. MVP 只交付 Standalone Mode；ESP32 Device Mode 僅作為後續方向保留。
 
 ## 使用者範圍
@@ -70,7 +71,7 @@ MVP 必須支援：
 - 裁切、縮放與基礎影像調整。
 - 選擇或自訂 palette。
 - 選擇 Dither 效果。
-- 拖曳調整效果順序。
+- 依固定效果順序預覽結果。
 - 預覽處理前後的結果。
 - 匯出 PNG。
 - 保留基本工作狀態與設定。
@@ -93,7 +94,7 @@ MVP 不包含：
 5. App 解碼圖片後自動進入 `prepare` group 並只展開 Crop；此時 Image Input、Crop 與 edit tools 可選。
 6. 使用者按下右下角顯眼的 OK 或自行收合 Crop 時，App 進入 `edit` group 並展開 Resize、Adjust、Palette、Dither；若使用者改點單一 edit tool，則只展開該 edit panel。
 7. `edit` group 會依 Crop 範圍與 Resize、Adjust、Palette、Dither 等設定更新 Result。
-8. 使用者可拖曳 Effects order，改變圖片處理順序。
+8. App 依固定 Effects order 更新圖片處理結果。
 9. 使用者可在圖片呈現區右下角切換 Original / Result。
 10. 使用者確認結果後匯出 PNG。
 11. 使用者可切換到 Web Setting、Help 或 About，再返回編輯頁並保留目前工作狀態。
@@ -230,16 +231,16 @@ Acceptance:
 - Returning to `None` disables dither output changes while leaving Palette behavior available.
 - Dither uses the current effective palette as fixed output colors.
 
-### US-11 Reorder Effects
+### US-11 Fixed Effects Order
 
-As a user, I want to drag effects into a different order, so that I can control how image operations affect the result.
+As a user, I want effects to run in a predictable order, so that Palette and Dither results are easier to understand.
 
 Acceptance:
 
-- The user can drag supported effects in the Effects Order list.
-- Fixed non-effect steps remain outside the draggable order.
-- Export is not draggable as an image effect.
-- Changing order recalculates preview and export using the new order.
+- Effects run in the fixed edit order: Adjust, Palette, Dither.
+- Tool rows do not show drag handles.
+- Fixed non-effect steps remain outside the edit effects order.
+- Export is not part of the image effects order.
 
 ### US-12 Export PNG
 
@@ -348,14 +349,14 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 - 看到目前啟用的圖片處理效果。
 - 展開單一效果的設定面板。
 - 啟用或停用可選效果。
-- 拖曳可拖曳效果來改變處理順序。
+- 依固定順序套用 edit effects。
 
 行為要求：
 
-- 改變順序後，預覽與匯出結果都要依照新順序重新計算。
+- 預覽與匯出結果都要依照固定順序重新計算。
 - Effects Order 只在 `edit` 可操作；`source` 與 `prepare` 時必須反灰停用。
 - 固定前置流程不應被使用者拖曳。
-- Export 不應成為可拖曳的圖片效果。
+- Export 不應成為圖片效果順序的一部分。
 
 ### Crop
 
@@ -464,7 +465,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 - 選擇非 Error Diffusion algorithm 時，Error Strength 控制仍可見但不可調整。
 - None 不改變圖片。
 - Dither 使用目前有效 Palette 作為固定輸出色。
-- Palette 與 Dither 仍要留在可拖曳 effects 中。
+- Palette 與 Dither 仍要留在固定 edit effects order 中。
 
 ### Export
 
@@ -606,13 +607,13 @@ MVP 驗收重點：
 
 ### Milestone 3: Pipeline System
 
-完成效果堆疊與可拖曳順序。
+完成固定效果堆疊。
 
 驗收：
 
 - 可看到 effects stack。
 - 可啟用、停用 operation。
-- 可拖曳改變 effects order。
+- effects order 依固定順序執行。
 - pipeline error 會停止流程並顯示錯誤。
 
 ### Milestone 4: Crop and Resize

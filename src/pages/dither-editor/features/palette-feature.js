@@ -325,7 +325,7 @@
         },
         operation: {
             pipeline: {
-                draggable: true
+                draggable: false
             },
             // Dither 關閉時，Palette operation 會把每個像素替換成 palette 中的最近色。
             run: function run(imageData, settings, context) {
