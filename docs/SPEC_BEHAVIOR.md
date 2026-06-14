@@ -40,11 +40,13 @@ Split From: SPEC_INDEX.md
 - 2026-06-14: 專案改為直接使用 vendored RgbQuant 萃取 Original palette，並優先以 RgbQuant 執行支援的 Error Diffusion。
 - 2026-06-14: Error Strength 對齊 dithering-studio-main 的控制語意，使用 0% 到 150%、每次 5% 的誤差擴散倍率。
 - 2026-06-14: Dither 預設改回 None，Error Strength slider step 改為 1%。
+- 2026-06-14: Error Strength slider step 改為 2%。
 - 2026-06-14: Palette color picker 調色時不立即重跑 preview，避免原生調色盤被關閉而無法微調。
 - 2026-06-14: Original Palette 新增 Colors 控制，可在 2 到 32 色間重新萃取，切到 Custom 或固定 preset 時隱藏。
 - 2026-06-14: Palette 色票排列改為每列最多 8 個。
 - 2026-06-14: Dither 預設改回 Floyd-Steinberg；Serpentine 改用 Toggle Switch，Crop 手機版維持 2x2 控制排列，slider 使用主題色。
 - 2026-06-14: Crop 新增 transform fill color，使用 Black / White / Custom select 搭配 color picker，填補旋轉或移動後原圖未覆蓋的區域。
+- 2026-06-14: Crop preview overlay 改以 canvas 內的 crop frame 對齊，避免手機或平板長條圖框選與正式 crop output 偏移。
 
 ## 產品目標
 
@@ -221,7 +223,7 @@ Acceptance:
 - Serpentine starts disabled.
 - Color Distance starts from `Euclidean BT.709`.
 - Error Strength starts from `100%` and applies to Error Diffusion algorithms.
-- Error Strength is adjustable from `0%` to `150%` in `1%` steps.
+- Error Strength is adjustable from `0%` to `150%` in `2%` steps.
 - Choosing an algorithm updates the result preview.
 - Choosing a Color Distance updates the result preview.
 - Changing Error Strength updates the result preview when the selected algorithm uses Error Diffusion.
@@ -492,9 +494,10 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 
 Crop preview 要求：
 
-- crop overlay 固定在中央並代表輸出裁切範圍。
+- crop overlay 代表輸出裁切範圍，必須和 preview canvas 內的 crop frame 對齊。
 - prepare 的 crop frame 與 edit 的 preview image 在相同比例下必須維持同一個中央位置與顯示尺寸，且不可貼齊 preview stage 邊界。
 - prepare 的 crop canvas 可以延伸到 crop frame 外並覆蓋 preview stage，讓 zoom / pan 時看得到原圖周邊脈絡；這個延伸不可改變 crop frame 本身的尺寸或位置。
+- prepare 的 crop preview 即使 canvas 為了顯示周邊脈絡而延伸，也必須讓 overlay 對準 canvas 內的 crop frame，確保 OK 後的正式 crop output 與畫面框選一致。
 - 從 prepare 進入 edit 且 result 尚未完成時，畫面應保留上一個可見 preview，不應短暫跳回 source fallback。
 - prepare 與 edit 的 preview 對齊必須使用同一個 preview stage content-box，不可讓 border-box 差異造成微小位移。
 - 旋轉、zoom、pan 都應作用在原圖 transform。

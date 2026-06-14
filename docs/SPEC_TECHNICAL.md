@@ -41,12 +41,14 @@ Split From: SPEC_INDEX.md
 - 2026-06-14: 將 RgbQuant 以 MIT vendored library 納入 `src/vendor/`，由 `rgbquant-adapter.js` 統一提供 Original palette 萃取與支援的 Error Diffusion。
 - 2026-06-14: Error Strength 對齊 dithering-studio-main，統一以 `errorStrength / 100` 乘上 error diffusion 擴散係數，UI step 為 5%。
 - 2026-06-14: Dither 預設改回 `none`，Error Strength UI step 改為 1%。
+- 2026-06-14: Error Strength UI step 改為 2%。
 - 2026-06-14: Palette color input 的 `input` 事件只同步 state，不排正式 preview；`change` 時才排 preview，避免調色盤互動被 render 打斷。
 - 2026-06-14: Palette settings 新增 `originalPaletteSize`，Original palette 可用 Colors 在 2 到 32 色間重新萃取。
 - 2026-06-14: Palette swatches 使用 8 欄 grid，限制每列最多 8 個色票。
 - 2026-06-14: Dither 預設改回 `floyd-steinberg`。
 - 2026-06-14: Dither Serpentine 改用 `panelUtils.toggleSwitchInput()`；Crop 手機版維持 2x2 grid；range input 套用主題 accent 色。
 - 2026-06-14: Crop settings 新增 `backgroundPreset` / `backgroundColor`，preview renderer 與正式 crop operation 共用 transform fill color。
+- 2026-06-14: Crop preview overlay 改以 canvas rect + `layout.frame` 對齊，修正窄版長條圖框選與正式 crop output 偏移。
 
 ## Plug-and-Play 架構要求
 
@@ -1484,6 +1486,9 @@ const PREVIEW_SLOW_THRESHOLD_MS = 500;
 - `prepare` group 不執行正式 preview pipeline；page 只用 `viewport-renderer.renderTransformed()` 顯示來源圖與 Crop transform。按 OK 或收合 prepare tool 進入 `edit` 後，才從 `sourceImageData` 跑正式 pipeline。
 - `prepare` 的 crop frame scale 必須用 crop frame fit preview stage 內的固定內距區域計算，不可用 source image 盲目 fit 整個 stage；`edit` preview canvas 必須使用同一個 fit rule，讓相同比例的 crop frame 與 result image 保持相同顯示位置與尺寸。
 - `prepare` 的 transformed canvas layout 可以在 crop frame 外延伸到完整 preview stage，用於顯示 zoom / pan 的原圖周邊脈絡；延伸 layout 時只能調整 `layout.width` / `layout.height` 與 `layout.frame.x` / `layout.frame.y`，不可改變 crop frame scale。
+- `assets/styles/layout.css` 在 `.preview-stage.is-crop-preview` 中必須讓 canvas 可由 `page.js` 明確定位，避免瀏覽器 grid overflow alignment 影響長條圖 crop preview。
+- `page.js` 的 crop overlay 必須以實際 canvas rect 加上 `layout.frame` offset 定位；不可只用 preview stage 中央公式，否則手機或平板上 canvas 溢出 stage 時，畫面框選與正式 crop output 會產生垂直或水平偏移。
+- `viewport-renderer.renderTransformed()` 必須以 `layout.frame` center 作為 transform origin，而不是 layout canvas center，讓預覽 transform 與正式 crop operation 的裁切框中心一致。
 - `viewport-renderer.js` 必須先把一般 preview 與 crop transformed preview 畫到 buffer canvas，再提交到可見 canvas，避免 resize canvas 時露出清空畫面。
 - `page.js` 在 `edit` result 第一次算完前不可用 `sourceImageData` 當 result fallback 畫面；應保留上一個可見 preview frame，直到 pipeline 結果完成。
 - `page.js` 在 `edit` 的 Original view 必須使用 `preparedImageData`；`preparedImageData` 由 `pipeline-runner.runPanelGroup(..., 'prepare')` 產生，代表 prepare group operations 後、edit effects 前的 source。
@@ -1554,7 +1559,7 @@ Error Diffusion algorithms：
 - Jarvis-Judice-Ninke。
 - Stucki。
 
-Error Diffusion processor 必須接受 `options.errorStrength` 百分比，將誤差擴散量乘上 `errorStrength / 100`。允許範圍為 `0` 到 `150`，UI step 為 `1`；缺值或無效值必須退回標準倍率 `1`。支援的 BT.709 Euclidean / Manhattan 路徑優先交給 RgbQuant reduce；RgbQuant 不支援的 color distance 使用既有 fallback processor。Ordered Dither 與 Pattern Dither 不套用 `errorStrength`。
+Error Diffusion processor 必須接受 `options.errorStrength` 百分比，將誤差擴散量乘上 `errorStrength / 100`。允許範圍為 `0` 到 `150`，UI step 為 `2`；缺值或無效值必須退回標準倍率 `1`。支援的 BT.709 Euclidean / Manhattan 路徑優先交給 RgbQuant reduce；RgbQuant 不支援的 color distance 使用既有 fallback processor。Ordered Dither 與 Pattern Dither 不套用 `errorStrength`。
 
 Dither function 不可讀 DOM，不可硬編碼寬高：
 

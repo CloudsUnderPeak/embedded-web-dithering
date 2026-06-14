@@ -436,13 +436,20 @@
         var crop = state.settings.crop;
         metrics = metrics || cropDisplayMetrics(state);
         var frame = metrics.layout.frame;
-        // overlay 直接以 preview stage 置中公式定位，不依賴旋轉後 canvas rect，
-        // 避免 rotation 改變 canvas 外接範圍時 overlay 跟著跑位。
+        var stageRect = refs.previewStage.getBoundingClientRect();
+        var stageStyle = window.getComputedStyle(refs.previewStage);
+        var canvasRect = refs.canvas.getBoundingClientRect();
+        var borderLeft = parseFloat(stageStyle.borderLeftWidth) || 0;
+        var borderTop = parseFloat(stageStyle.borderTopWidth) || 0;
+        var scaleX = canvasRect.width / metrics.layout.width || metrics.scale;
+        var scaleY = canvasRect.height / metrics.layout.height || metrics.scale;
+        // overlay 必須跟 canvas 內的 crop frame 對齊；手機長圖時 canvas 可能溢出 stage，
+        // 不能只用 stage 中央公式，否則畫面框選與正式 crop 取樣會偏移。
         refs.cropOverlay.hidden = false;
-        refs.cropOverlay.style.left = ((metrics.stageRect.width - frame.width * metrics.scale) / 2) + 'px';
-        refs.cropOverlay.style.top = ((metrics.stageRect.height - frame.height * metrics.scale) / 2) + 'px';
-        refs.cropOverlay.style.width = (frame.width * metrics.scale) + 'px';
-        refs.cropOverlay.style.height = (frame.height * metrics.scale) + 'px';
+        refs.cropOverlay.style.left = (canvasRect.left - stageRect.left - borderLeft + frame.x * scaleX) + 'px';
+        refs.cropOverlay.style.top = (canvasRect.top - stageRect.top - borderTop + frame.y * scaleY) + 'px';
+        refs.cropOverlay.style.width = (frame.width * scaleX) + 'px';
+        refs.cropOverlay.style.height = (frame.height * scaleY) + 'px';
         refs.cropOverlayLabel.textContent = [
             cropRatioLabel(crop),
             Math.round((crop.zoom || 1) * 100) + '%',
@@ -460,6 +467,8 @@
         if (!cropVisible || !state.sourceImageData) {
             refs.canvas.style.width = '';
             refs.canvas.style.height = '';
+            refs.canvas.style.left = '';
+            refs.canvas.style.top = '';
             refs.previewStage.style.height = '';
             var previewMetrics = previewDisplayMetrics(imageData);
             if (previewMetrics) {
@@ -471,13 +480,17 @@
 
         refs.previewStage.style.height = '';
         var metrics = cropDisplayMetrics(state);
-        refs.canvas.style.width = (metrics.layout.width * metrics.scale) + 'px';
-        refs.canvas.style.height = (metrics.layout.height * metrics.scale) + 'px';
+        var width = metrics.layout.width * metrics.scale;
+        var height = metrics.layout.height * metrics.scale;
+        refs.canvas.style.width = width + 'px';
+        refs.canvas.style.height = height + 'px';
+        refs.canvas.style.left = ((metrics.stageRect.width - width) / 2) + 'px';
+        refs.canvas.style.top = ((metrics.stageRect.height - height) / 2) + 'px';
         return metrics;
     }
 
     function holdPendingPreviewDisplay() {
-        refs.previewStage.classList.remove('is-crop-preview');
+        refs.previewStage.classList.add('is-crop-preview');
         refs.previewStage.classList.add('is-sized-preview');
     }
 

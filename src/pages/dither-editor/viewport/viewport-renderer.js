@@ -98,8 +98,8 @@
         ctx.fillRect(frame.x, frame.y, frame.width, frame.height);
         ctx.save();
         ctx.translate(
-            layout.width / 2 + Number(settings.panX || 0),
-            layout.height / 2 + Number(settings.panY || 0)
+            frame.x + frame.width / 2 + Number(settings.panX || 0),
+            frame.y + frame.height / 2 + Number(settings.panY || 0)
         );
         // Transform 順序需與正式 crop operation 一致：中心 -> pan -> rotation -> signed scale -> draw source。
         ctx.rotate(Number(settings.rotation || 0) * Math.PI / 180);

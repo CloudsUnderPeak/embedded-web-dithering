@@ -207,6 +207,10 @@
     max-height: none;
 }
 
+.preview-stage.is-crop-preview canvas {
+    position: absolute;
+}
+
 .simple-page {
     max-width: 760px;
     margin: 0 auto;
