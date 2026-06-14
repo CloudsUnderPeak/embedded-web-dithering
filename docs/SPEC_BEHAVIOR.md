@@ -52,6 +52,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-14: Edit preview 的 Original / Result 切換改用 Theme choice 風格。
 - 2026-06-15: Crop Fill 新增 Auto preset，以低解析邊界取樣快速估算填色，並用小幅色差穩定化降低旋轉閃爍。
 - 2026-06-15: Crop Fill 預設改為 Auto。
+- 2026-06-15: 手機版 empty upload dropzone 保留左右餘裕，不貼齊 preview stage 邊界。
 
 ## 產品目標
 
