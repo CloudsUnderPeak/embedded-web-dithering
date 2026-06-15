@@ -29,6 +29,8 @@
         'src/pages/dither-editor/editor-mode-state-machine.js',
         'src/pages/dither-editor/state.js',
         'src/pages/dither-editor/viewport/viewport-renderer.js',
+        'src/pages/dither-editor/viewport/overlay-renderer.js',
+        'src/pages/dither-editor/viewport/pointer-mapper.js',
         'src/pages/dither-editor/controller.js',
         'src/pages/dither-editor/page.js'
     ];

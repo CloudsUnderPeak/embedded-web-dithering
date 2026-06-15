@@ -58,6 +58,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-15: Preview stage 網格改為重用既有 surface / border 灰階 tokens，不新增 preview pattern 專用色彩 tokens。
 - 2026-06-15: Dither Editor `entry.js` 將 feature scripts 與後續 page scripts 併入同一載入波次，降低 GitHub Pages 首次載入瀑布。
 - 2026-06-15: `index.html` 的 classic scripts 改用 `defer`，讓共用基礎檔與 page entries 可並行下載並依序執行。
+- 2026-06-15: 將 Crop overlay sizing / positioning 與 pointer mapping 從 `page.js` 拆到 `viewport/overlay-renderer.js` 與 `viewport/pointer-mapper.js`。
 
 ## Plug-and-Play 架構要求
 
@@ -395,7 +396,7 @@ embedded-web-dithering/
 - `operations/` 只放跨 feature 的 operation registry 與 pipeline runner；單一 feature 的 operation implementation 預設留在該 feature script。
 - `dither/` 放 dither 演算法核心與矩陣資料，不處理 DOM、feature registration 或 editor state。
 - `gpu/` 放可選硬體加速 processor，例如 WebGL adjust processor。GPU processor 必須有 CPU fallback，且不應直接操作 tool panel 或 editor mode。
-- `viewport/` 放 canvas render、overlay render、座標轉換與 preview viewport 相關邏輯；page 仍負責 DOM mount 與工具列組合。
+- `viewport/` 放 canvas render、overlay render、座標轉換與 preview viewport 相關邏輯；page 仍負責 DOM mount 與工具列組合。Crop overlay 尺寸/定位必須由 `viewport/overlay-renderer.js` 管理，overlay pointer / wheel 到 crop pan/zoom 的換算必須由 `viewport/pointer-mapper.js` 管理。
 - `src/vendor/` 只放第三方程式碼與對應授權檔。Feature 不應直接依賴 vendor 全域物件，必須透過頁面 adapter 或 core wrapper 存取。
 - 空目錄不應保留作為未來分類提示；需要對應功能時再建立實際檔案與規格。
 
@@ -1482,7 +1483,7 @@ const PREVIEW_SLOW_THRESHOLD_MS = 500;
 - `prepare` 的 crop frame scale 必須用 crop frame fit preview stage 內的固定內距區域計算，不可用 source image 盲目 fit 整個 stage；`edit` preview canvas 必須使用同一個 fit rule，讓相同比例的 crop frame 與 result image 保持相同顯示位置與尺寸。
 - `prepare` 的 transformed canvas layout 可以在 crop frame 外延伸到完整 preview stage，用於顯示 zoom / pan 的原圖周邊脈絡；延伸 layout 時只能調整 `layout.width` / `layout.height` 與 `layout.frame.x` / `layout.frame.y`，不可改變 crop frame scale。
 - `assets/styles/layout.css` 在 `.preview-stage.is-crop-preview` 中必須讓 canvas 可由 `page.js` 明確定位，避免瀏覽器 grid overflow alignment 影響長條圖 crop preview。
-- `page.js` 的 crop overlay 必須以實際 canvas rect 加上 `layout.frame` offset 定位；不可只用 preview stage 中央公式，否則手機或平板上 canvas 溢出 stage 時，畫面框選與正式 crop output 會產生垂直或水平偏移。
+- `viewport/overlay-renderer.js` 的 crop overlay 必須以實際 canvas rect 加上 `layout.frame` offset 定位；不可只用 preview stage 中央公式，否則手機或平板上 canvas 溢出 stage 時，畫面框選與正式 crop output 會產生垂直或水平偏移。
 - `viewport-renderer.renderTransformed()` 必須以 `layout.frame` center 作為 transform origin，而不是 layout canvas center，讓預覽 transform 與正式 crop operation 的裁切框中心一致。
 - `viewport-renderer.js` 必須先把一般 preview 與 crop transformed preview 畫到 buffer canvas，再提交到可見 canvas，避免 resize canvas 時露出清空畫面。
 - `page.js` 在 `edit` result 第一次算完前不可用 `sourceImageData` 當 result fallback 畫面；應保留上一個可見 preview frame，直到 pipeline 結果完成。

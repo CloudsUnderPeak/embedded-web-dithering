@@ -3,11 +3,11 @@
     // controller 管狀態與 pipeline，renderer 管 canvas，page 只負責把兩者接到 UI。
     var controller = null;
     var renderer = null;
+    var overlayRenderer = null;
+    var pointerMapper = null;
     var sortable = null;
     var refs = {};
     var cachedState = null;
-    var PREVIEW_FRAME_INSET = 32;
-    var NARROW_PREVIEW_FRAME_INSET = 16;
 
     // 取得 UI 文字，缺字串時回傳 key 方便除錯。
     function t(key) {
@@ -319,181 +319,6 @@
         controller.updateSetting('crop', 'zoom', Number(controller.state.settings.crop.zoom || 1) + delta);
     }
 
-    // 只有有來源圖片且 Crop 面板展開時才顯示裁切框。
-    function shouldShowCropOverlay(state) {
-        return Boolean(state.sourceImageData && state.mode === modeMachine().groups.PREPARE);
-    }
-
-    // 將 crop 的 aspectRatioId 轉成使用者看得懂的比例文字。
-    function cropRatioLabel(crop) {
-        var ratios = app.pages.ditherEditor.crop && app.pages.ditherEditor.crop.ratios || [];
-        var ratio = ratios.find(function (entry) {
-            return entry.id === crop.aspectRatioId;
-        });
-        return ratio ? ratio.label : '';
-    }
-
-    function previewFrameInset(isNarrowScreen) {
-        return isNarrowScreen ? NARROW_PREVIEW_FRAME_INSET : PREVIEW_FRAME_INSET;
-    }
-
-    function fitPreviewFrame(width, height, stageRect, inset) {
-        if (!width || !height || !stageRect.width || !stageRect.height) {
-            return null;
-        }
-        var maxWidth = Math.max(1, stageRect.width - inset * 2);
-        var maxHeight = Math.max(1, stageRect.height - inset * 2);
-        var scale = Math.min(1, maxWidth / width, maxHeight / height);
-        if (!Number.isFinite(scale) || scale <= 0) {
-            return null;
-        }
-        return {
-            scale: scale,
-            width: width * scale,
-            height: height * scale
-        };
-    }
-
-    function previewStageBox() {
-        var rect = refs.previewStage.getBoundingClientRect();
-        var style = window.getComputedStyle(refs.previewStage);
-        var borderX = (parseFloat(style.borderLeftWidth) || 0) + (parseFloat(style.borderRightWidth) || 0);
-        var borderY = (parseFloat(style.borderTopWidth) || 0) + (parseFloat(style.borderBottomWidth) || 0);
-        return {
-            width: Math.max(1, rect.width - borderX),
-            height: Math.max(1, rect.height - borderY)
-        };
-    }
-
-    // 計算 crop preview canvas 與 overlay 在畫面上的縮放比例。
-    function cropDisplayMetrics(state) {
-        // Crop overlay 的 CSS 尺寸與 canvas 內部尺寸分開計算。
-        // overlay 固定代表輸出框；canvas 可以比 overlay 大，用來顯示旋轉/平移後的原圖脈絡。
-        var baseLayout = app.pages.ditherEditor.crop.previewLayout(state.sourceImageData, state.settings.crop);
-        var layout = {
-            width: baseLayout.width,
-            height: baseLayout.height,
-            frame: {
-                x: baseLayout.frame.x,
-                y: baseLayout.frame.y,
-                width: baseLayout.frame.width,
-                height: baseLayout.frame.height,
-                ratio: baseLayout.frame.ratio
-            }
-        };
-        var stageRect = previewStageBox();
-        var isNarrowScreen = window.matchMedia('(max-width: 920px)').matches;
-        var inset = previewFrameInset(isNarrowScreen);
-        var frameFit = fitPreviewFrame(
-            layout.frame.width,
-            layout.frame.height,
-            stageRect,
-            inset
-        ) || { scale: 1 };
-        var scale = frameFit.scale;
-        var stageWidthInImageSpace = Math.max(1, stageRect.width) / scale;
-        if (Number.isFinite(stageWidthInImageSpace) && stageWidthInImageSpace > layout.width) {
-            layout.frame.x += (stageWidthInImageSpace - layout.width) / 2;
-            layout.width = stageWidthInImageSpace;
-        }
-        var stageHeightInImageSpace = Math.max(1, stageRect.height) / scale;
-        if (Number.isFinite(stageHeightInImageSpace) && stageHeightInImageSpace > layout.height) {
-            layout.frame.y += (stageHeightInImageSpace - layout.height) / 2;
-            layout.height = stageHeightInImageSpace;
-        }
-
-        return {
-            layout: layout,
-            stageRect: stageRect,
-            scale: scale,
-            isNarrowScreen: isNarrowScreen
-        };
-    }
-
-    function previewDisplayMetrics(imageData) {
-        if (!imageData || !refs.previewStage) {
-            return null;
-        }
-        var stageRect = previewStageBox();
-        var isNarrowScreen = window.matchMedia('(max-width: 920px)').matches;
-        return fitPreviewFrame(
-            imageData.width,
-            imageData.height,
-            stageRect,
-            previewFrameInset(isNarrowScreen)
-        );
-    }
-
-    // 將固定比例裁切框定位到 preview stage 中央，並更新狀態標籤。
-    function renderCropOverlay(state, metrics) {
-        if (!refs.cropOverlay || !refs.canvas || !shouldShowCropOverlay(state)) {
-            if (refs.cropOverlay) {
-                refs.cropOverlay.hidden = true;
-            }
-            return;
-        }
-
-        var crop = state.settings.crop;
-        metrics = metrics || cropDisplayMetrics(state);
-        var frame = metrics.layout.frame;
-        var stageRect = refs.previewStage.getBoundingClientRect();
-        var stageStyle = window.getComputedStyle(refs.previewStage);
-        var canvasRect = refs.canvas.getBoundingClientRect();
-        var borderLeft = parseFloat(stageStyle.borderLeftWidth) || 0;
-        var borderTop = parseFloat(stageStyle.borderTopWidth) || 0;
-        var scaleX = canvasRect.width / metrics.layout.width || metrics.scale;
-        var scaleY = canvasRect.height / metrics.layout.height || metrics.scale;
-        // overlay 必須跟 canvas 內的 crop frame 對齊；手機長圖時 canvas 可能溢出 stage，
-        // 不能只用 stage 中央公式，否則畫面框選與正式 crop 取樣會偏移。
-        refs.cropOverlay.hidden = false;
-        refs.cropOverlay.style.left = (canvasRect.left - stageRect.left - borderLeft + frame.x * scaleX) + 'px';
-        refs.cropOverlay.style.top = (canvasRect.top - stageRect.top - borderTop + frame.y * scaleY) + 'px';
-        refs.cropOverlay.style.width = (frame.width * scaleX) + 'px';
-        refs.cropOverlay.style.height = (frame.height * scaleY) + 'px';
-        refs.cropOverlayLabel.textContent = [
-            cropRatioLabel(crop),
-            Math.round((crop.zoom || 1) * 100) + '%',
-            Math.round(crop.rotation || 0) + 'deg'
-        ].join(' | ');
-    }
-
-    // 根據是否進入 crop 模式，調整 canvas/stage 的 CSS 尺寸。
-    function updateCanvasDisplay(state, cropVisible, imageData) {
-        if (!refs.canvas || !refs.previewStage) {
-            return;
-        }
-        refs.previewStage.classList.toggle('is-crop-preview', cropVisible);
-        refs.previewStage.classList.toggle('is-sized-preview', Boolean(cropVisible || imageData));
-        if (!cropVisible || !state.sourceImageData) {
-            refs.canvas.style.width = '';
-            refs.canvas.style.height = '';
-            refs.canvas.style.left = '';
-            refs.canvas.style.top = '';
-            refs.previewStage.style.height = '';
-            var previewMetrics = previewDisplayMetrics(imageData);
-            if (previewMetrics) {
-                refs.canvas.style.width = previewMetrics.width + 'px';
-                refs.canvas.style.height = previewMetrics.height + 'px';
-            }
-            return null;
-        }
-
-        refs.previewStage.style.height = '';
-        var metrics = cropDisplayMetrics(state);
-        var width = metrics.layout.width * metrics.scale;
-        var height = metrics.layout.height * metrics.scale;
-        refs.canvas.style.width = width + 'px';
-        refs.canvas.style.height = height + 'px';
-        refs.canvas.style.left = ((metrics.stageRect.width - width) / 2) + 'px';
-        refs.canvas.style.top = ((metrics.stageRect.height - height) / 2) + 'px';
-        return metrics;
-    }
-
-    function holdPendingPreviewDisplay() {
-        refs.previewStage.classList.add('is-crop-preview');
-        refs.previewStage.classList.add('is-sized-preview');
-    }
-
     function shouldHoldPendingPreview(state, cropVisible) {
         return Boolean(
             !cropVisible
@@ -506,67 +331,6 @@
             && refs.canvas.width
             && refs.canvas.height
         );
-    }
-
-    // 將畫面座標位移換算回 canvas 內部像素位移。
-    function canvasScale() {
-        var rect = refs.canvas.getBoundingClientRect();
-        return {
-            x: refs.canvas.width / rect.width,
-            y: refs.canvas.height / rect.height
-        };
-    }
-
-    // 綁定 crop overlay 的拖曳與滾輪縮放；實際改的是原圖 pan/zoom。
-    function bindCropOverlay() {
-        var drag = null;
-
-        refs.cropOverlay.addEventListener('pointerdown', function (event) {
-            if (!controller.state.sourceImageData || controller.state.mode !== modeMachine().groups.PREPARE) {
-                return;
-            }
-            event.preventDefault();
-            // 拖曳 overlay 時移動的是原圖 pan，不是裁切框本身。
-            drag = {
-                pointerId: event.pointerId,
-                startX: event.clientX,
-                startY: event.clientY,
-                crop: Object.assign({}, controller.state.settings.crop),
-                scale: canvasScale()
-            };
-            refs.cropOverlay.setPointerCapture(event.pointerId);
-        });
-
-        refs.cropOverlay.addEventListener('pointermove', function (event) {
-            if (!drag || event.pointerId !== drag.pointerId) {
-                return;
-            }
-            event.preventDefault();
-            controller.updateSettings('crop', {
-                panX: Number(drag.crop.panX || 0) + (event.clientX - drag.startX) * drag.scale.x,
-                panY: Number(drag.crop.panY || 0) + (event.clientY - drag.startY) * drag.scale.y
-            });
-        });
-
-        // 結束拖曳並釋放 pointer capture。
-        function endDrag(event) {
-            if (!drag || event.pointerId !== drag.pointerId) {
-                return;
-            }
-            refs.cropOverlay.releasePointerCapture(event.pointerId);
-            drag = null;
-        }
-
-        refs.cropOverlay.addEventListener('pointerup', endDrag);
-        refs.cropOverlay.addEventListener('pointercancel', endDrag);
-        refs.cropOverlay.addEventListener('wheel', function (event) {
-            event.preventDefault();
-            controller.updateSetting(
-                'crop',
-                'zoom',
-                (controller.state.settings.crop.zoom || 1) + (event.deltaY < 0 ? 0.02 : -0.02)
-            );
-        }, { passive: false });
     }
 
     // 視窗尺寸改變時重新計算 canvas 與 crop overlay 尺寸。
@@ -590,7 +354,7 @@
         renderEmptyUpload(state);
         renderFeatureActions(state);
         renderPreviewToolbar(state);
-        var cropVisible = shouldShowCropOverlay(state);
+        var cropVisible = overlayRenderer.shouldShowCropOverlay(state);
         var image = cropVisible
             ? state.sourceImageData
             : state.viewMode === 'original'
@@ -600,15 +364,15 @@
         var cropMetrics = null;
         if (cropVisible) {
             // Crop 開啟時 preview 必須顯示 source + crop transform，不顯示已跑完的 pipeline 結果。
-            cropMetrics = updateCanvasDisplay(state, true);
+            cropMetrics = overlayRenderer.updateCanvasDisplay(state, true);
             renderer.renderTransformed(image, state.settings.crop, cropMetrics.layout);
             refs.lastRenderedPreviewKind = 'prepare';
         } else if (holdPendingPreview) {
-            holdPendingPreviewDisplay();
+            overlayRenderer.holdPendingPreviewDisplay();
             renderer.setFilter('');
         } else {
             renderer.render(image);
-            updateCanvasDisplay(state, false, image);
+            overlayRenderer.updateCanvasDisplay(state, false, image);
             refs.lastRenderedPreviewKind = state.viewMode === 'original'
                 ? 'original'
                 : state.previewImageData || state.outputImageData
@@ -623,7 +387,7 @@
             renderLivePreview(state);
         }
         refs.error.textContent = state.status === 'error' ? state.error || 'Error' : '';
-        renderCropOverlay(state, cropMetrics);
+        overlayRenderer.renderCropOverlay(state, cropMetrics, cropVisible);
         app.pages.ditherEditor.featureRegistry.dispatch('onRender', { state: state, controller: controller });
         if (refs.status) {
             app.app.renderStatus(refs.status, statusText(state));
@@ -736,8 +500,24 @@
                     refs.emptyBrowseButton
                 ]
             });
+            refs.previewStage = app.utils.dom.el('div', {
+                className: 'preview-stage',
+                children: [refs.canvas, refs.cropOverlay, refs.emptyUpload]
+            });
             bindEmptyUploadDropzone();
-            bindCropOverlay();
+            overlayRenderer = new app.pages.ditherEditor.ViewportOverlayRenderer({
+                previewStage: refs.previewStage,
+                canvas: refs.canvas,
+                cropOverlay: refs.cropOverlay,
+                cropOverlayLabel: refs.cropOverlayLabel,
+                prepareMode: modeMachine().groups.PREPARE
+            });
+            pointerMapper = new app.pages.ditherEditor.CropPointerMapper({
+                cropOverlay: refs.cropOverlay,
+                canvas: refs.canvas,
+                controller: controller,
+                prepareMode: modeMachine().groups.PREPARE
+            });
             bindViewportResize();
 
             renderer = new app.pages.ditherEditor.ViewportRenderer(refs.canvas);
@@ -822,12 +602,7 @@
                 children: [originalButton, resultButton]
             });
 
-            preview.appendChild(
-                refs.previewStage = app.utils.dom.el('div', {
-                    className: 'preview-stage',
-                    children: [refs.canvas, refs.cropOverlay, refs.emptyUpload]
-                })
-            );
+            preview.appendChild(refs.previewStage);
             preview.appendChild(
                 refs.previewToolbar = app.utils.dom.el('div', {
                     className: 'preview-toolbar',
@@ -867,11 +642,16 @@
             if (sortable && sortable.destroy) {
                 sortable.destroy();
             }
+            if (pointerMapper) {
+                pointerMapper.destroy();
+            }
             if (controller) {
                 app.pages.ditherEditor.featureRegistry.dispatch('dispose', { state: controller.state, controller: controller });
                 controller.destroy();
             }
             sortable = null;
+            pointerMapper = null;
+            overlayRenderer = null;
             controller = null;
             renderer = null;
             refs = {};
