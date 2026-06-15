@@ -56,6 +56,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-15: Crop Fill 預設 `backgroundPreset` 改為 `auto`。
 - 2026-06-15: Preview stage 透明區域背景 token 改為柔和灰白 5x5 分組細網格 pattern，不再使用 checker token。
 - 2026-06-15: Preview stage 網格改為重用既有 surface / border 灰階 tokens，不新增 preview pattern 專用色彩 tokens。
+- 2026-06-15: Dither Editor `entry.js` 將 feature scripts 與後續 page scripts 併入同一載入波次，降低 GitHub Pages 首次載入瀑布。
+- 2026-06-15: `index.html` 的 classic scripts 改用 `defer`，讓共用基礎檔與 page entries 可並行下載並依序執行。
 
 ## Plug-and-Play 架構要求
 
@@ -502,26 +504,26 @@ const defaultDitherOptions = {
 
 ### Script 載入順序
 
-因為專案堅持無 build step 且要支援直接雙擊 `index.html`，`index.html` 必須用 classic scripts 依序載入共用基礎檔與 page entries。單一頁面內部需要的 scripts 不應攤平在 `index.html`，必須交給該頁的 `entry.js` 管理。
+因為專案堅持無 build step 且要支援直接雙擊 `index.html`，`index.html` 必須用 deferred classic scripts 載入共用基礎檔與 page entries，讓瀏覽器可並行下載並仍依 HTML 順序執行。單一頁面內部需要的 scripts 不應攤平在 `index.html`，必須交給該頁的 `entry.js` 管理。
 
 示意：
 
 ```html
-<script src="src/namespace.js"></script>
-<script src="src/i18n/en.js"></script>
-<script src="src/utils/dom.js"></script>
-<script src="src/core/canvas/canvas-utils.js"></script>
-<script src="src/ui/sortable-list.js"></script>
-<script src="src/app/page-registry.js"></script>
-<script src="src/pages/dither-editor/entry.js"></script>
-<script src="src/pages/web-setting/entry.js"></script>
-<script src="src/pages/help/entry.js"></script>
-<script src="src/pages/about/entry.js"></script>
-<script src="src/app/app-shell.js"></script>
-<script src="src/main.js"></script>
+<script defer src="src/namespace.js"></script>
+<script defer src="src/i18n/en.js"></script>
+<script defer src="src/utils/dom.js"></script>
+<script defer src="src/core/canvas/canvas-utils.js"></script>
+<script defer src="src/ui/sortable-list.js"></script>
+<script defer src="src/app/page-registry.js"></script>
+<script defer src="src/pages/dither-editor/entry.js"></script>
+<script defer src="src/pages/web-setting/entry.js"></script>
+<script defer src="src/pages/help/entry.js"></script>
+<script defer src="src/pages/about/entry.js"></script>
+<script defer src="src/app/app-shell.js"></script>
+<script defer src="src/main.js"></script>
 ```
 
-`entry.js` 可以透過動態插入 classic `<script>` 的方式載入該頁檔案；同批 scripts 可一次插入以便瀏覽器並行下載，但每支 script 必須設為 `async = false`，維持 classic script 依插入順序執行。不得使用 ES Modules `import` / `export`，也不得用會被 `file://` CORS 擋住的 template/script `fetch()` 作為唯一載入方式。
+`entry.js` 可以透過動態插入 classic `<script>` 的方式載入該頁檔案；同批 scripts 可一次插入以便瀏覽器並行下載，但每支 script 必須設為 `async = false`，維持 classic script 依插入順序執行。Dither Editor 應先載入可解析 feature manifest 的 bootstrap scripts，再把 feature scripts 與後續 page scripts 併入同一批載入，避免 GitHub Pages 上出現不必要的序列化網路波次。不得使用 ES Modules `import` / `export`，也不得用會被 `file://` CORS 擋住的 template/script `fetch()` 作為唯一載入方式。
 
 每個檔案使用 IIFE 或清楚的 namespace assignment：
 
