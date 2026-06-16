@@ -2,33 +2,27 @@
 
 [English](README.md)
 
-Embedded Web Dithering 是一個面向嵌入式顯示器工作流的獨立瀏覽器圖片 dithering 編輯器。專案設計目標是從靜態檔案直接在本機執行，不需要後端、build step、CDN，或 runtime 網路依賴。
+Embedded Web Dithering 是一個可直接在瀏覽器使用的圖片 dithering 工具，適合用來準備電子紙、嵌入式螢幕等受限顯示器要顯示的圖片。你可以載入圖片、裁切畫面、調整尺寸與色調、設定顏色與 dithering 效果，最後匯出 PNG。
 
-Repository slug：`embedded-web-dithering`。
-GitHub repository：`https://github.com/CloudsUnderPeak/embedded-web-dithering.git`。
+## 線上體驗
 
-## 目前範圍
+網頁版本：`https://cloudsunderpeak.github.io/embedded-web-dithering/`
 
-- 直接從 `index.html` 開啟 app。
-- 載入本機圖片或專案內建 demo assets。
-- 透過固定比例 crop、等比 resize、adjustment、palette、dithering 工具編輯圖片。
-- 使用 feature group 流程：來源輸入、crop 準備、再進入可編輯的處理 stack。
-- 重新排序支援的圖片處理 effects。
+也可以下載專案後，直接從本機開啟 `index.html` 使用。
+
+## 為什麼做這個專案
+
+很多電子紙或嵌入式螢幕只能顯示有限的顏色，圖片如果直接放上去，常常會失去細節或看起來不自然。這個專案希望把常用的圖片準備步驟整理在同一個頁面裡，讓你不用打開大型繪圖軟體，也能快速把圖片調整成比較適合裝置顯示的樣子。
+
+## 特色
+
+- 直接從 `index.html` 開啟使用。
+- 載入本機圖片，或使用專案內建 demo 試玩。
+- 使用固定比例裁切、等比縮放、亮度 / 對比 / 飽和度調整。
+- 選擇或微調圖片使用的顏色。
+- 套用 dithering，預覽圖片在有限顏色下的呈現效果。
 - 將處理後結果匯出為 PNG。
-- ESP32 / embedded-device integration 保留為未來模式，不列入目前 MVP。
 
 ## 支援匯入格式
 
-MVP 接受 PNG、JPEG/JPG 與 WebP 圖片。其他格式包含 SVG、GIF、AVIF、HEIC/HEIF、RAW、PSD、TIFF、BMP，都會在進入 canvas 與 dithering pipeline 前被拒絕。
-
-## 專案文件
-
-修改需求或實作前，把 spec index 當成文件導引入口：
-
-- [docs/SPEC_INDEX.md](docs/SPEC_INDEX.md)：Behavior 與 Technical spec 的導引入口。
-- [docs/SPEC_BEHAVIOR.md](docs/SPEC_BEHAVIOR.md)：產品行為、使用者流程、UI 行為、里程碑與驗收標準。
-- [docs/SPEC_TECHNICAL.md](docs/SPEC_TECHNICAL.md)：架構、模組邊界、state、pipeline、storage 與實作限制。
-
-## 開發備註
-
-這個專案刻意避免 package install 和 bundling。請使用 classic browser scripts，並把 runtime assets 保留在 repository 內。
+目前支援上傳 PNG、JPEG/JPG 與 WebP 格式的圖片。

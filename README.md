@@ -2,33 +2,27 @@
 
 [繁體中文](README.zh-TW.md)
 
-Embedded Web Dithering is a standalone browser-based image dithering editor for embedded display workflows. The project is designed to run locally from static files, without a backend, build step, CDN, or runtime network dependency.
+Embedded Web Dithering is an image dithering tool you can use directly in the browser. It is made for preparing images for e-paper and other limited-color displays: load an image, crop it, adjust size and tone, choose colors and dithering, then export the result as PNG.
 
-Repository slug: `embedded-web-dithering`.
-GitHub repository: `https://github.com/CloudsUnderPeak/embedded-web-dithering.git`.
+## Try It Online
 
-## Current Scope
+Live app: `https://cloudsunderpeak.github.io/embedded-web-dithering/`
+
+You can also download the project and open `index.html` locally.
+
+## Why This Project
+
+Many e-paper and embedded displays can only show a small set of colors. If you place a normal image on them directly, details can disappear or colors can look wrong. This project brings the common preparation steps into one simple page, so you can tune an image for device display without opening a large graphics app.
+
+## Highlights
 
 - Open the app directly from `index.html`.
-- Load local images or project-bundled demo assets.
-- Edit images through fixed-ratio crop, proportional resize, adjustment, palette, and dithering tools.
-- Use a feature-group flow: source input, crop preparation, then the editable processing stack.
-- Reorder supported image-processing effects.
+- Load local images or try the bundled demo.
+- Crop to fixed ratios, resize proportionally, and adjust brightness, contrast, and saturation.
+- Choose or fine-tune the colors used by the image.
+- Apply dithering and preview how the image looks with limited colors.
 - Export the processed result as PNG.
-- Keep ESP32 / embedded-device integration as a future mode, not part of the current MVP.
 
 ## Supported Input Formats
 
-The MVP accepts PNG, JPEG/JPG, and WebP images. Other formats, including SVG, GIF, AVIF, HEIC/HEIF, RAW, PSD, TIFF, and BMP, are intentionally rejected before entering the canvas and dithering pipeline.
-
-## Project Docs
-
-Use the spec index as the navigation entry before changing requirements or implementation:
-
-- [docs/SPEC_INDEX.md](docs/SPEC_INDEX.md): navigation entry for the behavior and technical specs.
-- [docs/SPEC_BEHAVIOR.md](docs/SPEC_BEHAVIOR.md): product behavior, user flows, UI behavior, milestones, and acceptance criteria.
-- [docs/SPEC_TECHNICAL.md](docs/SPEC_TECHNICAL.md): architecture, module boundaries, state, pipeline, storage, and implementation constraints.
-
-## Development Notes
-
-This project intentionally avoids package installation and bundling. Use classic browser scripts and keep runtime assets inside the repository.
+You can upload PNG, JPEG/JPG, and WebP images.
