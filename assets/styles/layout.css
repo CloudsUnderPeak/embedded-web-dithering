@@ -88,7 +88,7 @@
 }
 
 .dither-controls-panel::-webkit-scrollbar-thumb:hover {
-    background: var(--color-scroll-thumb-hover);
+    background: var(--color-border-heavy);
     background-clip: content-box;
 }
 
@@ -159,9 +159,9 @@
     width: min(680px, calc(100% - 48px));
     min-height: min(340px, calc(100% - 48px));
     padding: 32px;
-    border: 2px dashed var(--color-drop-border);
+    border: 2px dashed var(--color-border-heavy);
     border-radius: 8px;
-    color: var(--color-muted-strong);
+    color: var(--color-text-soft);
     background: var(--color-surface-alpha);
     text-align: center;
     box-shadow: 0 18px 44px var(--color-shadow);
@@ -233,7 +233,7 @@
 }
 
 .simple-page p {
-    color: var(--color-muted-strong);
+    color: var(--color-text-soft);
 }
 
 @media (max-width: 920px) {

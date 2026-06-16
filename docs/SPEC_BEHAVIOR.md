@@ -59,6 +59,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-16: Empty Upload、New Image、Load Demo、Crop 操作、Palette 加刪、Resize link 與 Export 改用本地 SVG icon；Browse File 與 Original / Result 維持純文字。
 - 2026-06-16: 右上角 Menu 按鈕新增本地 SVG menu icon，文字仍保留。
 - 2026-06-16: Resize link 改用 `link-01` SVG，工具面板展開/收合改用 chevron SVG，Light / Dark theme 選項新增 sun / moon SVG icon。
+- 2026-06-16: Light / Dark theme 色彩重新收斂為較少的共享語意層級，減少過度細分色票並維持 theme 切換後的 UI 對比。
 
 ## 產品目標
 
