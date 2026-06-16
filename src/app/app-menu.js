@@ -5,6 +5,7 @@
     function AppMenu(button, onSelect) {
         this.button = button;
         this.onSelect = onSelect;
+        this.button.setAttribute('aria-expanded', 'false');
         this.node = app.utils.dom.el('div', {
             className: 'app-menu',
             attrs: { hidden: 'hidden' }
@@ -40,7 +41,7 @@
             self.toggle();
         });
         document.addEventListener('click', function (event) {
-            if (event.target === self.button || self.node.contains(event.target)) {
+            if (self.button.contains(event.target) || self.node.contains(event.target)) {
                 return;
             }
             self.hide();
@@ -51,6 +52,7 @@
     AppMenu.prototype.toggle = function toggle() {
         if (this.node.hidden) {
             this.node.hidden = false;
+            this.button.setAttribute('aria-expanded', 'true');
         } else {
             this.hide();
         }
@@ -59,6 +61,7 @@
     // 關閉選單並同步 aria-expanded。
     AppMenu.prototype.hide = function hide() {
         this.node.hidden = true;
+        this.button.setAttribute('aria-expanded', 'false');
     };
 
     app.app.AppMenu = AppMenu;
