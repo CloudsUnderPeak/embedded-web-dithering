@@ -18,9 +18,12 @@
         // 建立外露的 Export PNG 按鈕，不放進可折疊 Tool Row。
         buildAction: function buildAction(context) {
             var exportButton = app.utils.dom.el('button', {
-                className: 'primary-button export-button',
-                text: ui.t('actionExport'),
-                attrs: { type: 'button' }
+                className: 'primary-button export-button button-with-icon',
+                attrs: { type: 'button' },
+                children: [
+                    ui.svgIcon('assets/icons/editor/export-download.svg'),
+                    app.utils.dom.el('span', { text: ui.t('actionExport') })
+                ]
             });
             exportButton.addEventListener('click', function () {
                 context.controller.exportPng();

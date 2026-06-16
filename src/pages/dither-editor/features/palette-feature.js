@@ -168,7 +168,9 @@
                 });
                 var removeButton = app.utils.dom.el('button', {
                     className: 'palette-remove-button',
-                    text: 'x',
+                    children: [
+                        ui.svgIcon('assets/icons/editor/palette-remove.svg', { fallbackText: 'x' })
+                    ],
                     attrs: {
                         type: 'button',
                         'aria-label': 'Remove palette color ' + (index + 1)
@@ -193,7 +195,9 @@
             });
             var addButton = app.utils.dom.el('button', {
                 className: 'palette-add-button',
-                text: '+',
+                children: [
+                    ui.svgIcon('assets/icons/editor/palette-add.svg', { fallbackText: '+' })
+                ],
                 attrs: { type: 'button', 'aria-label': 'Add palette color' }
             });
             addButton.addEventListener('click', function () {
@@ -215,6 +219,7 @@
     app.pages.ditherEditor.featureRegistry.register({
         id: 'palette',
         icon: '#',
+        iconPath: 'assets/icons/editor/palette.svg',
         labelKey: 'panelPalette',
         panelGroup: 'edit',
         pipelineStage: 'effectsOrder',

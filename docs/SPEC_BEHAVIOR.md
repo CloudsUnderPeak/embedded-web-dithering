@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-15
+Last Updated: 2026-06-16
 Split From: SPEC_INDEX.md
 ```
 
@@ -55,6 +55,10 @@ Split From: SPEC_INDEX.md
 - 2026-06-15: 手機版 empty upload dropzone 保留左右餘裕，不貼齊 preview stage 邊界。
 - 2026-06-15: Preview stage 透明區域背景改為柔和灰白細網格，並每 5x5 小格顯示一組主網格。
 - 2026-06-15: Preview stage 網格色彩改為沿用既有灰階 theme tokens，不另外維護 preview 專用色系。
+- 2026-06-15: 左側工具面板的 feature 圖示改用本地 SVG icon，取代 ASCII placeholder。
+- 2026-06-16: Empty Upload、New Image、Load Demo、Crop 操作、Palette 加刪、Resize link 與 Export 改用本地 SVG icon；Browse File 與 Original / Result 維持純文字。
+- 2026-06-16: 右上角 Menu 按鈕新增本地 SVG menu icon，文字仍保留。
+- 2026-06-16: Resize link 改用 `link-01` SVG，工具面板展開/收合改用 chevron SVG，Light / Dark theme 選項新增 sun / moon SVG icon。
 
 ## 產品目標
 

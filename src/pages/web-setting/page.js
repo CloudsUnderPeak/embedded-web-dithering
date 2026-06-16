@@ -6,6 +6,15 @@
         return app.i18n.en[key] || key;
     }
 
+    function themeIcon(option) {
+        var iconPath = option.id === 'dark'
+            ? 'assets/icons/app/moon.svg'
+            : 'assets/icons/app/sun.svg';
+        return app.ui.svgIcons.create(iconPath, {
+            className: 'setting-choice-icon'
+        });
+    }
+
     function themeOption(option) {
         // Radio 選項直接呼叫 app.app.setTheme，讓 DOM theme 與 localStorage 同步更新。
         var input = app.utils.dom.el('input', {
@@ -26,6 +35,7 @@
             className: 'setting-choice',
             children: [
                 input,
+                themeIcon(option),
                 app.utils.dom.el('span', { text: t(option.labelKey) })
             ]
         });

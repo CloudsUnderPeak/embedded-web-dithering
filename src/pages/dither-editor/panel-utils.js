@@ -8,6 +8,10 @@
         return app.i18n.en[key] || key;
     }
 
+    function svgIcon(icon, options) {
+        return app.ui.svgIcons.create(icon, options);
+    }
+
     // 建立一個工具面板 section，並可加上 data-tool-panel 方便 page 掛載。
     function section(titleKey, children, toolId) {
         return app.utils.dom.el('section', {
@@ -245,6 +249,7 @@
         t: t,
         section: section,
         row: row,
+        svgIcon: svgIcon,
         numberInput: numberInput,
         toggleSwitchInput: toggleSwitchInput,
         unitNumberInput: unitNumberInput,

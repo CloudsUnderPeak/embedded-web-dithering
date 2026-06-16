@@ -79,7 +79,9 @@
     function linkedSizeIcon() {
         return app.utils.dom.el('span', {
             className: 'resize-size-link',
-            text: '↔',
+            children: [
+                ui.svgIcon('assets/icons/editor/resize-link.svg', { fallbackText: '↔' })
+            ],
             attrs: {
                 role: 'img',
                 title: 'Width and height are linked',
@@ -91,6 +93,7 @@
     app.pages.ditherEditor.featureRegistry.register({
         id: 'resize',
         icon: '<>',
+        iconPath: 'assets/icons/editor/resize.svg',
         labelKey: 'panelResize',
         panelGroup: 'edit',
         pipelineStage: 'fixedBefore',

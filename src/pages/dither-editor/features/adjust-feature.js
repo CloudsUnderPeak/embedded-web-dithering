@@ -147,6 +147,7 @@
     app.pages.ditherEditor.featureRegistry.register({
         id: 'adjust',
         icon: '~~',
+        iconPath: 'assets/icons/editor/adjust.svg',
         labelKey: 'panelAdjust',
         panelGroup: 'edit',
         pipelineStage: 'effectsOrder',

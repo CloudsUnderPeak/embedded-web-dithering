@@ -8,6 +8,7 @@
     app.pages.ditherEditor.featureRegistry.register({
         id: 'input',
         icon: '+',
+        iconPath: 'assets/icons/editor/image-input.svg',
         labelKey: 'panelImageInput',
         dockOrder: 10,
         panelGroup: 'source',
@@ -32,18 +33,24 @@
             });
 
             var newButton = app.utils.dom.el('button', {
-                className: 'secondary-button',
-                text: ui.t('actionNewImage'),
-                attrs: { type: 'button' }
+                className: 'secondary-button button-with-icon',
+                attrs: { type: 'button' },
+                children: [
+                    ui.svgIcon('assets/icons/editor/new-image-stars.svg'),
+                    app.utils.dom.el('span', { text: ui.t('actionNewImage') })
+                ]
             });
             newButton.addEventListener('click', function () {
                 file.click();
             });
 
             var demoButton = app.utils.dom.el('button', {
-                className: 'secondary-button',
-                text: ui.t('actionLoadDemo'),
-                attrs: { type: 'button' }
+                className: 'secondary-button button-with-icon',
+                attrs: { type: 'button' },
+                children: [
+                    ui.svgIcon('assets/icons/editor/load-demo-image.svg'),
+                    app.utils.dom.el('span', { text: ui.t('actionLoadDemo') })
+                ]
             });
             demoButton.addEventListener('click', function () {
                 controller.loadDemo();

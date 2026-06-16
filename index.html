@@ -16,7 +16,10 @@
             <div class="app-title">Dither Image Editor</div>
             <div class="app-header-actions">
                 <div id="app-status" class="app-status is-ready" title="Ready" aria-label="Ready"></div>
-                <button id="app-menu-button" class="icon-button" type="button" aria-label="Menu">Menu</button>
+                <button id="app-menu-button" class="icon-button app-menu-button button-with-icon" type="button" aria-label="Menu">
+                    <span class="svg-icon app-menu-button-icon" data-svg-icon="assets/icons/editor/menu.svg"></span>
+                    <span>Menu</span>
+                </button>
             </div>
         </header>
         <main id="page-host" class="page-host"></main>
@@ -27,6 +30,7 @@
     <script defer src="src/i18n/en.js"></script>
     <script defer src="src/utils/dom.js"></script>
     <script defer src="src/utils/math.js"></script>
+    <script defer src="src/ui/svg-icons.js"></script>
     <script defer src="src/core/storage/storage-keys.js"></script>
     <script defer src="src/core/storage/settings-store.js"></script>
     <script defer src="src/core/storage/document-store.js"></script>

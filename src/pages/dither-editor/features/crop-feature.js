@@ -311,10 +311,10 @@
         });
     }
 
-    function cropIconButton(icon, label) {
+    function cropIconButton(iconPath, fallbackText, label) {
         return app.utils.dom.el('button', {
             className: 'icon-button crop-icon-button',
-            text: icon,
+            children: [ui.svgIcon(iconPath, { fallbackText: fallbackText })],
             attrs: { type: 'button', 'aria-label': label, title: label }
         });
     }
@@ -483,6 +483,7 @@
     app.pages.ditherEditor.featureRegistry.register({
         id: 'crop',
         icon: '[]',
+        iconPath: 'assets/icons/editor/crop.svg',
         labelKey: 'panelCrop',
         pipelineStage: 'fixedBefore',
         pipelineOrder: 10,
@@ -607,10 +608,10 @@
                     backgroundColor: normalizeHexColor(backgroundColorInput.value)
                 });
             });
-            var rotateLeftButton = cropIconButton('↺', 'Rotate left 90 degrees');
-            var rotateRightButton = cropIconButton('↻', 'Rotate right 90 degrees');
-            var flipXButton = cropIconButton('⇄', 'Flip horizontal');
-            var flipYButton = cropIconButton('⇅', 'Flip vertical');
+            var rotateLeftButton = cropIconButton('assets/icons/editor/crop-rotate-left.svg', '↺', 'Rotate left 90 degrees');
+            var rotateRightButton = cropIconButton('assets/icons/editor/crop-rotate-right.svg', '↻', 'Rotate right 90 degrees');
+            var flipXButton = cropIconButton('assets/icons/editor/crop-flip-horizontal.svg', '⇄', 'Flip horizontal');
+            var flipYButton = cropIconButton('assets/icons/editor/crop-flip-vertical.svg', '⇅', 'Flip vertical');
             flipXButton.setAttribute('aria-pressed', crop.flipX ? 'true' : 'false');
             flipYButton.setAttribute('aria-pressed', crop.flipY ? 'true' : 'false');
             rotateLeftButton.addEventListener('click', function () {

@@ -594,6 +594,95 @@
     line-height: 1;
 }
 
+.svg-icon {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    color: currentColor;
+    line-height: 1;
+    pointer-events: none;
+    --svg-icon-filter: none;
+}
+
+body[data-theme="dark"] .svg-icon {
+    --svg-icon-filter: brightness(0) invert(1);
+}
+
+.svg-icon-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: var(--svg-icon-filter);
+}
+
+body[data-theme="light"] .primary-button .svg-icon,
+body[data-theme="light"] .secondary-button.is-active .svg-icon,
+body[data-theme="light"] .tool-button.is-active .svg-icon,
+body[data-theme="light"] .palette-remove-button .svg-icon {
+    --svg-icon-filter: brightness(0) invert(1);
+}
+
+body[data-theme="dark"] .primary-button .svg-icon,
+body[data-theme="dark"] .secondary-button.is-active .svg-icon,
+body[data-theme="dark"] .tool-button.is-active .svg-icon,
+body[data-theme="dark"] .palette-remove-button .svg-icon {
+    --svg-icon-filter: none;
+}
+
+body[data-theme="light"] .palette-add-button .svg-icon {
+    --svg-icon-filter: brightness(0) saturate(100%) invert(18%) sepia(64%) saturate(2772%) hue-rotate(344deg) brightness(86%) contrast(95%);
+}
+
+body[data-theme="dark"] .palette-add-button .svg-icon {
+    --svg-icon-filter: brightness(0) saturate(100%) invert(77%) sepia(19%) saturate(769%) hue-rotate(314deg) brightness(104%) contrast(101%);
+}
+
+body[data-theme="light"] .preview-upload-icon .svg-icon,
+body[data-theme="light"] .tool-accordion-item.is-dragging .svg-icon {
+    --svg-icon-filter: brightness(0) saturate(100%) invert(31%) sepia(20%) saturate(1441%) hue-rotate(126deg) brightness(91%) contrast(91%);
+}
+
+body[data-theme="dark"] .preview-upload-icon .svg-icon,
+body[data-theme="dark"] .tool-accordion-item.is-dragging .svg-icon {
+    --svg-icon-filter: brightness(0) saturate(100%) invert(57%) sepia(36%) saturate(674%) hue-rotate(126deg) brightness(93%) contrast(88%);
+}
+
+.svg-icon-fallback {
+    display: inline-grid;
+    place-items: center;
+}
+
+.button-with-icon {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.palette-add-button .svg-icon {
+    width: 22px;
+    height: 22px;
+}
+
+.palette-remove-button .svg-icon {
+    width: 12px;
+    height: 12px;
+}
+
+.resize-size-link .svg-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.crop-icon-button .svg-icon,
+.crop-zoom-button .svg-icon {
+    width: 18px;
+    height: 18px;
+}
+
 .tool-dock {
     /* Tool Dock 是功能列表；可拖曳的是 Tool Row，不是展開後的 Panel。 */
     display: grid;
@@ -657,16 +746,23 @@ body.is-sorting * {
     display: none;
 }
 
-.tool-button::after {
-    content: '>';
+.tool-button-state-icon {
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
     color: var(--color-muted);
-    font-size: 13px;
-    transform: rotate(90deg);
-    transition: transform 120ms ease;
 }
 
-.tool-button[aria-expanded="false"]::after {
-    transform: rotate(0deg);
+.tool-button-state-chevron {
+    grid-area: 1 / 1;
+    width: 16px;
+    height: 16px;
+}
+
+.tool-button[aria-expanded="false"] .tool-button-state-chevron.is-open,
+.tool-button[aria-expanded="true"] .tool-button-state-chevron.is-closed {
+    display: none;
 }
 
 .tool-button-icon {
@@ -677,6 +773,22 @@ body.is-sorting * {
     border-radius: 6px;
     background: var(--color-panel-subtle);
     font-size: 13px;
+}
+
+.tool-button-icon-img {
+    display: block;
+    width: 18px;
+    height: 18px;
+    opacity: 0.82;
+}
+
+.app-menu-button-icon {
+    width: 18px;
+    height: 18px;
+}
+
+.tool-button.is-active .tool-button-icon-img {
+    opacity: 1;
 }
 
 .tool-button-label {
@@ -704,7 +816,7 @@ body.is-sorting * {
     background: var(--color-accent);
 }
 
-.tool-button.is-active::after {
+.tool-button.is-active .tool-button-state-icon {
     color: var(--color-on-accent);
 }
 
@@ -725,7 +837,7 @@ body.is-sorting * {
     cursor: grabbing;
 }
 
-.tool-accordion-item.is-dragging .tool-button::after,
+.tool-accordion-item.is-dragging .tool-button-state-icon,
 .tool-accordion-item.is-dragging .tool-drag-handle {
     color: var(--color-accent);
 }
@@ -922,6 +1034,11 @@ body.is-sorting * {
     font-size: 20px;
 }
 
+.preview-upload-icon .svg-icon {
+    width: 100%;
+    height: 100%;
+}
+
 .crop-overlay {
     /* Crop overlay 只顯示固定比例裁切框；實際拖曳移動的是底下的原圖 transform。 */
     position: absolute;
@@ -1036,6 +1153,11 @@ body.is-sorting * {
     background: var(--color-surface);
 }
 
+.setting-choice-icon {
+    width: 18px;
+    height: 18px;
+}
+
 .setting-choice:has(input:checked) {
     border-color: var(--color-accent);
     background: var(--color-accent-soft);
@@ -1068,7 +1190,7 @@ body.is-sorting * {
 
     .tool-button-label,
     .tool-drag-handle,
-    .tool-button::after {
+    .tool-button-state-icon {
         display: grid;
         align-items: center;
     }

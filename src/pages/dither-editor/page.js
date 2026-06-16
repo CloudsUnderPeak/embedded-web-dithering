@@ -14,6 +14,10 @@
         return app.i18n.en[key] || key;
     }
 
+    function ui() {
+        return app.pages.ditherEditor.panelUtils;
+    }
+
     // 判斷指定工具面板是否展開，並兼容早期單面板狀態欄位。
     function isToolOpen(state, id) {
         if (state.openToolPanels) {
@@ -33,6 +37,24 @@
         return app.pages.ditherEditor.editorModeStateMachine;
     }
 
+    function toolIconNode(tool) {
+        var attrs = { 'aria-hidden': 'true' };
+        if (tool.iconPath) {
+            return app.utils.dom.el('span', {
+                className: 'tool-button-icon',
+                attrs: attrs,
+                children: [
+                    ui().svgIcon(tool.iconPath, { className: 'tool-button-icon-img' })
+                ]
+            });
+        }
+        return app.utils.dom.el('span', {
+            className: 'tool-button-icon',
+            text: tool.icon,
+            attrs: attrs
+        });
+    }
+
     // 建立左側/下方工具列，包含 tool row、panel host 與拖曳排序綁定。
     function buildToolDock(state) {
         // Tool dock 完全由 feature registry 產生；新增/停用 feature 不應修改本函式。
@@ -48,11 +70,10 @@
             attrs: { 'aria-label': 'Editor tools' },
             children: tools.map(function (tool) {
                 var isPipelineEffect = draggableEffectIds.indexOf(tool.id) !== -1;
+                var isOpen = isToolOpen(state, tool.id);
                 var buttonChildren = [];
                 if (isPipelineEffect) {
-                    buttonChildren.push(
-                        app.utils.dom.el('span', { className: 'tool-button-icon', text: tool.icon })
-                    );
+                    buttonChildren.push(toolIconNode(tool));
                     buttonChildren.push(
                         app.utils.dom.el('span', {
                             className: 'tool-drag-handle',
@@ -61,12 +82,24 @@
                         })
                     );
                 } else {
-                    buttonChildren.push(
-                        app.utils.dom.el('span', { className: 'tool-button-icon', text: tool.icon })
-                    );
+                    buttonChildren.push(toolIconNode(tool));
                 }
                 buttonChildren.push(
                     app.utils.dom.el('span', { className: 'tool-button-label', text: t(tool.labelKey) })
+                );
+                buttonChildren.push(
+                    app.utils.dom.el('span', {
+                        className: 'tool-button-state-icon',
+                        attrs: { 'aria-hidden': 'true' },
+                        children: [
+                            ui().svgIcon('assets/icons/editor/chevron-right.svg', {
+                                className: 'tool-button-state-chevron is-closed'
+                            }),
+                            ui().svgIcon('assets/icons/editor/chevron-down.svg', {
+                                className: 'tool-button-state-chevron is-open'
+                            })
+                        ]
+                    })
                 );
                 var button = app.utils.dom.el('button', {
                     className: isPipelineEffect ? 'tool-button is-draggable' : 'tool-button',
@@ -74,6 +107,8 @@
                         type: 'button',
                         title: t(tool.labelKey),
                         'aria-label': t(tool.labelKey),
+                        'aria-pressed': isOpen ? 'true' : 'false',
+                        'aria-expanded': isOpen ? 'true' : 'false',
                         'data-tool': tool.id
                     },
                     children: buttonChildren
@@ -492,8 +527,10 @@
                     refs.emptyFileInput,
                     app.utils.dom.el("span", {
                         className: "preview-upload-icon",
-                        text: "↑",
-                        attrs: { "aria-hidden": "true" }
+                        attrs: { "aria-hidden": "true" },
+                        children: [
+                            ui().svgIcon('assets/icons/editor/upload-share.svg', { fallbackText: "↑" })
+                        ]
                     }),
                     app.utils.dom.el("div", { className: "preview-upload-title", text: t("uploadDropTitle") }),
                     app.utils.dom.el("div", { className: "preview-upload-separator", text: t("uploadDropSeparator") }),
@@ -566,16 +603,16 @@
             });
             var cropZoomInButton = app.utils.dom.el('button', {
                 className: 'secondary-button crop-zoom-button',
-                text: '+',
-                attrs: { type: 'button', title: t('actionCropZoomIn'), 'aria-label': t('actionCropZoomIn') }
+                attrs: { type: 'button', title: t('actionCropZoomIn'), 'aria-label': t('actionCropZoomIn') },
+                children: [ui().svgIcon('assets/icons/editor/zoom-in.svg', { fallbackText: '+' })]
             });
             cropZoomInButton.addEventListener('click', function () {
                 adjustCropZoom(0.1);
             });
             var cropZoomOutButton = app.utils.dom.el('button', {
                 className: 'secondary-button crop-zoom-button',
-                text: '-',
-                attrs: { type: 'button', title: t('actionCropZoomOut'), 'aria-label': t('actionCropZoomOut') }
+                attrs: { type: 'button', title: t('actionCropZoomOut'), 'aria-label': t('actionCropZoomOut') },
+                children: [ui().svgIcon('assets/icons/editor/zoom-out.svg', { fallbackText: '-' })]
             });
             cropZoomOutButton.addEventListener('click', function () {
                 adjustCropZoom(-0.1);

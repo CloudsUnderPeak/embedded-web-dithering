@@ -66,6 +66,7 @@
     app.pages.ditherEditor.featureRegistry.register({
         id: 'dither',
         icon: '..',
+        iconPath: 'assets/icons/editor/dither.svg',
         labelKey: 'panelDither',
         panelGroup: 'edit',
         pipelineStage: 'effectsOrder',

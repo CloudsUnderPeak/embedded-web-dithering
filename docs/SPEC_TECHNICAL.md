@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-15
+Last Updated: 2026-06-16
 Split From: SPEC_INDEX.md
 ```
 
@@ -59,6 +59,10 @@ Split From: SPEC_INDEX.md
 - 2026-06-15: Dither Editor `entry.js` 將 feature scripts 與後續 page scripts 併入同一載入波次，降低 GitHub Pages 首次載入瀑布。
 - 2026-06-15: `index.html` 的 classic scripts 改用 `defer`，讓共用基礎檔與 page entries 可並行下載並依序執行。
 - 2026-06-15: 將 Crop overlay sizing / positioning 與 pointer mapping 從 `page.js` 拆到 `viewport/overlay-renderer.js` 與 `viewport/pointer-mapper.js`。
+- 2026-06-15: 左側 feature dock 圖示改用 `assets/icons/editor/` 的本地 SVG 檔案，取代 ASCII placeholder。
+- 2026-06-16: `src/ui/svg-icons.js` 新增共用 SVG icon helper，供 app shell、feature panel、preview toolbar 與 action button 以外部 SVG image 重用本地 SVG。
+- 2026-06-16: Header Menu button 改用本地 SVG menu icon 顯示圖示，並繼承目前 theme color。
+- 2026-06-16: Tool accordion chevrons 與 Web Setting theme sun / moon icons 改用外部 SVG image，直接引用本地 SVG asset。
 
 ## Plug-and-Play 架構要求
 
@@ -377,6 +381,7 @@ embedded-web-dithering/
       slider.js
       select.js
       color-swatch.js
+      svg-icons.js
       sortable-list.js
       tooltip.js
       toggle.js
@@ -397,6 +402,9 @@ embedded-web-dithering/
 - `dither/` 放 dither 演算法核心與矩陣資料，不處理 DOM、feature registration 或 editor state。
 - `gpu/` 放可選硬體加速 processor，例如 WebGL adjust processor。GPU processor 必須有 CPU fallback，且不應直接操作 tool panel 或 editor mode。
 - `viewport/` 放 canvas render、overlay render、座標轉換與 preview viewport 相關邏輯；page 仍負責 DOM mount 與工具列組合。Crop overlay 尺寸/定位必須由 `viewport/overlay-renderer.js` 管理，overlay pointer / wheel 到 crop pan/zoom 的換算必須由 `viewport/pointer-mapper.js` 管理。
+- `src/ui/svg-icons.js` 是唯一 SVG icon loading helper；它只把本地 SVG path 設為外部 `<img src>`，不可保存完整 SVG path data、不可 runtime `fetch()` SVG。`index.html` 不應直接保存完整 SVG symbol/path 資料。
+- `assets/icons/editor/` 放 Dither Editor 專用本地 SVG icon；feature dock 可用 `iconPath` 指向此目錄的 SVG 檔，page 透過 `src/ui/svg-icons.js` 顯示圖示並保留 `icon` 文字作為 fallback。SVG 應使用 24x24 viewBox，不硬寫顯示尺寸。
+- `assets/icons/app/` 放 app shell 或全站設定使用的本地 SVG icon；執行時透過外部 SVG image 顯示，不從檔案 fetch。
 - `src/vendor/` 只放第三方程式碼與對應授權檔。Feature 不應直接依賴 vendor 全域物件，必須透過頁面 adapter 或 core wrapper 存取。
 - 空目錄不應保留作為未來分類提示；需要對應功能時再建立實際檔案與規格。
 
@@ -513,6 +521,7 @@ const defaultDitherOptions = {
 <script defer src="src/namespace.js"></script>
 <script defer src="src/i18n/en.js"></script>
 <script defer src="src/utils/dom.js"></script>
+<script defer src="src/ui/svg-icons.js"></script>
 <script defer src="src/core/canvas/canvas-utils.js"></script>
 <script defer src="src/ui/sortable-list.js"></script>
 <script defer src="src/app/page-registry.js"></script>
