@@ -61,6 +61,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-16: Resize link 改用 `link-01` SVG，工具面板展開/收合改用 chevron SVG，Light / Dark theme 選項新增 sun / moon SVG icon。
 - 2026-06-16: Light / Dark theme 色彩重新收斂為較少的共享語意層級，減少過度細分色票並維持 theme 切換後的 UI 對比。
 - 2026-06-16: Crop overlay 新增觸控螢幕雙指縮放，和滑鼠滾輪一樣調整圖片 zoom。
+- 2026-06-16: Palette 新增色票按鈕改為圓形外框包住加號；Original Colors 數字控制在無單位文字時仍保留步進按鈕緩衝區，降低窄螢幕誤點。
 
 ## 產品目標
 
@@ -448,11 +449,12 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 - Palette 預設為 Original。
 - Original palette 必須使用專案內 vendored RgbQuant 的代表色萃取流程，而不是手寫明暗錨點 heuristic。
 - Original palette 應以原始來源圖的區塊統計、hue retention 與 BT.709 euclidean 色距合併產生代表色。
-- Original palette 的 Colors 預設為 8，可調範圍為 2 到 32；此控制位於 Preset 下方，且只在 Palette 為 Original 時顯示。
+- Original palette 的 Colors 預設為 8，可調範圍為 2 到 32；此控制位於 Preset 下方，且只在 Palette 為 Original 時顯示，並需保留上下調整按鈕前的緩衝區以降低窄螢幕誤點。
 - Original 不主動改變圖片。
 - 手動變更色票後，狀態切換為 Custom。
 - 使用原生 color picker 微調色票時，調色盤必須維持開啟直到使用者完成選色。
 - Palette 色票每列最多顯示 8 個，超過時換到下一列。
+- 新增色票按鈕必須以圓形外框包住加號，讓新增動作和一般色票清楚區分。
 - Custom 是目前工作區設定，不是固定 preset。
 - 色票被刪到空時，回到 Original。
 - Palette 當前有效色票必須同步給 Dither 使用。

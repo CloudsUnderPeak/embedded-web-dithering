@@ -394,7 +394,37 @@
 
 .palette-colors-row .unit-number-field {
     width: 96px;
+    display: grid;
+    grid-template-columns: minmax(34px, 1fr) 16px 22px;
+    column-gap: 6px;
+    align-items: center;
     justify-self: start;
+    min-height: 34px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 6px;
+    background: var(--color-surface);
+    overflow: hidden;
+}
+
+.palette-colors-row .unit-number-field input {
+    width: 100%;
+    min-width: 0;
+    min-height: 32px;
+    border: 0;
+    padding: 6px;
+    background: transparent;
+}
+
+.palette-colors-row .unit-number-field .unit-number-suffix {
+    position: static;
+    justify-self: stretch;
+    transform: none;
+}
+
+.palette-colors-row .unit-number-field .unit-number-stepper {
+    position: static;
+    align-self: stretch;
+    height: auto;
 }
 
 .button-row {
@@ -585,13 +615,20 @@
     place-items: center;
     width: 32px;
     height: 32px;
-    border: 0;
+    border: 1px solid var(--color-border-heavy);
+    border-radius: 999px;
     padding: 0;
     color: var(--color-accent);
-    background: transparent;
+    background: var(--color-surface);
     font-size: 28px;
     font-weight: 700;
     line-height: 1;
+}
+
+.palette-add-button:hover,
+.palette-add-button:focus-visible {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
 }
 
 .svg-icon {
@@ -657,8 +694,8 @@ body[data-theme="dark"] .tool-accordion-item.is-dragging .svg-icon {
 }
 
 .palette-add-button .svg-icon {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
 }
 
 .palette-remove-button .svg-icon {

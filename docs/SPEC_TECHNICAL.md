@@ -65,6 +65,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-16: Tool accordion chevrons 與 Web Setting theme sun / moon icons 改用外部 SVG image，直接引用本地 SVG asset。
 - 2026-06-16: Light / Dark theme token 收斂為共享語意色階，移除單一元件專用的 drop、idle status、add 與 scroll hover 色票。
 - 2026-06-16: Crop pointer mapper 新增雙 pointer pinch zoom，讓觸控螢幕可用雙指縮放調整 crop zoom。
+- 2026-06-16: Palette 新增色票 button 使用圓形外框包住加號；Original Colors 的 unitless number field 必須以獨立 grid 欄保留 stepper 前緩衝，降低窄螢幕誤觸 input。
 
 ## Plug-and-Play 架構要求
 
@@ -678,7 +679,7 @@ Palette feature 必須把 preset 與使用者自訂色票分清楚：
 - MVP 內建 fixed presets 至少包含 `monochrome`、`game-boy`、`warm-ink`、`e6-color-epaper`；`e6-color-epaper` 使用黑、白、紅、黃、藍、綠六色色票。
 - `Original` 是 Palette 的預設選項，色票從載入時的原始 `sourceImageData` 萃取，不考慮 crop、resize、adjust 或其他 pipeline step。
 - `Original` palette 萃取必須透過 `rgbquant-adapter.js` 呼叫 vendored RgbQuant，設定使用 `colors: settings.originalPaletteSize`、`method: 2`、`boxSize: [8, 8]`、`boxPxls: 2`、`minHueCols: 2000` 與 `colorDist: 'euclidean'`。`ditherit-v2` options 雖包含 `initColors: 4096`，但 RgbQuant `method: 2` 的 `buildPal()` 實際使用完整 2D histogram，不以 `initColors` 截斷候選。
-- `originalPaletteSize` 預設為 `8`，允許範圍為 `2..32`，面板必須在 Preset row 下方用短寬度、靠左的 `unitNumberInput` 呈現 Colors；當 `presetId` 不是 `original` 時，此控制必須隱藏。
+- `originalPaletteSize` 預設為 `8`，允許範圍為 `2..32`，面板必須在 Preset row 下方用短寬度、靠左的 `unitNumberInput` 呈現 Colors；當 `presetId` 不是 `original` 時，此控制必須隱藏。此 unitless control 必須保留 input 與 stepper 之間的固定緩衝欄，避免窄螢幕調整上下值時誤點到數字輸入。
 - `Original` 只負責顯示原始圖片代表色並同步給 `Dither`，palette operation 不主動改變圖片。
 - `Custom` 只代表目前 settings 中的色票陣列，不應被加入 `palette-presets.js`。
 - 選擇固定 preset 時，feature 應複製 preset colors 到目前 settings，避免使用者後續編輯污染 config。
@@ -686,7 +687,7 @@ Palette feature 必須把 preset 與使用者自訂色票分清楚：
 - Dither 為 `none` 或 Dither operation 被停用時，選擇固定 preset 或 `Custom` 後，palette operation 直接把像素映射到目前色票中最接近的顏色。
 - 使用者新增、刪除或完成編輯色票後，feature 應把 `presetId` 設為 `custom`，排程 preview，並讓 `Dither` 使用同一份有效 palette。
 - 原生 color picker 的 `input` 事件只能更新 palette state 與 Dither palette，不應排程 preview 或重建色票 DOM；`change` 事件才排正式 preview。
-- `.palette-swatches` 必須用 8 欄 grid 排列，讓每列最多 8 個色票或新增按鈕。
+- `.palette-swatches` 必須用 8 欄 grid 排列，讓每列最多 8 個色票或新增按鈕；新增按鈕必須維持與色票同尺寸的圓形外框加號 affordance。
 - 色票陣列為空時，feature 應回到 `presetId: 'original'`；`Original` 不主動改圖。
 - `palette-utils` 必須集中管理 palette 最近色判斷；預設使用 RgbQuant-style Euclidean BT.709 distance，並支援由 Dither settings 指定其他 Color Distance。
 
