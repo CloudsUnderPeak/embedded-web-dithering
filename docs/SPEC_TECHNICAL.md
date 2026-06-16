@@ -64,6 +64,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-16: Header Menu button 改用本地 SVG menu icon 顯示圖示，並繼承目前 theme color。
 - 2026-06-16: Tool accordion chevrons 與 Web Setting theme sun / moon icons 改用外部 SVG image，直接引用本地 SVG asset。
 - 2026-06-16: Light / Dark theme token 收斂為共享語意色階，移除單一元件專用的 drop、idle status、add 與 scroll hover 色票。
+- 2026-06-16: Crop pointer mapper 新增雙 pointer pinch zoom，讓觸控螢幕可用雙指縮放調整 crop zoom。
 
 ## Plug-and-Play 架構要求
 
@@ -403,6 +404,7 @@ embedded-web-dithering/
 - `dither/` 放 dither 演算法核心與矩陣資料，不處理 DOM、feature registration 或 editor state。
 - `gpu/` 放可選硬體加速 processor，例如 WebGL adjust processor。GPU processor 必須有 CPU fallback，且不應直接操作 tool panel 或 editor mode。
 - `viewport/` 放 canvas render、overlay render、座標轉換與 preview viewport 相關邏輯；page 仍負責 DOM mount 與工具列組合。Crop overlay 尺寸/定位必須由 `viewport/overlay-renderer.js` 管理，overlay pointer / wheel 到 crop pan/zoom 的換算必須由 `viewport/pointer-mapper.js` 管理。
+- `viewport/pointer-mapper.js` 必須把單一 pointer 拖曳轉成 crop pan、wheel 轉成 crop zoom、兩個 active pointers 的距離變化轉成 crop zoom。進入雙指縮放時應暫停單指 drag；縮放結束且仍剩一個 pointer 時可回到拖曳 pan。
 - `src/ui/svg-icons.js` 是唯一 SVG icon loading helper；它只把本地 SVG path 設為外部 `<img src>`，不可保存完整 SVG path data、不可 runtime `fetch()` SVG。`index.html` 不應直接保存完整 SVG symbol/path 資料。
 - `assets/icons/editor/` 放 Dither Editor 專用本地 SVG icon；feature dock 可用 `iconPath` 指向此目錄的 SVG 檔，page 透過 `src/ui/svg-icons.js` 顯示圖示並保留 `icon` 文字作為 fallback。SVG 應使用 24x24 viewBox，不硬寫顯示尺寸。
 - `assets/icons/app/` 放 app shell 或全站設定使用的本地 SVG icon；執行時透過外部 SVG image 顯示，不從檔案 fetch。

@@ -60,6 +60,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-16: 右上角 Menu 按鈕新增本地 SVG menu icon，文字仍保留。
 - 2026-06-16: Resize link 改用 `link-01` SVG，工具面板展開/收合改用 chevron SVG，Light / Dark theme 選項新增 sun / moon SVG icon。
 - 2026-06-16: Light / Dark theme 色彩重新收斂為較少的共享語意層級，減少過度細分色票並維持 theme 切換後的 UI 對比。
+- 2026-06-16: Crop overlay 新增觸控螢幕雙指縮放，和滑鼠滾輪一樣調整圖片 zoom。
 
 ## 產品目標
 
@@ -382,6 +383,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 - 選擇 transform 後原圖未覆蓋區域的底色。
 - 在 preview 區拖曳原圖位置。
 - 在 crop overlay 上用滑鼠滾輪調整 zoom。
+- 在 crop overlay 上用觸控螢幕雙指縮放調整 zoom。
 
 限制：
 
