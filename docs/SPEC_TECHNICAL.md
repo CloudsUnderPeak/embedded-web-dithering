@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-16
+Last Updated: 2026-06-18
 Split From: SPEC_INDEX.md
 ```
 
@@ -66,6 +66,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-16: Light / Dark theme token 收斂為共享語意色階，移除單一元件專用的 drop、idle status、add 與 scroll hover 色票。
 - 2026-06-16: Crop pointer mapper 新增雙 pointer pinch zoom，讓觸控螢幕可用雙指縮放調整 crop zoom。
 - 2026-06-16: Palette 新增色票 button 使用圓形外框包住加號；Original Colors 的 unitless number field 必須以獨立 grid 欄保留 stepper 前緩衝，降低窄螢幕誤觸 input。
+- 2026-06-18: 正式 preview pipeline 完成後記錄 `previewRenderDurationMs`，由 `page.js` 在 edit Result 圖片右下角顯示 preview 計時 label，並由 `SHOW_PREVIEW_TIMING_LABEL` 控制顯示。
 
 ## Plug-and-Play 架構要求
 
@@ -567,6 +568,7 @@ const editorState = {
     sourceImageData: null,
     preparedImageData: null,
     previewImageData: null,
+    previewRenderDurationMs: null,
     outputImageData: null,
     activeTool: 'input',
     openToolPanels: {
@@ -1489,6 +1491,7 @@ Preview 策略：
 ```js
 const PREVIEW_DEBOUNCE_MS = 80;
 const PREVIEW_SLOW_THRESHOLD_MS = 500;
+const SHOW_PREVIEW_TIMING_LABEL = true;
 ```
 
 規則：
@@ -1505,6 +1508,7 @@ const PREVIEW_SLOW_THRESHOLD_MS = 500;
 - `page.js` 的 crop frame fit 與 edit preview fit 必須使用同一個 preview stage content-box 尺寸；若 stage 有 border，需排除 border 厚度再計算置中與縮放。
 - 使用者調整 slider、select、color、effects order 時，不立即每次重算，先 debounce `PREVIEW_DEBOUNCE_MS`。
 - 正式 preview 使用 working image 的完整尺寸，不使用降低解析度的 `ImageData` 當成使用者可見的最終預覽，避免拖曳中與放開後出現不可信的跳變。
+- controller 必須在正式 preview pipeline 執行完成後更新 `state.previewRenderDurationMs`；`page.js` 只負責在 `SHOW_PREVIEW_TIMING_LABEL === true` 時把該數值格式化為純時間文字並貼齊目前 result canvas 右下角，不應在 DOM 層自行量測 pipeline。
 - export 永遠從工作圖和完整 pipeline 重新計算，不使用暫存 preview 結果。
 - slider 拖曳期間以手感優先，不在每個 `input` event 跑完整 pipeline；可用 `requestAnimationFrame` 更新輕量 live feedback。
 - live feedback 只能在「拖曳中看到的結果」與「放開後正式 pipeline 結果」足夠一致時啟用；不一致時寧可不顯示假的即時效果。

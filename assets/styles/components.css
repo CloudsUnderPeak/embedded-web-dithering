@@ -1100,6 +1100,23 @@ body.is-sorting * {
     pointer-events: none;
 }
 
+.preview-timing-label {
+    position: absolute;
+    z-index: 2;
+    border-radius: 999px;
+    padding: 4px 8px;
+    color: var(--color-on-accent);
+    background: var(--color-accent);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.preview-timing-label[hidden] {
+    display: none;
+}
+
 .metric-strip {
     display: none;
     color: var(--color-text-soft);

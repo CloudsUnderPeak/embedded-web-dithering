@@ -423,10 +423,45 @@
         }
         refs.error.textContent = state.status === 'error' ? state.error || 'Error' : '';
         overlayRenderer.renderCropOverlay(state, cropMetrics, cropVisible);
+        renderPreviewTimingLabel(state, cropVisible);
         app.pages.ditherEditor.featureRegistry.dispatch('onRender', { state: state, controller: controller });
         if (refs.status) {
             app.app.renderStatus(refs.status, statusText(state));
         }
+    }
+
+    function formatPreviewDuration(durationMs) {
+        if (durationMs < 1) {
+            return '<1 ms';
+        }
+        if (durationMs < 1000) {
+            return Math.round(durationMs) + ' ms';
+        }
+        return (durationMs / 1000).toFixed(1) + ' s';
+    }
+
+    function renderPreviewTimingLabel(state, cropVisible) {
+        var durationMs = state.previewRenderDurationMs;
+        var visible = Boolean(
+            refs.previewTimingLabel
+            && refs.canvas
+            && app.pages.ditherEditor.constants.SHOW_PREVIEW_TIMING_LABEL === true
+            && state.mode === modeMachine().groups.EDIT
+            && state.viewMode === 'result'
+            && !cropVisible
+            && state.previewImageData
+            && Number.isFinite(durationMs)
+        );
+        if (!visible) {
+            refs.previewTimingLabel.hidden = true;
+            return;
+        }
+        var stageRect = refs.previewStage.getBoundingClientRect();
+        var canvasRect = refs.canvas.getBoundingClientRect();
+        refs.previewTimingLabel.textContent = formatPreviewDuration(durationMs);
+        refs.previewTimingLabel.style.right = Math.max(6, stageRect.right - canvasRect.right + 6) + 'px';
+        refs.previewTimingLabel.style.bottom = Math.max(6, stageRect.bottom - canvasRect.bottom + 6) + 'px';
+        refs.previewTimingLabel.hidden = false;
     }
 
     // Adjust 拖曳中用 livePreview base + CSS filter 顯示即時結果。
@@ -438,6 +473,7 @@
             renderer.render(state.previewImageData);
         }
         renderer.setFilter(filter);
+        renderPreviewTimingLabel(state, false);
     }
 
     // 將 editor status 轉成 header 狀態文字。
@@ -501,6 +537,10 @@
             refs.status = appContext.statusNode;
             refs.canvas = app.utils.dom.el('canvas');
             refs.error = app.utils.dom.el('div', { className: 'error-text' });
+            refs.previewTimingLabel = app.utils.dom.el('span', {
+                className: 'preview-timing-label',
+                attrs: { hidden: 'hidden' }
+            });
             refs.cropOverlayLabel = app.utils.dom.el('span', { className: 'crop-overlay-label' });
             refs.cropOverlay = app.utils.dom.el('div', {
                 className: 'crop-overlay',
@@ -539,7 +579,7 @@
             });
             refs.previewStage = app.utils.dom.el('div', {
                 className: 'preview-stage',
-                children: [refs.canvas, refs.cropOverlay, refs.emptyUpload]
+                children: [refs.canvas, refs.cropOverlay, refs.previewTimingLabel, refs.emptyUpload]
             });
             bindEmptyUploadDropzone();
             overlayRenderer = new app.pages.ditherEditor.ViewportOverlayRenderer({

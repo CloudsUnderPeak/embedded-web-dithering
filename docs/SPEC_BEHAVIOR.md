@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-16
+Last Updated: 2026-06-18
 Split From: SPEC_INDEX.md
 ```
 
@@ -62,6 +62,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-16: Light / Dark theme 色彩重新收斂為較少的共享語意層級，減少過度細分色票並維持 theme 切換後的 UI 對比。
 - 2026-06-16: Crop overlay 新增觸控螢幕雙指縮放，和滑鼠滾輪一樣調整圖片 zoom。
 - 2026-06-16: Palette 新增色票按鈕改為圓形外框包住加號；Original Colors 數字控制在無單位文字時仍保留步進按鈕緩衝區，降低窄螢幕誤點。
+- 2026-06-18: Edit Result preview 新增圖片右下角 preview 計時 label，顯示最近一次正式 preview 完成耗時，並可用全域開關停用顯示。
 
 ## 產品目標
 
@@ -528,6 +529,8 @@ Crop preview 要求：
 
 使用者調整 slider、select、color 或 effects order 時，App 應更新 preview，但可以短暫 debounce，避免每一次輸入都完整重算。
 slider 控制的填色與 thumb、Toggle Switch 的啟用狀態必須使用較淡的 control accent 主題色，不使用瀏覽器預設藍色。
+
+Edit Result preview 應在圖片右下角顯示最近一次正式 preview 完成耗時，label 文字只顯示時間。Preview 尚未完成、空狀態、prepare crop preview、Original view，或全域顯示開關關閉時，不顯示此計時 label。此 label 只描述目前繪製在 preview canvas 上、使用者可見的 Result 圖片。
 
 主要狀態：
 

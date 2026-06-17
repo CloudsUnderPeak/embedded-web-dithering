@@ -46,6 +46,7 @@
             sourceImageData: null,
             preparedImageData: null,
             previewImageData: null,
+            previewRenderDurationMs: null,
             outputImageData: null,
             livePreview: null,
             activeTool: initialTool,

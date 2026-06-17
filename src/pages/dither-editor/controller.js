@@ -14,6 +14,12 @@
         this.previewPending = false;
     }
 
+    function nowMs() {
+        return window.performance && window.performance.now
+            ? window.performance.now()
+            : Date.now();
+    }
+
     // 將 imageLoader 回傳結果寫入 state，並通知 feature 進行 onImageLoaded 初始化。
     DitherEditorController.prototype.loadResult = function loadResult(result, fileName) {
         // 所有圖片來源（upload/demo/new image）最後都收斂到 loadResult，
@@ -67,6 +73,7 @@
         var self = this;
         var max = app.pages.ditherEditor.constants.MAX_INPUT_LONG_EDGE;
         this.state.status = 'loading-image';
+        this.state.previewRenderDurationMs = null;
         this.render(this.state);
         return app.core.imageLoader
             .loadDemoImage(max)
@@ -84,6 +91,7 @@
     DitherEditorController.prototype.loadFile = function loadFile(file) {
         var self = this;
         this.state.status = 'loading-image';
+        this.state.previewRenderDurationMs = null;
         this.render(this.state);
         return app.core.imageLoader
             .loadImageFromFile(file, app.pages.ditherEditor.constants.MAX_INPUT_LONG_EDGE)
@@ -299,6 +307,7 @@
             this.render(this.state);
             return;
         }
+        this.state.previewRenderDurationMs = null;
         if (this.previewHoldDepth > 0) {
             // 使用者拖曳 slider 時先更新輕量 live preview，完整 pipeline 延到互動結束。
             this.previewPending = true;
@@ -334,11 +343,13 @@
         }
         try {
             this.runFeatureHook('onBeforePreview', {});
+            var startMs = nowMs();
             // Preview 永遠從 sourceImageData 跑完整 pipeline，避免連續套用造成畫質累積劣化。
             this.state.previewImageData = app.pages.ditherEditor.pipelineRunner.run(
                 this.state.sourceImageData,
                 this.state
             );
+            this.state.previewRenderDurationMs = nowMs() - startMs;
             this.state.outputImageData = this.state.previewImageData;
             this.state.status = 'preview-ready';
             this.runFeatureHook('onAfterPreview', {});
@@ -346,6 +357,7 @@
         } catch (error) {
             this.state.status = 'error';
             this.state.error = error.message;
+            this.state.previewRenderDurationMs = null;
         }
         this.state.livePreview = null;
         this.render(this.state);
