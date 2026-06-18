@@ -34,4 +34,11 @@
             return new ImageData(output, width, height);
         }
     };
+
+    app.pages.ditherEditor.ditherAlgorithmRegistry.registerProcessor({
+        id: 'pattern',
+        apply: function apply(imageData, options) {
+            return app.pages.ditherEditor.patternDither.apply(imageData, options);
+        }
+    });
 })(window.DitherApp);

@@ -63,6 +63,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-16: Crop overlay 新增觸控螢幕雙指縮放，和滑鼠滾輪一樣調整圖片 zoom。
 - 2026-06-16: Palette 新增色票按鈕改為圓形外框包住加號；Original Colors 數字控制在無單位文字時仍保留步進按鈕緩衝區，降低窄螢幕誤點。
 - 2026-06-18: Edit Result preview 新增圖片右下角 preview 計時 label，顯示最近一次正式 preview 完成耗時，並可用全域開關停用顯示。
+- 2026-06-18: RgbQuant 限縮為 Original palette 代表色萃取用途；Dither 不再使用 RgbQuant 執行 Error Diffusion，以降低 preview latency。
 
 ## 產品目標
 

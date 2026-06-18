@@ -6,6 +6,7 @@
     var bootstrapScripts = [
         'src/pages/dither-editor/config/app-mode.js',
         'src/pages/dither-editor/config/palette-presets.js',
+        'src/pages/dither-editor/dither/dither-algorithm-registry.js',
         'src/pages/dither-editor/config/dither-algorithms.js',
         'src/pages/dither-editor/config/color-distance-metrics.js',
         'src/pages/dither-editor/config/pipeline-presets.js',
@@ -48,6 +49,7 @@
             .loadMany(bootstrapScripts)
             .then(loadFeatureAndPageScripts)
             .then(function () {
+                app.pages.ditherEditor.ditherAlgorithmRegistry.assertRegistered();
                 app.pages.ditherEditor.featureRegistry.assertRegistered();
             })
             .then(function () {

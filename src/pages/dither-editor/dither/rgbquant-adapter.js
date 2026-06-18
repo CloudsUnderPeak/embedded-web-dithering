@@ -17,12 +17,6 @@
         useCache: true,
         cacheFreq: 10
     };
-    var KERNEL_BY_MATRIX_ID = {
-        floydSteinberg: 'FloydSteinberg',
-        atkinson: 'Atkinson',
-        jarvis: 'Jarvis',
-        stucki: 'Stucki'
-    };
 
     function createRgbQuant(options) {
         if (!window.RgbQuant) {
@@ -31,24 +25,12 @@
         return new window.RgbQuant(Object.assign({}, RGBQUANT_OPTIONS, options || {}));
     }
 
-    function colorToTuple(color) {
-        return [
-            Math.max(0, Math.min(255, Math.round(Number(color && color.r) || 0))),
-            Math.max(0, Math.min(255, Math.round(Number(color && color.g) || 0))),
-            Math.max(0, Math.min(255, Math.round(Number(color && color.b) || 0)))
-        ];
-    }
-
     function tupleToColor(tuple) {
         return {
             r: tuple[0],
             g: tuple[1],
             b: tuple[2]
         };
-    }
-
-    function cloneImageData(imageData) {
-        return new ImageData(new Uint8ClampedArray(imageData.data), imageData.width, imageData.height);
     }
 
     function normalizePaletteSize(value) {
@@ -60,40 +42,6 @@
         return Math.max(
             constants.MIN_ORIGINAL_PALETTE_SIZE,
             Math.min(constants.MAX_ORIGINAL_PALETTE_SIZE, Math.round(size))
-        );
-    }
-
-    function normalizeErrorStrengthPercent(value) {
-        var percent = Number(value);
-        if (!Number.isFinite(percent)) {
-            return 100;
-        }
-        return Math.max(0, Math.min(150, percent));
-    }
-
-    function rgbQuantColorDistanceId(colorDistance) {
-        var normalized = app.core.paletteUtils.normalizeColorDistanceId(colorDistance);
-        if (normalized === 'manhattan-bt709') {
-            return 'manhattan';
-        }
-        if (normalized === 'euclidean-bt709') {
-            return 'euclidean';
-        }
-        return null;
-    }
-
-    function kernelName(matrixId) {
-        return KERNEL_BY_MATRIX_ID[matrixId] || null;
-    }
-
-    function canApplyErrorDiffusion(options) {
-        return Boolean(
-            window.RgbQuant
-            && options
-            && options.palette
-            && options.palette.length
-            && kernelName(options.matrixId)
-            && rgbQuantColorDistanceId(options.colorDistance)
         );
     }
 
@@ -110,23 +58,6 @@
             });
             quantizer.sample(imageData);
             return quantizer.palette(true).slice(0, size).map(tupleToColor);
-        },
-        canApplyErrorDiffusion: canApplyErrorDiffusion,
-        applyErrorDiffusion: function applyErrorDiffusion(imageData, options) {
-            if (!canApplyErrorDiffusion(options)) {
-                throw new Error('RgbQuant cannot apply the selected error diffusion settings.');
-            }
-            var palette = options.palette.map(colorToTuple);
-            var quantizer = createRgbQuant({
-                colors: palette.length,
-                palette: palette,
-                colorDist: rgbQuantColorDistanceId(options.colorDistance),
-                dithKern: kernelName(options.matrixId),
-                dithSerp: Boolean(options.serpentine),
-                errorDiffusionStrength: normalizeErrorStrengthPercent(options.errorStrength)
-            });
-            var output = quantizer.reduce(cloneImageData(imageData));
-            return new ImageData(new Uint8ClampedArray(output), imageData.width, imageData.height);
         }
     };
 })(window.DitherApp);

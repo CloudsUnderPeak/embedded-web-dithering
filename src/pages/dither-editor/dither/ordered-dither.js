@@ -2,11 +2,12 @@
     // Ordered dithering 使用固定 Bayer matrix 產生規律網點，速度穩定且結果可預期。
     app.pages.ditherEditor = app.pages.ditherEditor || {};
     app.pages.ditherEditor.orderedDither = {
-        // 執行 Bayer ordered dithering，固定使用 bayer4 matrix。
+        // 執行 ordered dithering，options.matrixId 決定 threshold matrix。
         apply: function apply(imageData, options) {
             var width = imageData.width;
             var height = imageData.height;
-            var matrix = app.pages.ditherEditor.ditherMatrices.bayer4;
+            var matrices = app.pages.ditherEditor.ditherMatrices;
+            var matrix = matrices[options.matrixId] || matrices.bayer4;
             var size = matrix.length;
             var source = imageData.data;
             var output = new Uint8ClampedArray(source.length);
@@ -35,4 +36,11 @@
             return new ImageData(output, width, height);
         }
     };
+
+    app.pages.ditherEditor.ditherAlgorithmRegistry.registerProcessor({
+        id: 'ordered',
+        apply: function apply(imageData, options) {
+            return app.pages.ditherEditor.orderedDither.apply(imageData, options);
+        }
+    });
 })(window.DitherApp);

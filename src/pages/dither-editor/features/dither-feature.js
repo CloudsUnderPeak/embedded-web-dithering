@@ -11,15 +11,7 @@
     }
 
     function algorithmById(id) {
-        var algorithms = app.pages.ditherEditor.config.ditherAlgorithms;
-        return algorithms.find(function (algorithm) {
-            return algorithm.id === id;
-        }) || null;
-    }
-
-    function isErrorDiffusionAlgorithm(id) {
-        var algorithm = algorithmById(id);
-        return Boolean(algorithm && algorithm.mode === 'error-diffusion');
+        return app.pages.ditherEditor.ditherAlgorithmRegistry.get(id);
     }
 
     function normalizeErrorStrength(value) {
@@ -90,7 +82,7 @@
             );
             state.settings.dither.errorStrength = normalizeErrorStrength(state.settings.dither.errorStrength);
             var options = [{ value: 'none', label: ui.t('optionNone') }].concat(
-                app.pages.ditherEditor.config.ditherAlgorithms.map(function (algorithm) {
+                app.pages.ditherEditor.ditherAlgorithmRegistry.list().map(function (algorithm) {
                     return { value: algorithm.id, label: ui.t(algorithm.labelKey) };
                 })
             );
@@ -107,12 +99,16 @@
                 function (value) {
                     controller.updateSetting('dither', 'errorStrength', value);
                 },
-                !isErrorDiffusionAlgorithm(state.settings.dither.algorithm),
+                !app.pages.ditherEditor.ditherAlgorithmRegistry.supportsErrorStrength(
+                    state.settings.dither.algorithm
+                ),
                 previewHold
             );
             var rows = [
                 ui.row('Algorithm', ui.selectInput(state.settings.dither.algorithm, options, function (value) {
-                    errorStrengthControl.setDisabled(!isErrorDiffusionAlgorithm(value));
+                    errorStrengthControl.setDisabled(
+                        !app.pages.ditherEditor.ditherAlgorithmRegistry.supportsErrorStrength(value)
+                    );
                     controller.updateSetting('dither', 'algorithm', value);
                 })),
                 ui.row(ui.t('labelColorDistance'), ui.selectInput(
@@ -133,14 +129,14 @@
             pipeline: {
                 draggable: false
             },
-            // 依演算法設定分派到 ordered、pattern 或 error diffusion processor。
+            // 依演算法 registry 找到對應 processor；Dither feature 不硬寫 processor 清單。
             run: function run(imageData, settings) {
                 // none 代表 pipeline 保留此工具但不套用任何 dithering。
                 if (settings.algorithm === 'none') {
                     return imageData;
                 }
-                var config = app.pages.ditherEditor.config;
-                var algorithm = algorithmById(settings.algorithm) || config.ditherAlgorithms[0];
+                var registry = app.pages.ditherEditor.ditherAlgorithmRegistry;
+                var algorithm = algorithmById(settings.algorithm) || registry.first();
                 var palette = settings.palette || [];
                 if (!palette.length) {
                     return imageData;
@@ -152,13 +148,7 @@
                     serpentine: Boolean(settings.serpentine),
                     errorStrength: normalizeErrorStrength(settings.errorStrength)
                 };
-                if (algorithm.mode === 'ordered') {
-                    return app.pages.ditherEditor.orderedDither.apply(imageData, options);
-                }
-                if (algorithm.mode === 'pattern') {
-                    return app.pages.ditherEditor.patternDither.apply(imageData, options);
-                }
-                return app.pages.ditherEditor.errorDiffusion.apply(imageData, options);
+                return registry.run(imageData, algorithm, options);
             }
         }
     });

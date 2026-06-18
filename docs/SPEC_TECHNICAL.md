@@ -68,6 +68,9 @@ Split From: SPEC_INDEX.md
 - 2026-06-16: Palette 新增色票 button 使用圓形外框包住加號；Original Colors 的 unitless number field 必須以獨立 grid 欄保留 stepper 前緩衝，降低窄螢幕誤觸 input。
 - 2026-06-18: 正式 preview pipeline 完成後記錄 `previewRenderDurationMs`，由 `page.js` 在 edit Result 圖片右下角顯示 preview 計時 label，並由 `SHOW_PREVIEW_TIMING_LABEL` 控制顯示。
 - 2026-06-18: `pipeline-runner.js` 新增可選 Stage Cache；controller 在 preview、prepared original 與 live preview base 使用同一份 in-memory cache，換圖與銷毀時清空，Export 維持完整正式 pipeline 重跑。
+- 2026-06-18: RgbQuant adapter 限縮為 Original palette 萃取入口；Error Diffusion 改由專案內建 processor 執行，並參考 dithering-studio-main 將 hot loop 改為 typed array、本地 nearest-index palette search 與 Floyd-Steinberg fast path。
+- 2026-06-18: Error Diffusion 內建 processor 在擴散誤差寫回工作緩衝時必須 clamp 到 `0..255`，避免 Error Strength 增大時累積誤差爆掉造成破圖。
+- 2026-06-18: Dither 演算法改為使用 `dither-algorithm-registry.js` 註冊；演算法 metadata 指向 processor id，Dither feature 不再硬寫 ordered / pattern / error diffusion 分派。
 
 ## Plug-and-Play 架構要求
 
@@ -694,23 +697,25 @@ Palette feature 必須把 preset 與使用者自訂色票分清楚：
 - 色票陣列為空時，feature 應回到 `presetId: 'original'`；`Original` 不主動改圖。
 - `palette-utils` 必須集中管理 palette 最近色判斷；預設使用 RgbQuant-style Euclidean BT.709 distance，並支援由 Dither settings 指定其他 Color Distance。
 
-`dither-algorithms.js`：
+`dither-algorithm-registry.js` / `dither-algorithms.js`：
 
 ```js
 (function (app) {
     app.pages.ditherEditor = app.pages.ditherEditor || {};
     app.pages.ditherEditor.config = app.pages.ditherEditor.config || {};
 
-    app.pages.ditherEditor.config.ditherAlgorithms = [
-        {
-            id: 'floyd-steinberg',
-            labelKey: 'algorithmFloydSteinberg',
-            mode: 'error-diffusion',
-            matrixId: 'floydSteinberg',
-        },
-    ];
+    app.pages.ditherEditor.ditherAlgorithmRegistry.register({
+        id: 'floyd-steinberg',
+        labelKey: 'algorithmFloydSteinberg',
+        processorId: 'error-diffusion',
+        matrixId: 'floydSteinberg',
+        supportsSerpentine: true,
+        supportsErrorStrength: true,
+    });
 })(window.DitherApp);
 ```
+
+Dither algorithm 必須透過 `ditherAlgorithmRegistry.register()` 註冊 metadata，並指定已註冊的 `processorId`。Dither processor 必須透過 `ditherAlgorithmRegistry.registerProcessor({ id, apply })` 註冊共同介面；`apply(imageData, options, algorithm)` 必須回傳新的 `ImageData` 或原圖。新增 matrix-only 演算法時，通常只需要新增 matrix、演算法註冊 entry 與 i18n label；新增新型演算法時，新增 processor script 並註冊 processor，不應修改 `dither-feature.js` 的分派邏輯。
 
 Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-steinberg`，且 `serpentine` 預設為 `false`。`DEFAULT_DITHER_ERROR_STRENGTH` 目前為 `100`，代表標準 error diffusion 擴散強度。Dither 啟用時 output 必須以目前有效 Palette 作為固定輸出色，不自行產生新的顏色。
 
@@ -718,13 +723,11 @@ Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-ste
 
 `color-distance-metrics.js` 宣告使用者可選的最近色距離公式。Dither feature 預設使用 `DEFAULT_COLOR_DISTANCE_ID`，目前為 `euclidean-bt709`。同一個 `colorDistance` 必須傳給 Error Diffusion、Ordered Dither、Pattern Dither，以及 Dither 關閉時 Palette operation 的直接最近色映射。`euclidean-bt709` 是 RgbQuant-style BT.709 weighted euclidean distance；`euclidean-rgb` 是未加權 RGB squared distance；`manhattan-bt709` 是 BT.709 weighted Manhattan distance；`manhattan-rgb` 是未加權 Manhattan distance。舊 id `euclidean` / `bt709` 應正規化到 `euclidean-bt709`，舊 id `rgb` 應正規化到 `euclidean-rgb`，舊 id `manhattan` 應正規化到 `manhattan-rgb`。
 
-`rgbquant-adapter.js` 是 Dither Editor 使用 RgbQuant 的唯一入口。Adapter 必須：
+`rgbquant-adapter.js` 是 Dither Editor 使用 RgbQuant 的唯一入口，且只可用於 Original palette 萃取。Adapter 必須：
 
-- 將專案 `{ r, g, b }` 色彩格式轉成 RgbQuant `[r, g, b]` tuple。
-- 將 `floydSteinberg`、`atkinson`、`jarvis`、`stucki` 映射到 RgbQuant kernel 名稱。
-- 將 `euclidean-bt709` 映射到 RgbQuant `euclidean`，將 `manhattan-bt709` 映射到 RgbQuant `manhattan`。
-- 對 RgbQuant 尚不支援的 `euclidean-rgb`、`manhattan-rgb`、`ciede2000` 保留既有 Error Diffusion fallback。
-- 複製輸入 `ImageData` 後再交給 RgbQuant reduce，避免 operation 修改 upstream pipeline input。
+- 將 RgbQuant `[r, g, b]` tuple 轉成專案 `{ r, g, b }` 色彩格式。
+- 不提供 Error Diffusion / dither reduce wrapper。
+- 不讓 Dither operation 直接呼叫 RgbQuant。
 
 `pipeline-presets.js`：
 
@@ -754,7 +757,8 @@ Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-ste
 - `Image Input`、`Export` 這類 UI action 不放進 pipeline operations，但仍必須以 feature script 管理，並由 `feature-manifest.js` 控制是否載入。
 - 要停用某個 feature，例如 `Crop`，預設做法是只在 `feature-manifest.js` 將該 feature 設為 `enabled: false`；停用後該工具不應出現在工具列、state settings、pipeline order，也不應載入對應 feature script。
 - `pages/dither-editor/operations/operation-registry.js` 的 operation metadata 負責定義該 operation 是否屬於可拖曳 pipeline effect，例如 `pipeline: { draggable: true }`。
-- `pages/dither-editor/config/dither-algorithms.js` 負責定義 dither panel 可選演算法。
+- `pages/dither-editor/dither/dither-algorithm-registry.js` 負責保存 dither algorithm metadata 與 processor implementation；Dither feature 只能透過 registry 產生選項與執行演算法，不可硬寫 processor if/else。
+- `pages/dither-editor/config/dither-algorithms.js` 負責註冊 dither panel 可選演算法 metadata，並以 `config.ditherAlgorithms` getter 保留舊讀取路徑。
 - `pages/dither-editor/config/palette-presets.js` 負責定義 palette panel 可選固定調色盤。
 - `Palette` 的 `Custom` 色票不寫入 `palette-presets.js`；它由 `palette-feature.js` 的 settings 管理，隨目前工作區保存。
 - UI panel 只能讀 registry/config 產生選項，不可把演算法名稱硬寫在 HTML。
@@ -1592,7 +1596,9 @@ Error Diffusion algorithms：
 - Jarvis-Judice-Ninke。
 - Stucki。
 
-Error Diffusion processor 必須接受 `options.errorStrength` 百分比，將誤差擴散量乘上 `errorStrength / 100`。允許範圍為 `0` 到 `150`，UI step 為 `2`；缺值或無效值必須退回標準倍率 `1`。支援的 BT.709 Euclidean / Manhattan 路徑優先交給 RgbQuant reduce；RgbQuant 不支援的 color distance 使用既有 fallback processor。Ordered Dither 與 Pattern Dither 不套用 `errorStrength`。
+Error Diffusion processor 必須接受 `options.errorStrength` 百分比，將誤差擴散量乘上 `errorStrength / 100`。允許範圍為 `0` 到 `150`，UI step 為 `2`；缺值或無效值必須退回標準倍率 `1`。Error Diffusion 不可委派給 RgbQuant reduce；必須由專案內建 processor 執行，並支援目前的 Color Distance。Ordered Dither 與 Pattern Dither 不套用 `errorStrength`。
+
+Error Diffusion hot path 應避免每像素建立暫時 object、`forEach` callback 或跨模組 nearest-color callback。常用 Floyd-Steinberg path 應使用預先計算的擴散係數、typed array 工作緩衝與本地 nearest-index palette search；其他 matrix path 可共用預先編譯的 offset/factor 陣列。擴散誤差寫回工作緩衝時必須把每個 RGB channel clamp 到 `0..255`，維持高 Error Strength 下的穩定性。
 
 Dither function 不可讀 DOM，不可硬編碼寬高：
 
