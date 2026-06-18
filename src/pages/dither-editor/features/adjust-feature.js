@@ -67,7 +67,7 @@
         return app.pages.ditherEditor.pipelineRunner.run(state.sourceImageData, {
             pipeline: state.pipeline,
             settings: Object.assign({}, state.settings, { adjust: createDefaultSettings() })
-        });
+        }, { stageCache: context.stageCache });
     }
 
     function canUseLivePreview(state, current) {

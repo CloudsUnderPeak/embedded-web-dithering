@@ -12,6 +12,7 @@
         this.livePreviewFrame = null;
         this.previewHoldDepth = 0;
         this.previewPending = false;
+        this.stageCache = options.stageCache || app.pages.ditherEditor.pipelineRunner.createStageCache();
     }
 
     function nowMs() {
@@ -54,6 +55,7 @@
         state.uiRevision = revision;
         this.previewPending = false;
         this.previewHoldDepth = 0;
+        app.pages.ditherEditor.pipelineRunner.clearStageCache(this.stageCache);
         clearTimeout(this.previewTimer);
         this.previewTimer = null;
         if (this.livePreviewFrame) {
@@ -149,7 +151,7 @@
             this.state.livePreview = {
                 id: id,
                 baseImageData: feature && feature.createLivePreviewBase
-                    ? feature.createLivePreviewBase({ state: this.state })
+                    ? feature.createLivePreviewBase({ state: this.state, stageCache: this.stageCache })
                     : null
             };
         }
@@ -230,7 +232,8 @@
         this.state.preparedImageData = app.pages.ditherEditor.pipelineRunner.runPanelGroup(
             this.state.sourceImageData,
             this.state,
-            app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE
+            app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE,
+            { stageCache: this.stageCache }
         );
         return this.state.preparedImageData;
     };
@@ -347,7 +350,8 @@
             // Preview 永遠從 sourceImageData 跑完整 pipeline，避免連續套用造成畫質累積劣化。
             this.state.previewImageData = app.pages.ditherEditor.pipelineRunner.run(
                 this.state.sourceImageData,
-                this.state
+                this.state,
+                { stageCache: this.stageCache }
             );
             this.state.previewRenderDurationMs = nowMs() - startMs;
             this.state.outputImageData = this.state.previewImageData;
@@ -425,6 +429,7 @@
             cancelAnimationFrame(this.livePreviewFrame);
             this.livePreviewFrame = null;
         }
+        app.pages.ditherEditor.pipelineRunner.clearStageCache(this.stageCache);
         this.state.livePreview = null;
     };
 

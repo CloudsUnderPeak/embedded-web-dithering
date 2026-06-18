@@ -67,6 +67,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-16: Crop pointer mapper 新增雙 pointer pinch zoom，讓觸控螢幕可用雙指縮放調整 crop zoom。
 - 2026-06-16: Palette 新增色票 button 使用圓形外框包住加號；Original Colors 的 unitless number field 必須以獨立 grid 欄保留 stepper 前緩衝，降低窄螢幕誤觸 input。
 - 2026-06-18: 正式 preview pipeline 完成後記錄 `previewRenderDurationMs`，由 `page.js` 在 edit Result 圖片右下角顯示 preview 計時 label，並由 `SHOW_PREVIEW_TIMING_LABEL` 控制顯示。
+- 2026-06-18: `pipeline-runner.js` 新增可選 Stage Cache；controller 在 preview、prepared original 與 live preview base 使用同一份 in-memory cache，換圖與銷毀時清空，Export 維持完整正式 pipeline 重跑。
 
 ## Plug-and-Play 架構要求
 
@@ -1300,6 +1301,24 @@ function runPipeline(sourceImageData, state) {
 - 不略過失敗 operation，避免輸出結果不可預期。
 - preview 時由 controller catch error，更新 `state.status = 'error'` 與 `state.error`。
 - export 時若 pipeline throw error，禁止輸出並要求使用者修正設定。
+
+### Stage Cache
+
+`pipeline-runner.js` 可接受可選的 Stage Cache，用於 preview 類 pipeline 加速。Cache key 必須包含：
+
+- 輸入 stage identity。
+- operation id。
+- operation 自己的 settings stable serialization。
+- operation 透過 `operation.cacheKey(settings, context)` 宣告的額外相依狀態。
+
+規則：
+
+- Stage Cache 只保存 in-memory `ImageData`，不可寫入 localStorage、IndexedDB 或 document data。
+- controller 擁有單一 Stage Cache，`runPreview()`、`updatePreparedPreview()` 與 live preview base 可共用；換新圖、重建 state 或 `destroy()` 時必須清空。
+- Stage Cache 必須有固定容量上限，避免大圖連續設定變更時無限制保留 `ImageData`。
+- 預設 cache key 只包含 operation 自己的 settings；若 operation 讀取其他 feature state 或 pipeline enabled 狀態，該 operation 必須提供 `cacheKey()`。例如 `Palette` 會讀取 Dither 啟用狀態與 Dither settings，因此必須把這些值納入額外 cache key。
+- Operation 不可修改 upstream `ImageData`；cache 會重用 operation 回傳的 `ImageData`。若 operation 為 no-op 並回傳原物件，下游 stage identity 應保持與輸入相同，讓後續 stage 可重用。
+- Export 不使用 preview Stage Cache，也不直接使用暫存 preview bitmap；它仍從工作圖執行完整正式 pipeline，確保輸出與最新 settings 一致。
 
 ## 核心模組邊界
 

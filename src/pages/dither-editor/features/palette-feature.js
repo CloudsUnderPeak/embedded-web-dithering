@@ -332,6 +332,14 @@
             pipeline: {
                 draggable: false
             },
+            cacheKey: function cacheKey(settings, context) {
+                var state = context && context.state;
+                var enabled = state && state.pipeline && state.pipeline.enabled;
+                return {
+                    ditherEnabled: !enabled || enabled.dither !== false,
+                    ditherSettings: state && state.settings ? state.settings.dither : null
+                };
+            },
             // Dither 關閉時，Palette operation 會把每個像素替換成 palette 中的最近色。
             run: function run(imageData, settings, context) {
                 var palette = currentPalette(settings);
