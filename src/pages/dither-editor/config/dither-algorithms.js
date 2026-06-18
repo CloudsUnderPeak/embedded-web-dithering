@@ -28,10 +28,25 @@
         supportsErrorStrength: true
     });
     registry.register({
-        id: 'stucki',
-        labelKey: 'algorithmStucki',
+        id: 'sierra-lite',
+        labelKey: 'algorithmSierraLite',
         processorId: 'error-diffusion',
-        matrixId: 'stucki',
+        matrixId: 'sierraLite',
+        supportsSerpentine: true,
+        supportsErrorStrength: true
+    });
+    registry.register({
+        id: 'stevenson-arce',
+        labelKey: 'algorithmStevensonArce',
+        processorId: 'error-diffusion',
+        matrixId: 'stevensonArce',
+        supportsErrorStrength: true
+    });
+    registry.register({
+        id: 'adaptive-fs-3x3',
+        labelKey: 'algorithmAdaptiveFs3',
+        processorId: 'adaptive-error-diffusion',
+        adaptiveRadius: 1,
         supportsSerpentine: true,
         supportsErrorStrength: true
     });
@@ -42,10 +57,39 @@
         matrixId: 'bayer4'
     });
     registry.register({
+        id: 'bayer-8',
+        labelKey: 'algorithmBayer8',
+        processorId: 'ordered',
+        matrixId: 'bayer8'
+    });
+    registry.register({
+        id: 'blue-noise-64',
+        labelKey: 'algorithmBlueNoise64',
+        processorId: 'ordered',
+        matrixId: 'blueNoise64',
+        thresholdScale: 42
+    });
+    registry.register({
+        id: 'dot-diffusion-simple',
+        labelKey: 'algorithmDotDiffusionSimple',
+        processorId: 'dot-diffusion'
+    });
+    registry.register({
         id: 'pattern-dots',
         labelKey: 'algorithmPatternDots',
-        processorId: 'pattern',
-        matrixId: 'dots'
+        processorId: 'pattern'
+    });
+    registry.register({
+        id: 'palette-dot-halftone',
+        labelKey: 'algorithmPaletteDotHalftone',
+        processorId: 'palette-mix',
+        mixMask: 'halftone'
+    });
+    registry.register({
+        id: 'mix-ordered',
+        labelKey: 'algorithmMixOrdered',
+        processorId: 'palette-mix',
+        mixMask: 'blue-noise'
     });
 
     Object.defineProperty(app.pages.ditherEditor.config, 'ditherAlgorithms', {

@@ -17,6 +17,8 @@
         'src/pages/dither-editor/dither/error-diffusion.js',
         'src/pages/dither-editor/dither/ordered-dither.js',
         'src/pages/dither-editor/dither/pattern-dither.js',
+        'src/pages/dither-editor/dither/dot-diffusion.js',
+        'src/pages/dither-editor/dither/palette-mix-dither.js',
         'src/pages/dither-editor/gpu/adjust-processor.js',
         'src/pages/dither-editor/operations/operation-registry.js',
         'src/pages/dither-editor/constants.js',

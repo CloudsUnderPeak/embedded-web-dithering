@@ -211,6 +211,128 @@
         return value < 0 ? 0 : (value > 255 ? 255 : value);
     }
 
+    function luminanceAt(data, index) {
+        return 0.2126 * data[index] + 0.7152 * data[index + 1] + 0.0722 * data[index + 2];
+    }
+
+    function computeMeanMap(data, width, height, radius) {
+        var stride = width + 1;
+        var integral = new Float32Array(stride * (height + 1));
+
+        for (var y = 0; y < height; y += 1) {
+            var rowSum = 0;
+            for (var x = 0; x < width; x += 1) {
+                var pixel = y * width + x;
+                rowSum += luminanceAt(data, pixel * 4);
+                integral[(y + 1) * stride + (x + 1)] = integral[y * stride + (x + 1)] + rowSum;
+            }
+        }
+
+        var output = new Float32Array(width * height);
+        for (var row = 0; row < height; row += 1) {
+            var top = Math.max(0, row - radius);
+            var bottom = Math.min(height - 1, row + radius);
+            for (var col = 0; col < width; col += 1) {
+                var left = Math.max(0, col - radius);
+                var right = Math.min(width - 1, col + radius);
+                var a = integral[top * stride + left];
+                var b = integral[top * stride + (right + 1)];
+                var c = integral[(bottom + 1) * stride + left];
+                var d = integral[(bottom + 1) * stride + (right + 1)];
+                var area = (right - left + 1) * (bottom - top + 1);
+                output[row * width + col] = (d - b - c + a) / area;
+            }
+        }
+        return output;
+    }
+
+    function applyAdaptiveFloydSteinberg(imageData, options, radius) {
+        var width = imageData.width;
+        var height = imageData.height;
+        var palette = normalizedPalette(options.palette);
+        if (!palette.length) {
+            return imageData;
+        }
+
+        var source = imageData.data;
+        var meanMap = computeMeanMap(source, width, height, radius);
+        var data = new Float32Array(source);
+        var output = new Uint8ClampedArray(source.length);
+        var nearestIndex = createNearestIndexFinder(palette, options.colorDistance);
+        var strength = normalizeErrorStrength(options.errorStrength);
+        var factor7 = (7 / 16) * strength;
+        var factor3 = (3 / 16) * strength;
+        var factor5 = (5 / 16) * strength;
+        var factor1 = (1 / 16) * strength;
+        var rowStride = width * 4;
+        var adaptiveBiasScale = 0.35;
+
+        for (var y = 0; y < height; y += 1) {
+            var reverse = options.serpentine && y % 2 === 1;
+            var rowOffset = y * rowStride;
+            var start = reverse ? width - 1 : 0;
+            var end = reverse ? -1 : width;
+            var step = reverse ? -1 : 1;
+
+            for (var x = start; x !== end; x += step) {
+                var index = rowOffset + x * 4;
+                var r = data[index];
+                var g = data[index + 1];
+                var b = data[index + 2];
+                var localMean = meanMap[y * width + x];
+                var bias = (128 - localMean) * adaptiveBiasScale;
+                var paletteIndex = nearestIndex(
+                    clampByte(r + bias),
+                    clampByte(g + bias),
+                    clampByte(b + bias)
+                );
+                var nr = palette.red[paletteIndex];
+                var ng = palette.green[paletteIndex];
+                var nb = palette.blue[paletteIndex];
+                var er = r - nr;
+                var eg = g - ng;
+                var eb = b - nb;
+
+                output[index] = nr;
+                output[index + 1] = ng;
+                output[index + 2] = nb;
+                output[index + 3] = 255;
+
+                if (!reverse) {
+                    if (x + 1 < width) {
+                        diffuse(data, index + 4, er, eg, eb, factor7);
+                    }
+                    if (y + 1 < height) {
+                        var nextRow = index + rowStride;
+                        if (x > 0) {
+                            diffuse(data, nextRow - 4, er, eg, eb, factor3);
+                        }
+                        diffuse(data, nextRow, er, eg, eb, factor5);
+                        if (x + 1 < width) {
+                            diffuse(data, nextRow + 4, er, eg, eb, factor1);
+                        }
+                    }
+                } else {
+                    if (x > 0) {
+                        diffuse(data, index - 4, er, eg, eb, factor7);
+                    }
+                    if (y + 1 < height) {
+                        var reverseNextRow = index + rowStride;
+                        if (x + 1 < width) {
+                            diffuse(data, reverseNextRow + 4, er, eg, eb, factor3);
+                        }
+                        diffuse(data, reverseNextRow, er, eg, eb, factor5);
+                        if (x > 0) {
+                            diffuse(data, reverseNextRow - 4, er, eg, eb, factor1);
+                        }
+                    }
+                }
+            }
+        }
+
+        return new ImageData(output, width, height);
+    }
+
     function applyMatrix(imageData, options, matrix, palette, nearestIndex, strength) {
         var width = imageData.width;
         var height = imageData.height;
@@ -294,6 +416,13 @@
         id: 'error-diffusion',
         apply: function apply(imageData, options) {
             return app.pages.ditherEditor.errorDiffusion.apply(imageData, options);
+        }
+    });
+
+    app.pages.ditherEditor.ditherAlgorithmRegistry.registerProcessor({
+        id: 'adaptive-error-diffusion',
+        apply: function apply(imageData, options, algorithm) {
+            return applyAdaptiveFloydSteinberg(imageData, options, algorithm.adaptiveRadius || 1);
         }
     });
 })(window.DitherApp);

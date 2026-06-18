@@ -71,6 +71,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-18: RgbQuant adapter 限縮為 Original palette 萃取入口；Error Diffusion 改由專案內建 processor 執行，並參考 dithering-studio-main 將 hot loop 改為 typed array、本地 nearest-index palette search 與 Floyd-Steinberg fast path。
 - 2026-06-18: Error Diffusion 內建 processor 在擴散誤差寫回工作緩衝時必須 clamp 到 `0..255`，避免 Error Strength 增大時累積誤差爆掉造成破圖。
 - 2026-06-18: Dither 演算法改為使用 `dither-algorithm-registry.js` 註冊；演算法 metadata 指向 processor id，Dither feature 不再硬寫 ordered / pattern / error diffusion 分派。
+- 2026-06-18: Dither 演算法精簡為 Floyd-Steinberg、Atkinson、Jarvis-Judice-Ninke、Sierra Lite、Stevenson-Arce、Adaptive FS 3x3、Bayer 4x4、Bayer 8x8、Blue Noise 64、Dot Diffusion 8x8 與 Dot Halftone。
+- 2026-06-19: 新增 palette-pair mixing processor，支援 Palette Dot Halftone 與 Mix Ordered；移除 Green Noise、Riemersma 與 Ostromoukhov。
 
 ## Plug-and-Play 架構要求
 
@@ -716,6 +718,8 @@ Palette feature 必須把 preset 與使用者自訂色票分清楚：
 ```
 
 Dither algorithm 必須透過 `ditherAlgorithmRegistry.register()` 註冊 metadata，並指定已註冊的 `processorId`。Dither processor 必須透過 `ditherAlgorithmRegistry.registerProcessor({ id, apply })` 註冊共同介面；`apply(imageData, options, algorithm)` 必須回傳新的 `ImageData` 或原圖。新增 matrix-only 演算法時，通常只需要新增 matrix、演算法註冊 entry 與 i18n label；新增新型演算法時，新增 processor script 並註冊 processor，不應修改 `dither-feature.js` 的分派邏輯。
+
+Dither feature 傳給 processor 的 `serpentine` 必須尊重 algorithm metadata；只有 `supportsSerpentine === true` 的演算法可收到 `serpentine: true`。非 serpentine 演算法即使 UI state 為 true，也必須以標準掃描方向執行。
 
 Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-steinberg`，且 `serpentine` 預設為 `false`。`DEFAULT_DITHER_ERROR_STRENGTH` 目前為 `100`，代表標準 error diffusion 擴散強度。Dither 啟用時 output 必須以目前有效 Palette 作為固定輸出色，不自行產生新的顏色。
 
@@ -1594,11 +1598,41 @@ Error Diffusion algorithms：
 - Floyd-Steinberg。
 - Atkinson。
 - Jarvis-Judice-Ninke。
-- Stucki。
+- Sierra Lite。
+- Stevenson-Arce。
+- Adaptive FS 3x3。
+
+Ordered Dither algorithms：
+
+- Bayer 4x4。
+- Bayer 8x8。
+- Blue Noise 64。
+
+Pattern Dither algorithms：
+
+- Dot Halftone。
+- Palette Dot Halftone。
+
+Other Dither algorithms：
+
+- Dot Diffusion 8x8。
+- Mix Ordered。
 
 Error Diffusion processor 必須接受 `options.errorStrength` 百分比，將誤差擴散量乘上 `errorStrength / 100`。允許範圍為 `0` 到 `150`，UI step 為 `2`；缺值或無效值必須退回標準倍率 `1`。Error Diffusion 不可委派給 RgbQuant reduce；必須由專案內建 processor 執行，並支援目前的 Color Distance。Ordered Dither 與 Pattern Dither 不套用 `errorStrength`。
 
 Error Diffusion hot path 應避免每像素建立暫時 object、`forEach` callback 或跨模組 nearest-color callback。常用 Floyd-Steinberg path 應使用預先計算的擴散係數、typed array 工作緩衝與本地 nearest-index palette search；其他 matrix path 可共用預先編譯的 offset/factor 陣列。擴散誤差寫回工作緩衝時必須把每個 RGB channel clamp 到 `0..255`，維持高 Error Strength 下的穩定性。
+
+具名 Error Diffusion 演算法必須優先保留常見公開實作的 matrix 相對權重與 divisor，避免同名演算法和其他工具輸出大幅偏離。必要轉換只可發生在本專案 offset/factor processor 的資料格式邊界，例如移除會落在當前像素而無法正確輸出 palette 色的權重。
+
+Adaptive FS 3x3 必須先以 integral image 計算局部平均亮度 map，半徑為 `1`。因本專案 Dither 以 palette 為固定輸出色，Adaptive FS 不走灰階-only threshold fallback；它應使用局部平均亮度對 nearest palette color input 做亮度 bias，再以 Floyd-Steinberg 權重擴散原始 RGB 誤差。
+
+Bayer ordered matrices 可由 `buildBayer(size)` 產生，避免手寫大型 16x16 / 32x32 matrix。Blue Noise 64 必須使用 deterministic seed 建立固定 ranking mask，且應 lazy 初始化後重用，避免未選用時增加初始載入成本。Blue Noise 正統常見作法是使用預先或離線產生的 blue-noise threshold texture；本專案目前使用 procedural void-and-cluster-style ranking mask，結果應視為 blue-noise-like，不承諾和特定外部 mask 完全一致。Blue Noise mask 不應出現穩定橫向或直向條紋。Blue Noise 的 ordered threshold strength 可低於 Bayer，減少彩色 palette 下的高頻錯色噪點。
+
+Dot Diffusion 8x8 必須使用 8x8 class matrix 決定 tile 內處理順序；每個像素先量化到目前 palette 最近色，再把 RGB 誤差平均分配給 3x3 鄰域內 class 較高、尚未處理的像素。它不可先把像素 threshold 成黑白亮度，避免多色 palette 輸出退化成黑白。它不套用 Error Strength，也不需要 serpentine。
+
+Dot Halftone 是 clustered-dot ordered halftone，不是 dot diffusion。Processor 應使用固定 cell matrix 由中心向外成長網點，微調原始 RGB 後做 nearest palette mapping，不可先轉成單一灰階亮度再映射。
+
+Palette Dot Halftone 與 Mix Ordered 必須使用 palette-pair mixing：每個像素先找最能近似原始 RGB 的兩個 palette 色與混色比例，再由對應 mask 決定輸出哪個 palette 色。Palette Dot Halftone 使用 clustered-dot mask；Mix Ordered 使用 Blue Noise 64 ranking mask。兩者都不可輸出 palette 外顏色，也不套用 Error Strength。
 
 Dither function 不可讀 DOM，不可硬編碼寬高：
 

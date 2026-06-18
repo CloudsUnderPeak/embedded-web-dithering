@@ -64,6 +64,8 @@ Split From: SPEC_INDEX.md
 - 2026-06-16: Palette 新增色票按鈕改為圓形外框包住加號；Original Colors 數字控制在無單位文字時仍保留步進按鈕緩衝區，降低窄螢幕誤點。
 - 2026-06-18: Edit Result preview 新增圖片右下角 preview 計時 label，顯示最近一次正式 preview 完成耗時，並可用全域開關停用顯示。
 - 2026-06-18: RgbQuant 限縮為 Original palette 代表色萃取用途；Dither 不再使用 RgbQuant 執行 Error Diffusion，以降低 preview latency。
+- 2026-06-18: Dither 選單精簡為 Floyd-Steinberg、Atkinson、Jarvis-Judice-Ninke、Sierra Lite、Stevenson-Arce、Adaptive FS 3x3、Bayer 4x4、Bayer 8x8、Blue Noise 64、Dot Diffusion 8x8 與 Dot Halftone。
+- 2026-06-19: Dither 選單新增 Palette Dot Halftone 與 Mix Ordered，移除 Green Noise、Riemersma 與 Ostromoukhov。
 
 ## 產品目標
 
@@ -476,6 +478,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 行為要求：
 
 - Dither 預設為 Floyd-Steinberg。
+- Algorithm 選單支援 Floyd-Steinberg、Atkinson、Jarvis-Judice-Ninke、Sierra Lite、Stevenson-Arce、Adaptive FS 3x3、Bayer 4x4、Bayer 8x8、Blue Noise 64、Dot Diffusion 8x8、Dot Halftone、Palette Dot Halftone 與 Mix Ordered。
 - Serpentine 預設為關閉。
 - Serpentine 使用 Toggle Switch 呈現。
 - Color Distance 預設為 Euclidean BT.709，使用者可切換支援的距離公式。

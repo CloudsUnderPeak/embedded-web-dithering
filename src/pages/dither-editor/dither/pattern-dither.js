@@ -1,9 +1,41 @@
 (function (app) {
-    // Pattern dithering 是簡化的圖案化效果，用固定點陣改變灰階再映射到 palette。
-    // 它不是嚴格的物理或印刷模型，主要提供快速、風格化的預覽。
+    // Clustered-dot halftone 使用中心向外成長的 ordered matrix 產生規律網點。
+    // 它是風格化網點，不是 dot diffusion。
     app.pages.ditherEditor = app.pages.ditherEditor || {};
+
+    function buildClusteredDotMatrix(size) {
+        var center = (size - 1) / 2;
+        var cells = [];
+        var matrix = new Array(size);
+        for (var y = 0; y < size; y += 1) {
+            matrix[y] = new Array(size);
+            for (var x = 0; x < size; x += 1) {
+                var dx = x - center;
+                var dy = y - center;
+                cells.push({
+                    x: x,
+                    y: y,
+                    distance: dx * dx + dy * dy,
+                    angle: Math.atan2(dy, dx)
+                });
+            }
+        }
+        cells.sort(function (a, b) {
+            if (a.distance !== b.distance) {
+                return a.distance - b.distance;
+            }
+            return a.angle - b.angle;
+        });
+        for (var i = 0; i < cells.length; i += 1) {
+            matrix[cells[i].y][cells[i].x] = i;
+        }
+        return matrix;
+    }
+
+    var CLUSTERED_DOT_MATRIX = buildClusteredDotMatrix(8);
+
     app.pages.ditherEditor.patternDither = {
-        // 執行簡化 pattern dithering，輸出仍會映射到 palette。
+        // 執行 clustered-dot halftone，輸出仍會映射到 palette。
         apply: function apply(imageData, options) {
             var width = imageData.width;
             var height = imageData.height;
@@ -11,19 +43,21 @@
             var output = new Uint8ClampedArray(source.length);
             var palette = options.palette;
             var nearestColor = app.core.paletteUtils.createNearestColorFinder(palette, options.colorDistance);
+            var matrixSize = CLUSTERED_DOT_MATRIX.length;
+            var levels = matrixSize * matrixSize;
 
             for (var y = 0; y < height; y += 1) {
                 for (var x = 0; x < width; x += 1) {
                     var index = (y * width + x) * 4;
-                    var luma = app.core.colorUtils.luminance(
-                        source[index],
-                        source[index + 1],
-                        source[index + 2]
-                    );
-                    // dot 決定此像素是否位在圖案點上，藉此產生人工網點感。
-                    var dot = (x % 3 === 1 && y % 3 === 1) || (x + y) % 7 === 0;
-                    var adjusted = luma + (dot ? 34 : -18);
-                    var nearest = nearestColor({ r: adjusted, g: adjusted, b: adjusted });
+                    var threshold = (
+                        CLUSTERED_DOT_MATRIX[y % matrixSize][x % matrixSize] + 0.5
+                    ) / levels - 0.5;
+                    var amount = threshold * 86;
+                    var nearest = nearestColor({
+                        r: source[index] + amount,
+                        g: source[index + 1] + amount,
+                        b: source[index + 2] + amount
+                    });
                     output[index] = nearest.r;
                     output[index + 1] = nearest.g;
                     output[index + 2] = nearest.b;

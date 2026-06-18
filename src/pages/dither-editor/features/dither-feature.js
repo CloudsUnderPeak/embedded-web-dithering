@@ -145,7 +145,7 @@
                     matrixId: algorithm.matrixId,
                     palette: palette,
                     colorDistance: app.core.paletteUtils.normalizeColorDistanceId(settings.colorDistance),
-                    serpentine: Boolean(settings.serpentine),
+                    serpentine: Boolean(settings.serpentine && algorithm.supportsSerpentine),
                     errorStrength: normalizeErrorStrength(settings.errorStrength)
                 };
                 return registry.run(imageData, algorithm, options);
