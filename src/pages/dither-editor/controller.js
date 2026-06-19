@@ -7,6 +7,7 @@
         this.state = options.initialState || app.pages.ditherEditor.state.create();
         this.render = options.render;
         this.renderLivePreview = options.renderLivePreview || options.render;
+        this.renderPreviewTimingLabel = options.renderPreviewTimingLabel || null;
         this.setStatus = options.setStatus;
         this.previewTimer = null;
         this.previewTimingHideTimer = null;
@@ -256,7 +257,11 @@
                 phase: 'hidden',
                 durationMs: null
             };
-            self.render(self.state);
+            if (self.renderPreviewTimingLabel) {
+                self.renderPreviewTimingLabel(self.state);
+            } else {
+                self.render(self.state);
+            }
         }, delayMs);
     };
 

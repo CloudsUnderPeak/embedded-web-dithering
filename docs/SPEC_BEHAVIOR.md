@@ -67,6 +67,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-18: Dither 選單精簡為 Floyd-Steinberg、Atkinson、Jarvis-Judice-Ninke、Sierra Lite、Stevenson-Arce、Adaptive FS 3x3、Bayer 4x4、Bayer 8x8、Blue Noise 64、Dot Diffusion 8x8 與 Dot Halftone。
 - 2026-06-19: Dither 設定新增 Palette Mapping，支援 Nearest Color 與 Pair Mix；Dither Algorithm 選單只保留分布演算法。
 - 2026-06-19: Edit Result preview 的計時 label 改為正式繪製開始時顯示 Rendering，繪製完成後顯示耗時，依設定延遲自動隱藏並等待下一次繪製再出現。
+- 2026-06-19: Edit Result preview 的計時 label 自動隱藏時，不應關閉或重置使用者正在操作的面板表單。
 
 ## 產品目標
 
@@ -537,7 +538,7 @@ Crop preview 要求：
 使用者調整 slider、select、color 或 effects order 時，App 應更新 preview，但可以短暫 debounce，避免每一次輸入都完整重算。
 slider 控制的填色與 thumb、Toggle Switch 的啟用狀態必須使用較淡的 control accent 主題色，不使用瀏覽器預設藍色。
 
-Edit Result preview 應在圖片右下角顯示正式 preview 狀態：繪製開始時顯示 Rendering，繪製完成後顯示最近一次正式 preview 完成耗時，並依設定延遲自動隱藏。空狀態、prepare crop preview、Original view，或全域顯示開關關閉時，不顯示此計時 label。此 label 只描述目前繪製在 preview canvas 上、使用者可見的 Result 圖片。
+Edit Result preview 應在圖片右下角顯示正式 preview 狀態：繪製開始時顯示 Rendering，繪製完成後顯示最近一次正式 preview 完成耗時，並依設定延遲自動隱藏。空狀態、prepare crop preview、Original view，或全域顯示開關關閉時，不顯示此計時 label。此 label 只描述目前繪製在 preview canvas 上、使用者可見的 Result 圖片。計時 label 自動隱藏不可關閉、重置或打斷使用者正在操作的其他 panel form。
 
 主要狀態：
 

@@ -471,6 +471,10 @@
         refs.previewTimingLabel.hidden = false;
     }
 
+    function renderPreviewTimingLabelOnly(state) {
+        renderPreviewTimingLabel(state, overlayRenderer.shouldShowCropOverlay(state));
+    }
+
     // Adjust 拖曳中用 livePreview base + CSS filter 顯示即時結果。
     function renderLivePreview(state) {
         var filter = previewFilter(state);
@@ -531,6 +535,7 @@
             controller = new app.pages.ditherEditor.Controller({
                 render: render,
                 renderLivePreview: renderLivePreview,
+                renderPreviewTimingLabel: renderPreviewTimingLabelOnly,
                 setStatus: appContext.setStatus,
                 initialState: cachedState
             });

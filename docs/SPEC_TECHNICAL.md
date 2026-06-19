@@ -68,6 +68,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-16: Palette 新增色票 button 使用圓形外框包住加號；Original Colors 的 unitless number field 必須以獨立 grid 欄保留 stepper 前緩衝，降低窄螢幕誤觸 input。
 - 2026-06-18: 正式 preview pipeline 完成後記錄 `previewRenderDurationMs`，由 `page.js` 在 edit Result 圖片右下角顯示 preview 計時 label，並由 `SHOW_PREVIEW_TIMING_LABEL` 控制顯示。
 - 2026-06-19: preview 計時 label 改由 `previewTimingLabel.phase` 管理 rendering/done/hidden，完成後由 controller 依設定延遲排程自動隱藏。
+- 2026-06-19: preview 計時 label 自動隱藏時只更新 label DOM，不可觸發整頁 render，避免關閉正在操作的 panel form。
 - 2026-06-18: `pipeline-runner.js` 新增可選 Stage Cache；controller 在 preview、prepared original 與 live preview base 使用同一份 in-memory cache，換圖與銷毀時清空，Export 維持完整正式 pipeline 重跑。
 - 2026-06-18: RgbQuant adapter 限縮為 Original palette 萃取入口；Error Diffusion 改由專案內建 processor 執行，並參考 dithering-studio-main 將 hot loop 改為 typed array、本地 nearest-index palette search 與 Floyd-Steinberg fast path。
 - 2026-06-18: Error Diffusion 內建 processor 在擴散誤差寫回工作緩衝時必須 clamp 到 `0..255`，避免 Error Strength 增大時累積誤差爆掉造成破圖。
@@ -1557,7 +1558,7 @@ const PREVIEW_TIMING_LABEL_HIDE_DELAY_MS = configuredDelayMs;
 - 使用者調整 slider、select、color、effects order 時，不立即每次重算，先 debounce `PREVIEW_DEBOUNCE_MS`。
 - 正式 preview 使用 working image 的完整尺寸，不使用降低解析度的 `ImageData` 當成使用者可見的最終預覽，避免拖曳中與放開後出現不可信的跳變。
 - controller 必須在正式 preview 排程進入處理時把 `state.previewTimingLabel.phase` 設為 `rendering`，完成正式 preview pipeline 後更新 `state.previewRenderDurationMs` 並把 `state.previewTimingLabel` 設為 `done`；`page.js` 只負責在 `SHOW_PREVIEW_TIMING_LABEL === true` 時依 phase 顯示 Rendering 或格式化耗時文字，並貼齊目前 result canvas 右下角，不應在 DOM 層自行量測 pipeline。
-- `state.previewTimingLabel.phase === 'done'` 後，controller 必須依 `PREVIEW_TIMING_LABEL_HIDE_DELAY_MS` 排程切回 `hidden` 並重繪；載入圖片、preview error、destroy 或重新開始正式 preview 時需清掉舊 hide timer，避免舊 timer 關掉新的 label。
+- `state.previewTimingLabel.phase === 'done'` 後，controller 必須依 `PREVIEW_TIMING_LABEL_HIDE_DELAY_MS` 排程切回 `hidden`，並只更新 timing label DOM，不可觸發整頁 render 或重建 feature panel；載入圖片、preview error、destroy 或重新開始正式 preview 時需清掉舊 hide timer，避免舊 timer 關掉新的 label。
 - export 永遠從工作圖和完整 pipeline 重新計算，不使用暫存 preview 結果。
 - slider 拖曳期間以手感優先，不在每個 `input` event 跑完整 pipeline；可用 `requestAnimationFrame` 更新輕量 live feedback。
 - live feedback 只能在「拖曳中看到的結果」與「放開後正式 pipeline 結果」足夠一致時啟用；不一致時寧可不顯示假的即時效果。
