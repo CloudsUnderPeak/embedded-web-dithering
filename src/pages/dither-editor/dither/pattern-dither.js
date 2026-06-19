@@ -41,8 +41,7 @@
             var height = imageData.height;
             var source = imageData.data;
             var output = new Uint8ClampedArray(source.length);
-            var palette = options.palette;
-            var nearestColor = app.core.paletteUtils.createNearestColorFinder(palette, options.colorDistance);
+            var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
             var matrixSize = CLUSTERED_DOT_MATRIX.length;
             var levels = matrixSize * matrixSize;
 
@@ -51,13 +50,23 @@
                     var index = (y * width + x) * 4;
                     var threshold = (
                         CLUSTERED_DOT_MATRIX[y % matrixSize][x % matrixSize] + 0.5
-                    ) / levels - 0.5;
-                    var amount = threshold * 86;
-                    var nearest = nearestColor({
-                        r: source[index] + amount,
-                        g: source[index + 1] + amount,
-                        b: source[index + 2] + amount
-                    });
+                    ) / levels;
+                    var nearest;
+                    if (paletteMapper.id === 'pair-mix' || paletteMapper.id === 'tri-mix') {
+                        nearest = paletteMapper.mapColor(
+                            source[index],
+                            source[index + 1],
+                            source[index + 2],
+                            threshold
+                        );
+                    } else {
+                        var amount = (threshold - 0.5) * 86;
+                        nearest = paletteMapper.mapColor(
+                            source[index] + amount,
+                            source[index + 1] + amount,
+                            source[index + 2] + amount
+                        );
+                    }
                     output[index] = nearest.r;
                     output[index + 1] = nearest.g;
                     output[index + 2] = nearest.b;

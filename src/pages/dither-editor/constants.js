@@ -7,6 +7,7 @@
         PREVIEW_DEBOUNCE_MS: 80,
         SHOW_PREVIEW_TIMING_LABEL: true,
         DEFAULT_DITHER_ALGORITHM_ID: 'floyd-steinberg',
+        DEFAULT_PALETTE_MAPPING_ID: 'nearest-color',
         DEFAULT_COLOR_DISTANCE_ID: 'euclidean-bt709',
         DEFAULT_DITHER_ERROR_STRENGTH: 100,
         MIN_DITHER_ERROR_STRENGTH: 0,

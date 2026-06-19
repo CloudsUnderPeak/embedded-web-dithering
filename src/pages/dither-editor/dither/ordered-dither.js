@@ -29,21 +29,29 @@
             var thresholdScale = algorithm && algorithm.thresholdScale || 70;
             var source = imageData.data;
             var output = new Uint8ClampedArray(source.length);
-            var palette = options.palette;
-            var nearestColor = app.core.paletteUtils.createNearestColorFinder(palette, options.colorDistance);
+            var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
 
             for (var y = 0; y < height; y += 1) {
                 for (var x = 0; x < width; x += 1) {
                     var index = (y * width + x) * 4;
-                    // threshold 會把像素亮度推高或拉低，再交給 palette 找最近色。
-                    var threshold = (matrixCell(matrix, x, y, size) + 0.5) / levels - 0.5;
-                    var amount = threshold * thresholdScale;
-                    var color = {
-                        r: source[index] + amount,
-                        g: source[index + 1] + amount,
-                        b: source[index + 2] + amount
-                    };
-                    var nearest = nearestColor(color);
+                    var threshold = (matrixCell(matrix, x, y, size) + 0.5) / levels;
+                    var nearest;
+                    if (paletteMapper.id === 'pair-mix' || paletteMapper.id === 'tri-mix') {
+                        nearest = paletteMapper.mapColor(
+                            source[index],
+                            source[index + 1],
+                            source[index + 2],
+                            threshold
+                        );
+                    } else {
+                        // threshold 會把像素亮度推高或拉低，再交給 palette 找最近色。
+                        var amount = (threshold - 0.5) * thresholdScale;
+                        nearest = paletteMapper.mapColor(
+                            source[index] + amount,
+                            source[index + 1] + amount,
+                            source[index + 2] + amount
+                        );
+                    }
                     output[index] = nearest.r;
                     output[index + 1] = nearest.g;
                     output[index + 2] = nearest.b;

@@ -72,7 +72,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-18: Error Diffusion 內建 processor 在擴散誤差寫回工作緩衝時必須 clamp 到 `0..255`，避免 Error Strength 增大時累積誤差爆掉造成破圖。
 - 2026-06-18: Dither 演算法改為使用 `dither-algorithm-registry.js` 註冊；演算法 metadata 指向 processor id，Dither feature 不再硬寫 ordered / pattern / error diffusion 分派。
 - 2026-06-18: Dither 演算法精簡為 Floyd-Steinberg、Atkinson、Jarvis-Judice-Ninke、Sierra Lite、Stevenson-Arce、Adaptive FS 3x3、Bayer 4x4、Bayer 8x8、Blue Noise 64、Dot Diffusion 8x8 與 Dot Halftone。
-- 2026-06-19: 新增 palette-pair mixing processor，支援 Palette Dot Halftone 與 Mix Ordered；移除 Green Noise、Riemersma 與 Ostromoukhov。
+- 2026-06-19: 新增共用 Palette Mapping 層，支援 Nearest Color 與 Pair Mix；Algorithm metadata 不再註冊 Pair Mix 組合項。
 
 ## Plug-and-Play 架構要求
 
@@ -721,11 +721,13 @@ Dither algorithm 必須透過 `ditherAlgorithmRegistry.register()` 註冊 metada
 
 Dither feature 傳給 processor 的 `serpentine` 必須尊重 algorithm metadata；只有 `supportsSerpentine === true` 的演算法可收到 `serpentine: true`。非 serpentine 演算法即使 UI state 為 true，也必須以標準掃描方向執行。
 
-Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-steinberg`，且 `serpentine` 預設為 `false`。`DEFAULT_DITHER_ERROR_STRENGTH` 目前為 `100`，代表標準 error diffusion 擴散強度。Dither 啟用時 output 必須以目前有效 Palette 作為固定輸出色，不自行產生新的顏色。
+Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-steinberg`，且 `serpentine` 預設為 `false`。`DEFAULT_PALETTE_MAPPING_ID` 目前為 `nearest-color`。`DEFAULT_DITHER_ERROR_STRENGTH` 目前為 `100`，代表標準 error diffusion 擴散強度。Dither 啟用時 output 必須以目前有效 Palette 作為固定輸出色，不自行產生新的顏色。
 
 `serpentine` 的 panel control 必須使用 `panelUtils.toggleSwitchInput()`，避免和一般 checkbox 視覺混用。Adjust 與 Dither 的 range input、Toggle Switch checked state 必須使用 `--color-control-accent`，focus 或強調輪廓可沿用 `--color-accent-strong`，不可落回瀏覽器預設藍色或直接吃主 action accent。
 
-`color-distance-metrics.js` 宣告使用者可選的最近色距離公式。Dither feature 預設使用 `DEFAULT_COLOR_DISTANCE_ID`，目前為 `euclidean-bt709`。同一個 `colorDistance` 必須傳給 Error Diffusion、Ordered Dither、Pattern Dither，以及 Dither 關閉時 Palette operation 的直接最近色映射。`euclidean-bt709` 是 RgbQuant-style BT.709 weighted euclidean distance；`euclidean-rgb` 是未加權 RGB squared distance；`manhattan-bt709` 是 BT.709 weighted Manhattan distance；`manhattan-rgb` 是未加權 Manhattan distance。舊 id `euclidean` / `bt709` 應正規化到 `euclidean-bt709`，舊 id `rgb` 應正規化到 `euclidean-rgb`，舊 id `manhattan` 應正規化到 `manhattan-rgb`。
+`palette-mapping-modes.js` 宣告使用者可選的 Palette Mapping。`nearest-color` 直接選目前 palette 中距離最近的單一色；`pair-mix` 先找最能近似輸入 RGB 的兩個 palette 色與混合比例，再由目前 Dither Algorithm 的掃描、誤差擴散或 threshold mask 決定輸出其中一色；`tri-mix` 先找最能近似輸入 RGB 的三個 palette 色與混合比例，再由目前 Dither Algorithm 決定輸出其中一色。Pair Mix 與 Tri Mix 不是獨立 Algorithm，不應用 `Palette Dot Halftone`、`Mix Ordered` 或 `Tri Mix Ordered` 這類組合項擴增 Algorithm 選單。
+
+`color-distance-metrics.js` 宣告使用者可選的距離公式。Dither feature 預設使用 `DEFAULT_COLOR_DISTANCE_ID`，目前為 `euclidean-bt709`。同一個 `colorDistance` 必須傳給 Error Diffusion、Ordered Dither、Pattern Dither，以及 Dither 關閉時 Palette operation 的直接最近色映射；在 `pair-mix` 與 `tri-mix` 下，`colorDistance` 必須用來評估哪一組 palette mix 的混合結果最接近輸入顏色。`euclidean-bt709` 是 RgbQuant-style BT.709 weighted euclidean distance；`euclidean-rgb` 是未加權 RGB squared distance；`manhattan-bt709` 是 BT.709 weighted Manhattan distance；`manhattan-rgb` 是未加權 Manhattan distance。舊 id `euclidean` / `bt709` 應正規化到 `euclidean-bt709`，舊 id `rgb` 應正規化到 `euclidean-rgb`，舊 id `manhattan` 應正規化到 `manhattan-rgb`。
 
 `rgbquant-adapter.js` 是 Dither Editor 使用 RgbQuant 的唯一入口，且只可用於 Original palette 萃取。Adapter 必須：
 
@@ -1611,12 +1613,10 @@ Ordered Dither algorithms：
 Pattern Dither algorithms：
 
 - Dot Halftone。
-- Palette Dot Halftone。
 
 Other Dither algorithms：
 
 - Dot Diffusion 8x8。
-- Mix Ordered。
 
 Error Diffusion processor 必須接受 `options.errorStrength` 百分比，將誤差擴散量乘上 `errorStrength / 100`。允許範圍為 `0` 到 `150`，UI step 為 `2`；缺值或無效值必須退回標準倍率 `1`。Error Diffusion 不可委派給 RgbQuant reduce；必須由專案內建 processor 執行，並支援目前的 Color Distance。Ordered Dither 與 Pattern Dither 不套用 `errorStrength`。
 
@@ -1628,11 +1628,11 @@ Adaptive FS 3x3 必須先以 integral image 計算局部平均亮度 map，半�
 
 Bayer ordered matrices 可由 `buildBayer(size)` 產生，避免手寫大型 16x16 / 32x32 matrix。Blue Noise 64 必須使用 deterministic seed 建立固定 ranking mask，且應 lazy 初始化後重用，避免未選用時增加初始載入成本。Blue Noise 正統常見作法是使用預先或離線產生的 blue-noise threshold texture；本專案目前使用 procedural void-and-cluster-style ranking mask，結果應視為 blue-noise-like，不承諾和特定外部 mask 完全一致。Blue Noise mask 不應出現穩定橫向或直向條紋。Blue Noise 的 ordered threshold strength 可低於 Bayer，減少彩色 palette 下的高頻錯色噪點。
 
-Dot Diffusion 8x8 必須使用 8x8 class matrix 決定 tile 內處理順序；每個像素先量化到目前 palette 最近色，再把 RGB 誤差平均分配給 3x3 鄰域內 class 較高、尚未處理的像素。它不可先把像素 threshold 成黑白亮度，避免多色 palette 輸出退化成黑白。它不套用 Error Strength，也不需要 serpentine。
+Dot Diffusion 8x8 必須使用 8x8 class matrix 決定 tile 內處理順序；每個像素先透過目前 Palette Mapping 量化到 palette 色，再把 RGB 誤差平均分配給 3x3 鄰域內 class 較高、尚未處理的像素。它不可先把像素 threshold 成黑白亮度，避免多色 palette 輸出退化成黑白。它不套用 Error Strength，也不需要 serpentine。
 
-Dot Halftone 是 clustered-dot ordered halftone，不是 dot diffusion。Processor 應使用固定 cell matrix 由中心向外成長網點，微調原始 RGB 後做 nearest palette mapping，不可先轉成單一灰階亮度再映射。
+Dot Halftone 是 clustered-dot ordered halftone，不是 dot diffusion。Processor 應使用固定 cell matrix 由中心向外成長網點，並透過目前 Palette Mapping 輸出 palette 色，不可先轉成單一灰階亮度再映射。
 
-Palette Dot Halftone 與 Mix Ordered 必須使用 palette-pair mixing：每個像素先找最能近似原始 RGB 的兩個 palette 色與混色比例，再由對應 mask 決定輸出哪個 palette 色。Palette Dot Halftone 使用 clustered-dot mask；Mix Ordered 使用 Blue Noise 64 ranking mask。兩者都不可輸出 palette 外顏色，也不套用 Error Strength。
+Palette Mapping 必須透過共用 `paletteMapping` 進入各 Dither processor。Pair Mix 與 Tri Mix 在 Error Diffusion 類沒有 threshold mask 時應輸出混色比例中權重最高的 palette 色，再用實際輸出色計算誤差；Ordered Dither 與 Dot Halftone 類應把 matrix threshold 傳給 Pair Mix / Tri Mix，讓 mask 依照兩色或三色比例決定 palette 色落點。所有 Palette Mapping 都不可輸出 palette 外顏色。
 
 Dither function 不可讀 DOM，不可硬編碼寬高：
 
@@ -1654,6 +1654,7 @@ function applyDither(imageData, options) {
 const ditherSettings = {
     mode: 'error-diffusion',
     algorithm: 'none',
+    paletteMapping: 'nearest-color',
     serpentine: false,
     colorDistance: 'euclidean-bt709',
     errorStrength: 100,

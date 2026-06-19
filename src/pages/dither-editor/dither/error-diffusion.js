@@ -114,7 +114,19 @@
         };
     }
 
-    function applyFloydSteinberg(imageData, palette, nearestIndex, serpentine, strength) {
+    function mappedColor(palette, nearestIndex, paletteMapper, r, g, b) {
+        if (paletteMapper && paletteMapper.id !== 'nearest-color') {
+            return paletteMapper.mapColor(r, g, b);
+        }
+        var paletteIndex = nearestIndex(r, g, b);
+        return {
+            r: palette.red[paletteIndex],
+            g: palette.green[paletteIndex],
+            b: palette.blue[paletteIndex]
+        };
+    }
+
+    function applyFloydSteinberg(imageData, palette, nearestIndex, paletteMapper, serpentine, strength) {
         var width = imageData.width;
         var height = imageData.height;
         var data = new Float32Array(imageData.data);
@@ -135,10 +147,10 @@
                     var r = data[index];
                     var g = data[index + 1];
                     var b = data[index + 2];
-                    var paletteIndex = nearestIndex(r, g, b);
-                    var nr = palette.red[paletteIndex];
-                    var ng = palette.green[paletteIndex];
-                    var nb = palette.blue[paletteIndex];
+                    var mapped = mappedColor(palette, nearestIndex, paletteMapper, r, g, b);
+                    var nr = mapped.r;
+                    var ng = mapped.g;
+                    var nb = mapped.b;
                     var er = r - nr;
                     var eg = g - ng;
                     var eb = b - nb;
@@ -168,10 +180,10 @@
                     var rr = data[reverseIndex];
                     var rg = data[reverseIndex + 1];
                     var rb = data[reverseIndex + 2];
-                    var reversePaletteIndex = nearestIndex(rr, rg, rb);
-                    var rnr = palette.red[reversePaletteIndex];
-                    var rng = palette.green[reversePaletteIndex];
-                    var rnb = palette.blue[reversePaletteIndex];
+                    var reverseMapped = mappedColor(palette, nearestIndex, paletteMapper, rr, rg, rb);
+                    var rnr = reverseMapped.r;
+                    var rng = reverseMapped.g;
+                    var rnb = reverseMapped.b;
                     var rer = rr - rnr;
                     var reg = rg - rng;
                     var reb = rb - rnb;
@@ -259,6 +271,7 @@
         var data = new Float32Array(source);
         var output = new Uint8ClampedArray(source.length);
         var nearestIndex = createNearestIndexFinder(palette, options.colorDistance);
+        var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
         var strength = normalizeErrorStrength(options.errorStrength);
         var factor7 = (7 / 16) * strength;
         var factor3 = (3 / 16) * strength;
@@ -281,14 +294,17 @@
                 var b = data[index + 2];
                 var localMean = meanMap[y * width + x];
                 var bias = (128 - localMean) * adaptiveBiasScale;
-                var paletteIndex = nearestIndex(
+                var mapped = mappedColor(
+                    palette,
+                    nearestIndex,
+                    paletteMapper,
                     clampByte(r + bias),
                     clampByte(g + bias),
                     clampByte(b + bias)
                 );
-                var nr = palette.red[paletteIndex];
-                var ng = palette.green[paletteIndex];
-                var nb = palette.blue[paletteIndex];
+                var nr = mapped.r;
+                var ng = mapped.g;
+                var nb = mapped.b;
                 var er = r - nr;
                 var eg = g - ng;
                 var eb = b - nb;
@@ -333,7 +349,7 @@
         return new ImageData(output, width, height);
     }
 
-    function applyMatrix(imageData, options, matrix, palette, nearestIndex, strength) {
+    function applyMatrix(imageData, options, matrix, palette, nearestIndex, paletteMapper, strength) {
         var width = imageData.width;
         var height = imageData.height;
         var data = new Float32Array(imageData.data);
@@ -360,10 +376,10 @@
                 var r = data[index];
                 var g = data[index + 1];
                 var b = data[index + 2];
-                var paletteIndex = nearestIndex(r, g, b);
-                var nr = palette.red[paletteIndex];
-                var ng = palette.green[paletteIndex];
-                var nb = palette.blue[paletteIndex];
+                var mapped = mappedColor(palette, nearestIndex, paletteMapper, r, g, b);
+                var nr = mapped.r;
+                var ng = mapped.g;
+                var nb = mapped.b;
                 var er = r - nr;
                 var eg = g - ng;
                 var eb = b - nb;
@@ -397,18 +413,20 @@
             var matrices = app.pages.ditherEditor.ditherMatrices;
             var matrix = matrices[options.matrixId] || matrices.floydSteinberg;
             var nearestIndex = createNearestIndexFinder(palette, options.colorDistance);
+            var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
             var errorStrength = normalizeErrorStrength(options.errorStrength);
             if (matrix === matrices.floydSteinberg) {
                 return applyFloydSteinberg(
                     imageData,
                     palette,
                     nearestIndex,
+                    paletteMapper,
                     Boolean(options.serpentine),
                     errorStrength
                 );
             }
 
-            return applyMatrix(imageData, options, matrix, palette, nearestIndex, errorStrength);
+            return applyMatrix(imageData, options, matrix, palette, nearestIndex, paletteMapper, errorStrength);
         }
     };
 

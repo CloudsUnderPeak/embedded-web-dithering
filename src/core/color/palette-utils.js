@@ -197,8 +197,28 @@
         };
     }
 
+    function createColorDistanceMeasurer(colorDistanceId) {
+        var mode = normalizeColorDistanceId(colorDistanceId);
+        return function measureColorDistance(a, b) {
+            if (mode === 'manhattan-rgb') {
+                return manhattanRgbDistance(a, b);
+            }
+            if (mode === 'manhattan-bt709') {
+                return manhattanBt709Distance(a, b);
+            }
+            if (mode === 'euclidean-bt709') {
+                return euclideanBt709Distance(a, b);
+            }
+            if (mode === 'ciede2000') {
+                return ciede2000Distance(rgbToLab(a), rgbToLab(b));
+            }
+            return euclideanRgbDistance(a, b);
+        };
+    }
+
     app.core.paletteUtils = {
         createNearestColorFinder: createNearestColorFinder,
+        createColorDistanceMeasurer: createColorDistanceMeasurer,
         normalizeColorDistanceId: normalizeColorDistanceId,
         // 從 palette 中找出和目標色最接近的顏色。
         nearestColor: function nearestColor(color, palette, colorDistanceId) {

@@ -65,7 +65,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-18: Edit Result preview 新增圖片右下角 preview 計時 label，顯示最近一次正式 preview 完成耗時，並可用全域開關停用顯示。
 - 2026-06-18: RgbQuant 限縮為 Original palette 代表色萃取用途；Dither 不再使用 RgbQuant 執行 Error Diffusion，以降低 preview latency。
 - 2026-06-18: Dither 選單精簡為 Floyd-Steinberg、Atkinson、Jarvis-Judice-Ninke、Sierra Lite、Stevenson-Arce、Adaptive FS 3x3、Bayer 4x4、Bayer 8x8、Blue Noise 64、Dot Diffusion 8x8 與 Dot Halftone。
-- 2026-06-19: Dither 選單新增 Palette Dot Halftone 與 Mix Ordered，移除 Green Noise、Riemersma 與 Ostromoukhov。
+- 2026-06-19: Dither 設定新增 Palette Mapping，支援 Nearest Color 與 Pair Mix；Dither Algorithm 選單只保留分布演算法。
 
 ## 產品目標
 
@@ -472,13 +472,15 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 
 - 選擇不套用 Dither。
 - 選擇支援的 Dither algorithm。
+- 選擇 Palette Mapping。
 - 調整 Error Diffusion 的 Error Strength。
 - 配合目前有效 palette 產生處理結果。
 
 行為要求：
 
 - Dither 預設為 Floyd-Steinberg。
-- Algorithm 選單支援 Floyd-Steinberg、Atkinson、Jarvis-Judice-Ninke、Sierra Lite、Stevenson-Arce、Adaptive FS 3x3、Bayer 4x4、Bayer 8x8、Blue Noise 64、Dot Diffusion 8x8、Dot Halftone、Palette Dot Halftone 與 Mix Ordered。
+- Algorithm 選單支援 Floyd-Steinberg、Atkinson、Jarvis-Judice-Ninke、Sierra Lite、Stevenson-Arce、Adaptive FS 3x3、Bayer 4x4、Bayer 8x8、Blue Noise 64、Dot Diffusion 8x8 與 Dot Halftone。
+- Palette Mapping 選單支援 Nearest Color、Pair Mix 與 Tri Mix。
 - Serpentine 預設為關閉。
 - Serpentine 使用 Toggle Switch 呈現。
 - Color Distance 預設為 Euclidean BT.709，使用者可切換支援的距離公式。

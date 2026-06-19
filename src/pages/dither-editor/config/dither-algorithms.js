@@ -79,18 +79,6 @@
         labelKey: 'algorithmPatternDots',
         processorId: 'pattern'
     });
-    registry.register({
-        id: 'palette-dot-halftone',
-        labelKey: 'algorithmPaletteDotHalftone',
-        processorId: 'palette-mix',
-        mixMask: 'halftone'
-    });
-    registry.register({
-        id: 'mix-ordered',
-        labelKey: 'algorithmMixOrdered',
-        processorId: 'palette-mix',
-        mixMask: 'blue-noise'
-    });
 
     Object.defineProperty(app.pages.ditherEditor.config, 'ditherAlgorithms', {
         configurable: true,

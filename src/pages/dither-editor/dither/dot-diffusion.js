@@ -54,8 +54,7 @@
             var height = imageData.height;
             var source = new Float32Array(imageData.data);
             var output = new Uint8ClampedArray(source.length);
-            var palette = options.palette;
-            var nearestColor = app.core.paletteUtils.createNearestColorFinder(palette, options.colorDistance);
+            var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
             var recipients = [];
 
             for (var currentClass = 0; currentClass < CLASS_COORDS.length; currentClass += 1) {
@@ -66,7 +65,7 @@
                         var oldR = source[index];
                         var oldG = source[index + 1];
                         var oldB = source[index + 2];
-                        var nearest = nearestColor({ r: oldR, g: oldG, b: oldB });
+                        var nearest = paletteMapper.mapColor(oldR, oldG, oldB);
                         var errorR = oldR - nearest.r;
                         var errorG = oldG - nearest.g;
                         var errorB = oldB - nearest.b;

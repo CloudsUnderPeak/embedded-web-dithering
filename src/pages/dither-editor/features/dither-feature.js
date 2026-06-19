@@ -10,6 +10,12 @@
         });
     }
 
+    function paletteMappingOptions() {
+        return app.pages.ditherEditor.config.paletteMappingModes.map(function (mode) {
+            return { value: mode.id, label: ui.t(mode.labelKey) };
+        });
+    }
+
     function algorithmById(id) {
         return app.pages.ditherEditor.ditherAlgorithmRegistry.get(id);
     }
@@ -67,6 +73,7 @@
         defaultSettings: function defaultSettings() {
             return {
                 algorithm: constants.DEFAULT_DITHER_ALGORITHM_ID,
+                paletteMapping: constants.DEFAULT_PALETTE_MAPPING_ID,
                 serpentine: false,
                 colorDistance: constants.DEFAULT_COLOR_DISTANCE_ID,
                 errorStrength: constants.DEFAULT_DITHER_ERROR_STRENGTH,
@@ -79,6 +86,9 @@
             var controller = context.controller;
             state.settings.dither.colorDistance = app.core.paletteUtils.normalizeColorDistanceId(
                 state.settings.dither.colorDistance
+            );
+            state.settings.dither.paletteMapping = app.pages.ditherEditor.paletteMapping.normalizeId(
+                state.settings.dither.paletteMapping
             );
             state.settings.dither.errorStrength = normalizeErrorStrength(state.settings.dither.errorStrength);
             var options = [{ value: 'none', label: ui.t('optionNone') }].concat(
@@ -111,6 +121,13 @@
                     );
                     controller.updateSetting('dither', 'algorithm', value);
                 })),
+                ui.row(ui.t('labelPaletteMapping'), ui.selectInput(
+                    state.settings.dither.paletteMapping,
+                    paletteMappingOptions(),
+                    function (value) {
+                        controller.updateSetting('dither', 'paletteMapping', value);
+                    }
+                )),
                 ui.row(ui.t('labelColorDistance'), ui.selectInput(
                     state.settings.dither.colorDistance,
                     colorDistanceOptions(),
@@ -144,6 +161,7 @@
                 var options = {
                     matrixId: algorithm.matrixId,
                     palette: palette,
+                    paletteMapping: app.pages.ditherEditor.paletteMapping.normalizeId(settings.paletteMapping),
                     colorDistance: app.core.paletteUtils.normalizeColorDistanceId(settings.colorDistance),
                     serpentine: Boolean(settings.serpentine && algorithm.supportsSerpentine),
                     errorStrength: normalizeErrorStrength(settings.errorStrength)
