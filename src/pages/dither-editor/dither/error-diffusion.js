@@ -147,6 +147,40 @@
         return output;
     }
 
+    function matrixOffsetCache(matrix, width, strength) {
+        var matrixLength = matrix.length;
+        var rowStride = width * 4;
+        var cache = matrix._ditherOffsetCache;
+        if (cache && cache.width === width && cache.strength === strength) {
+            return cache;
+        }
+
+        var offsetX = new Int16Array(matrixLength);
+        var offsetY = new Int16Array(matrixLength);
+        var forwardOffset = new Int32Array(matrixLength);
+        var reverseOffset = new Int32Array(matrixLength);
+        var factors = new Array(matrixLength);
+        for (var i = 0; i < matrixLength; i += 1) {
+            offsetX[i] = matrix[i].x;
+            offsetY[i] = matrix[i].y;
+            forwardOffset[i] = matrix[i].y * rowStride + matrix[i].x * 4;
+            reverseOffset[i] = matrix[i].y * rowStride - matrix[i].x * 4;
+            factors[i] = matrix[i].factor * strength;
+        }
+        cache = {
+            width: width,
+            strength: strength,
+            length: matrixLength,
+            offsetX: offsetX,
+            offsetY: offsetY,
+            forwardOffset: forwardOffset,
+            reverseOffset: reverseOffset,
+            factors: factors
+        };
+        matrix._ditherOffsetCache = cache;
+        return cache;
+    }
+
     function applyAdaptiveFloydSteinberg(imageData, options, radius) {
         var width = imageData.width;
         var height = imageData.height;
@@ -239,16 +273,13 @@
         var height = imageData.height;
         var data = new Float32Array(imageData.data);
         var output = new Uint8ClampedArray(imageData.data.length);
-        var matrixLength = matrix.length;
-        var offsetX = new Array(matrixLength);
-        var offsetY = new Array(matrixLength);
-        var factors = new Array(matrixLength);
-
-        for (var i = 0; i < matrixLength; i += 1) {
-            offsetX[i] = matrix[i].x;
-            offsetY[i] = matrix[i].y;
-            factors[i] = matrix[i].factor * strength;
-        }
+        var matrixOffsets = matrixOffsetCache(matrix, width, strength);
+        var matrixLength = matrixOffsets.length;
+        var offsetX = matrixOffsets.offsetX;
+        var offsetY = matrixOffsets.offsetY;
+        var forwardOffset = matrixOffsets.forwardOffset;
+        var reverseOffset = matrixOffsets.reverseOffset;
+        var factors = matrixOffsets.factors;
 
         for (var y = 0; y < height; y += 1) {
             var reverse = options.serpentine && y % 2 === 1;
@@ -280,7 +311,14 @@
                     if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
                         continue;
                     }
-                    diffuse(data, (ny * width + nx) * 4, er, eg, eb, factors[entryIndex]);
+                    diffuse(
+                        data,
+                        index + (reverse ? reverseOffset[entryIndex] : forwardOffset[entryIndex]),
+                        er,
+                        eg,
+                        eb,
+                        factors[entryIndex]
+                    );
                 }
             }
         }

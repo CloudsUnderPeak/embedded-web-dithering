@@ -46,40 +46,64 @@
         }
         return thresholds;
     })();
+    var CLUSTERED_DOT_WRAP_MASK = (CLUSTERED_DOT_MATRIX.length & (CLUSTERED_DOT_MATRIX.length - 1)) === 0
+        ? CLUSTERED_DOT_MATRIX.length - 1
+        : null;
+
+    function wrapIndex(value, size) {
+        return CLUSTERED_DOT_WRAP_MASK === null ? value % size : value & CLUSTERED_DOT_WRAP_MASK;
+    }
+
+    function applyCpu(imageData, options) {
+        var width = imageData.width;
+        var height = imageData.height;
+        var source = imageData.data;
+        var output = new Uint8ClampedArray(source.length);
+        var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
+        var matrixSize = CLUSTERED_DOT_MATRIX.length;
+        if (!paletteMapper.length) {
+            return imageData;
+        }
+
+        for (var y = 0; y < height; y += 1) {
+            var rowOffset = y * width * 4;
+            var thresholdRow = wrapIndex(y, matrixSize) * matrixSize;
+            for (var x = 0; x < width; x += 1) {
+                var index = rowOffset + x * 4;
+                var threshold = CLUSTERED_DOT_THRESHOLDS[thresholdRow + wrapIndex(x, matrixSize)];
+                var nearest = paletteMapper.mapThresholdColor(
+                    source[index],
+                    source[index + 1],
+                    source[index + 2],
+                    threshold,
+                    86
+                );
+                output[index] = nearest.r;
+                output[index + 1] = nearest.g;
+                output[index + 2] = nearest.b;
+                output[index + 3] = 255;
+            }
+        }
+
+        return new ImageData(output, width, height);
+    }
 
     app.pages.ditherEditor.patternDither = {
         // 執行 clustered-dot halftone，輸出仍會映射到 palette。
         apply: function apply(imageData, options) {
-            var width = imageData.width;
-            var height = imageData.height;
-            var source = imageData.data;
-            var output = new Uint8ClampedArray(source.length);
-            var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
-            var matrixSize = CLUSTERED_DOT_MATRIX.length;
-            if (!paletteMapper.length) {
-                return imageData;
+            var gpuProcessor = app.pages.ditherEditor.thresholdDitherProcessor;
+            if (gpuProcessor) {
+                return gpuProcessor.apply(imageData, options, {
+                    cacheKey: 'pattern:clustered-dot:86',
+                    matrixSize: CLUSTERED_DOT_MATRIX.length,
+                    levels: CLUSTERED_DOT_MATRIX.length * CLUSTERED_DOT_MATRIX.length,
+                    thresholds: CLUSTERED_DOT_THRESHOLDS,
+                    thresholdScale: 86
+                }, function fallback() {
+                    return applyCpu(imageData, options);
+                });
             }
-
-            for (var y = 0; y < height; y += 1) {
-                var thresholdRow = (y % matrixSize) * matrixSize;
-                for (var x = 0; x < width; x += 1) {
-                    var index = (y * width + x) * 4;
-                    var threshold = CLUSTERED_DOT_THRESHOLDS[thresholdRow + (x % matrixSize)];
-                    var nearest = paletteMapper.mapThresholdColor(
-                        source[index],
-                        source[index + 1],
-                        source[index + 2],
-                        threshold,
-                        86
-                    );
-                    output[index] = nearest.r;
-                    output[index + 1] = nearest.g;
-                    output[index + 2] = nearest.b;
-                    output[index + 3] = 255;
-                }
-            }
-
-            return new ImageData(output, width, height);
+            return applyCpu(imageData, options);
         }
     };
 

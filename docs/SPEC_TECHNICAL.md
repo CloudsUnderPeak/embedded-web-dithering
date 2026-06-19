@@ -74,6 +74,9 @@ Split From: SPEC_INDEX.md
 - 2026-06-18: Dither 演算法改為使用 `dither-algorithm-registry.js` 註冊；演算法 metadata 指向 processor id，Dither feature 不再硬寫 ordered / pattern / error diffusion 分派。
 - 2026-06-18: Dither 演算法精簡為 Floyd-Steinberg、Atkinson、Jarvis-Judice-Ninke、Sierra Lite、Stevenson-Arce、Adaptive FS 3x3、Bayer 4x4、Bayer 8x8、Blue Noise 64、Dot Diffusion 8x8 與 Dot Halftone。
 - 2026-06-19: Palette Mapping 改為 dither strategy 介面，processor 只呼叫 `mapColor()` / `mapThresholdColor()`，不再依 `pair-mix` / `tri-mix` id 分支。
+- 2026-06-19: Dither CPU hot path 新增保守快取：Dot Diffusion 預算 class recipient offsets、generic Error Diffusion 快取 matrix offsets、Ordered / Pattern threshold lookup 使用預先攤平表，不改演算法 kernel 或 threshold 語意。
+- 2026-06-19: 新增 `threshold-dither-processor.js` 作為 WebGL threshold dither fast path；Ordered / Dot Halftone 類在 Nearest Color 與 Pair Mix mapping 可走 GPU，Tri Mix 或 WebGL 不可用時保留 CPU fallback。
+- 2026-06-19: Tri Mix CPU hot path 預先列出 top-6 candidate 的三色組合並攤平 barycentric loop；不得改 top candidate 數量、組合順序、權重 clamp/normalize 或 threshold 選色規則。
 - 2026-06-19: 新增共用 Palette Mapping 層，支援 Nearest Color 與 Pair Mix；Algorithm metadata 不再註冊 Pair Mix 組合項。
 
 ## Plug-and-Play 架構要求
@@ -340,6 +343,7 @@ embedded-web-dithering/
           pattern-dither.js
         gpu/
           adjust-processor.js
+          threshold-dither-processor.js
         panel-utils.js
         viewport/
           viewport-controller.js
@@ -412,7 +416,7 @@ embedded-web-dithering/
 - `config/` 只放開發者可擴充設定，例如 palette preset、dither algorithm、pipeline preset、display profile；不放使用者目前工作區 state。
 - `operations/` 只放跨 feature 的 operation registry 與 pipeline runner；單一 feature 的 operation implementation 預設留在該 feature script。
 - `dither/` 放 dither 演算法核心與矩陣資料，不處理 DOM、feature registration 或 editor state。
-- `gpu/` 放可選硬體加速 processor，例如 WebGL adjust processor。GPU processor 必須有 CPU fallback，且不應直接操作 tool panel 或 editor mode。
+- `gpu/` 放可選硬體加速 processor，例如 WebGL adjust processor 與 threshold dither processor。GPU processor 必須有 CPU fallback，且不應直接操作 tool panel 或 editor mode。
 - `viewport/` 放 canvas render、overlay render、座標轉換與 preview viewport 相關邏輯；page 仍負責 DOM mount 與工具列組合。Crop overlay 尺寸/定位必須由 `viewport/overlay-renderer.js` 管理，overlay pointer / wheel 到 crop pan/zoom 的換算必須由 `viewport/pointer-mapper.js` 管理。
 - `viewport/pointer-mapper.js` 必須把單一 pointer 拖曳轉成 crop pan、wheel 轉成 crop zoom、兩個 active pointers 的距離變化轉成 crop zoom。進入雙指縮放時應暫停單指 drag；縮放結束且仍剩一個 pointer 時可回到拖曳 pan。
 - `src/ui/svg-icons.js` 是唯一 SVG icon loading helper；它只把本地 SVG path 設為外部 `<img src>`，不可保存完整 SVG path data、不可 runtime `fetch()` SVG。`index.html` 不應直接保存完整 SVG symbol/path 資料。
@@ -734,6 +738,12 @@ Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-ste
 `palette-mapping-modes.js` 宣告使用者可選的 Palette Mapping。`nearest-color` 直接選目前 palette 中距離最近的單一色；`pair-mix` 先找最能近似輸入 RGB 的兩個 palette 色與混合比例，再由目前 Dither Algorithm 的掃描、誤差擴散或 threshold mask 決定輸出其中一色；`tri-mix` 先找最能近似輸入 RGB 的三個 palette 色與混合比例，再由目前 Dither Algorithm 決定輸出其中一色。Pair Mix 與 Tri Mix 不是獨立 Algorithm，不應用 `Palette Dot Halftone`、`Mix Ordered` 或 `Tri Mix Ordered` 這類組合項擴增 Algorithm 選單。
 
 `palette-mapping.js` 必須提供 dither strategy 介面。Dither processor 應只透過 `paletteMapping.createMapper(options)` 取得 mapper，並呼叫 `mapColor(r, g, b)` 或 `mapThresholdColor(r, g, b, threshold, thresholdScale)`；processor 不應依 `nearest-color`、`pair-mix` 或 `tri-mix` id 寫分支。Ordered / Pattern / Blue Noise 類 threshold 演算法應把 mask threshold 交給 `mapThresholdColor()`，由 mapping strategy 自行決定 threshold 是要當亮度偏移或 palette mix cutoff。
+
+Dither hot-path optimization 只能改資料結構、查表與快取，不可改變演算法定義。Dot Diffusion 可預先計算每個 class 的 recipient relative offsets，但邊界像素仍必須依實際圖片尺寸重新計算有效 recipient 數；Error Diffusion 可快取 matrix offsets，但不可改 kernel factor、serpentine 掃描方向或 error strength 語意；Ordered / Pattern Dither 可快取 normalized threshold map，但不可改 matrix ranking、thresholdScale 或 Palette Mapping 的選色結果。
+
+Tri Mix CPU optimization 可預先列出 top-6 candidate 內的 20 組三色組合，並可將 barycentric weight 計算攤平到 hot loop；但不可改變 top candidate 數量、candidate insertion tie-break、三色組合枚舉順序、`denom` epsilon、weight clamp/normalize 流程、Color Distance 評分或 threshold 選色比較。優化後必須用 benchmark checksum 確認輸出與優化前一致。
+
+`threshold-dither-processor.js` 是 Ordered / Pattern threshold 類演算法的可選 WebGL fast path。它只能在 `nearest-color` 或 `pair-mix` Palette Mapping、已支援的 Color Distance、palette 長度不超過 shader 上限，且瀏覽器可建立 WebGL context 時啟用；`tri-mix` 必須走 CPU，避免 shader 組合量過高且難以維持 Palette Mapping 語意。GPU path 必須使用同一份 threshold rank、`thresholdScale`、palette 與 Color Distance；`nearest-color` 應把 threshold 當亮度偏移，`pair-mix` 應先找最佳 palette pair 與混合比例，再把 threshold 當 cutoff 決定輸出 pair 的哪個顏色。`auto` backend 必須以 CPU fallback 保留功能可用性；forced `gpu` backend 在不支援目前 options 時必須報錯。benchmark 工具應用 checksum 驗證 CPU/GPU 輸出一致後才報告速度差異。
 
 `color-distance-metrics.js` 宣告使用者可選的距離公式。Dither feature 預設使用 `DEFAULT_COLOR_DISTANCE_ID`，目前為 `euclidean-bt709`。同一個 `colorDistance` 必須傳給 Error Diffusion、Ordered Dither、Pattern Dither，以及 Dither 關閉時 Palette operation 的直接最近色映射；在 `pair-mix` 與 `tri-mix` 下，`colorDistance` 必須用來評估哪一組 palette mix 的混合結果最接近輸入顏色。`euclidean-bt709` 是 RgbQuant-style BT.709 weighted euclidean distance；`euclidean-rgb` 是未加權 RGB squared distance；`manhattan-bt709` 是 BT.709 weighted Manhattan distance；`manhattan-rgb` 是未加權 Manhattan distance。舊 id `euclidean` / `bt709` 應正規化到 `euclidean-bt709`，舊 id `rgb` 應正規化到 `euclidean-rgb`，舊 id `manhattan` 應正規化到 `manhattan-rgb`。
 

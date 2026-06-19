@@ -35,6 +35,38 @@ Before changing requirements, specs, or behavior expectations, read `docs/SPEC_I
   - Use commit messages in `[Add] summary`, `[Modify] summary`, or `[Fix] summary` format.
   - Use a concise commit-title summary.
 
+## Project Internal Tools
+
+These tools are for local agent workflows. They should help future changes produce evidence, but they are not product features.
+
+- `tools/dither-benchmark/`
+  - Use this when changing dither algorithms, Palette Mapping, Color Distance, CPU hot paths, or GPU paths.
+  - Primary purpose: collect before/after performance data and verify CPU/GPU output consistency with checksum.
+  - Prefer the headless runner for repeatable reports:
+
+    ```bash
+    python3 tools/dither-benchmark/run.py --width 800 --height 480 --iterations 5 --warmup 1 --algorithm bayer-8 --mapping nearest-color --backend auto
+    ```
+
+  - Use `--backend cpu` for baseline, `--backend auto` for normal accelerated behavior, and `--backend gpu` only when intentionally verifying GPU support.
+  - Read `tools/dither-benchmark/README.md` for supported options and result column meanings.
+
+- `tools/dither-render/`
+  - Use this when the user asks Codex to directly generate a dithered PNG from this project, or when a visual output sample is needed after algorithm changes.
+  - Primary purpose: render PNG files through the same project dither scripts used by the app.
+  - Prefer the headless runner:
+
+    ```bash
+    python3 tools/dither-render/run.py --output output/dither.png --algorithm bayer-8 --mapping nearest-color --palette e6
+    ```
+
+  - Use `--input` for a real source image, or omit it to generate a synthetic source.
+  - Read `tools/dither-render/README.md` for supported options.
+
+- Both tools load browser-oriented project scripts through an internal HTML runner. Keep this design unless the dither core is intentionally refactored into a shared non-browser module.
+- Do not add hardcoded local absolute paths to these tools or their docs. Prefer CLI arguments, environment variables, PATH lookup, or documented relative paths.
+- These tools may use a headless browser, but they do not require starting a dev server.
+
 ## Think Before Coding
 
 State assumptions explicitly before implementation when they affect the solution.

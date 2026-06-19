@@ -200,45 +200,17 @@
         return count;
     }
 
-    function barycentricWeights(palette, a, bIndex, c, r, g, b, weights) {
-        var ar = palette.red[a];
-        var ag = palette.green[a];
-        var ab = palette.blue[a];
-        var v0r = palette.red[bIndex] - ar;
-        var v0g = palette.green[bIndex] - ag;
-        var v0b = palette.blue[bIndex] - ab;
-        var v1r = palette.red[c] - ar;
-        var v1g = palette.green[c] - ag;
-        var v1b = palette.blue[c] - ab;
-        var v2r = r - ar;
-        var v2g = g - ag;
-        var v2b = b - ab;
-        var d00 = v0r * v0r + v0g * v0g + v0b * v0b;
-        var d01 = v0r * v1r + v0g * v1g + v0b * v1b;
-        var d11 = v1r * v1r + v1g * v1g + v1b * v1b;
-        var d20 = v2r * v0r + v2g * v0g + v2b * v0b;
-        var d21 = v2r * v1r + v2g * v1g + v2b * v1b;
-        var denom = d00 * d11 - d01 * d01;
-
-        if (Math.abs(denom) < 0.000001) {
-            return false;
+    var TRI_CANDIDATE_COMBINATIONS = (function buildTriCandidateCombinations() {
+        var output = [];
+        for (var i = 0; i < 4; i += 1) {
+            for (var j = i + 1; j < 5; j += 1) {
+                for (var k = j + 1; k < 6; k += 1) {
+                    output.push(i, j, k);
+                }
+            }
         }
-
-        var second = (d11 * d20 - d01 * d21) / denom;
-        var third = (d00 * d21 - d01 * d20) / denom;
-        var first = 1 - second - third;
-        first = Math.max(0, first);
-        second = Math.max(0, second);
-        third = Math.max(0, third);
-        var total = first + second + third;
-        if (!total) {
-            return false;
-        }
-        weights[0] = first / total;
-        weights[1] = second / total;
-        weights[2] = third / total;
-        return true;
-    }
+        return output;
+    })();
 
     function triChoice(palette, distance, r, g, b, buffers) {
         var count = topCandidateIndexes(
@@ -259,35 +231,71 @@
         buffers.choiceWeights[2] = 0;
         buffers.choiceDistance = Infinity;
 
-        for (var i = 0; i < count - 2; i += 1) {
-            for (var j = i + 1; j < count - 1; j += 1) {
-                for (var k = j + 1; k < count; k += 1) {
-                    var a = buffers.candidateIndexes[i];
-                    var bIndex = buffers.candidateIndexes[j];
-                    var c = buffers.candidateIndexes[k];
-                    if (!barycentricWeights(palette, a, bIndex, c, r, g, b, buffers.weights)) {
-                        continue;
-                    }
-                    var mixedR = palette.red[a] * buffers.weights[0]
-                        + palette.red[bIndex] * buffers.weights[1]
-                        + palette.red[c] * buffers.weights[2];
-                    var mixedG = palette.green[a] * buffers.weights[0]
-                        + palette.green[bIndex] * buffers.weights[1]
-                        + palette.green[c] * buffers.weights[2];
-                    var mixedB = palette.blue[a] * buffers.weights[0]
-                        + palette.blue[bIndex] * buffers.weights[1]
-                        + palette.blue[c] * buffers.weights[2];
-                    var current = distance.rgb(r, g, b, mixedR, mixedG, mixedB);
-                    if (current < buffers.choiceDistance) {
-                        buffers.choiceIndexes[0] = a;
-                        buffers.choiceIndexes[1] = bIndex;
-                        buffers.choiceIndexes[2] = c;
-                        buffers.choiceWeights[0] = buffers.weights[0];
-                        buffers.choiceWeights[1] = buffers.weights[1];
-                        buffers.choiceWeights[2] = buffers.weights[2];
-                        buffers.choiceDistance = current;
-                    }
-                }
+        for (var comboIndex = 0; comboIndex < TRI_CANDIDATE_COMBINATIONS.length; comboIndex += 3) {
+            var firstPosition = TRI_CANDIDATE_COMBINATIONS[comboIndex];
+            var secondPosition = TRI_CANDIDATE_COMBINATIONS[comboIndex + 1];
+            var thirdPosition = TRI_CANDIDATE_COMBINATIONS[comboIndex + 2];
+            if (thirdPosition >= count) {
+                continue;
+            }
+
+            var a = buffers.candidateIndexes[firstPosition];
+            var bIndex = buffers.candidateIndexes[secondPosition];
+            var c = buffers.candidateIndexes[thirdPosition];
+            var ar = palette.red[a];
+            var ag = palette.green[a];
+            var ab = palette.blue[a];
+            var v0r = palette.red[bIndex] - ar;
+            var v0g = palette.green[bIndex] - ag;
+            var v0b = palette.blue[bIndex] - ab;
+            var v1r = palette.red[c] - ar;
+            var v1g = palette.green[c] - ag;
+            var v1b = palette.blue[c] - ab;
+            var v2r = r - ar;
+            var v2g = g - ag;
+            var v2b = b - ab;
+            var d00 = v0r * v0r + v0g * v0g + v0b * v0b;
+            var d01 = v0r * v1r + v0g * v1g + v0b * v1b;
+            var d11 = v1r * v1r + v1g * v1g + v1b * v1b;
+            var d20 = v2r * v0r + v2g * v0g + v2b * v0b;
+            var d21 = v2r * v1r + v2g * v1g + v2b * v1b;
+            var denom = d00 * d11 - d01 * d01;
+
+            if (Math.abs(denom) < 0.000001) {
+                continue;
+            }
+
+            var second = (d11 * d20 - d01 * d21) / denom;
+            var third = (d00 * d21 - d01 * d20) / denom;
+            var first = 1 - second - third;
+            first = Math.max(0, first);
+            second = Math.max(0, second);
+            third = Math.max(0, third);
+            var total = first + second + third;
+            if (!total) {
+                continue;
+            }
+            var firstWeight = first / total;
+            var secondWeight = second / total;
+            var thirdWeight = third / total;
+            var mixedR = palette.red[a] * firstWeight
+                + palette.red[bIndex] * secondWeight
+                + palette.red[c] * thirdWeight;
+            var mixedG = palette.green[a] * firstWeight
+                + palette.green[bIndex] * secondWeight
+                + palette.green[c] * thirdWeight;
+            var mixedB = palette.blue[a] * firstWeight
+                + palette.blue[bIndex] * secondWeight
+                + palette.blue[c] * thirdWeight;
+            var current = distance.rgb(r, g, b, mixedR, mixedG, mixedB);
+            if (current < buffers.choiceDistance) {
+                buffers.choiceIndexes[0] = a;
+                buffers.choiceIndexes[1] = bIndex;
+                buffers.choiceIndexes[2] = c;
+                buffers.choiceWeights[0] = firstWeight;
+                buffers.choiceWeights[1] = secondWeight;
+                buffers.choiceWeights[2] = thirdWeight;
+                buffers.choiceDistance = current;
             }
         }
 
@@ -334,7 +342,6 @@
         var buffers = {
             candidateIndexes: new Array(6),
             candidateScores: new Array(6),
-            weights: [0, 0, 0],
             choiceIndexes: [0, 0, 0],
             choiceWeights: [1, 0, 0],
             choiceDistance: Infinity

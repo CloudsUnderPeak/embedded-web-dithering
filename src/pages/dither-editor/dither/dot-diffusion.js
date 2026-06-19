@@ -19,6 +19,7 @@
             CLASS_COORDS[CLASS_MATRIX[classY][classX]] = { x: classX, y: classY };
         }
     }
+    var RECIPIENT_OFFSETS = buildRecipientOffsets();
 
     function clampByte(value) {
         return value < 0 ? 0 : (value > 255 ? 255 : value);
@@ -28,24 +29,74 @@
         return CLASS_MATRIX[y & 7][x & 7];
     }
 
-    function collectRecipients(x, y, width, height, currentClass, recipients) {
-        recipients.length = 0;
-        for (var offsetY = -1; offsetY <= 1; offsetY += 1) {
-            var ny = y + offsetY;
-            if (ny < 0 || ny >= height) {
-                continue;
+    function buildRecipientOffsets() {
+        var output = new Array(CLASS_COORDS.length);
+        for (var currentClass = 0; currentClass < CLASS_COORDS.length; currentClass += 1) {
+            var coord = CLASS_COORDS[currentClass];
+            var offsetXs = [];
+            var offsetYs = [];
+            for (var offsetY = -1; offsetY <= 1; offsetY += 1) {
+                for (var offsetX = -1; offsetX <= 1; offsetX += 1) {
+                    if (offsetX === 0 && offsetY === 0) {
+                        continue;
+                    }
+                    if (classAt(coord.x + offsetX, coord.y + offsetY) > currentClass) {
+                        offsetXs.push(offsetX);
+                        offsetYs.push(offsetY);
+                    }
+                }
             }
-            for (var offsetX = -1; offsetX <= 1; offsetX += 1) {
-                var nx = x + offsetX;
-                if ((offsetX === 0 && offsetY === 0) || nx < 0 || nx >= width) {
-                    continue;
-                }
-                if (classAt(nx, ny) > currentClass) {
-                    recipients.push((ny * width + nx) * 4);
-                }
+            output[currentClass] = {
+                offsetX: new Int8Array(offsetXs),
+                offsetY: new Int8Array(offsetYs),
+                length: offsetXs.length
+            };
+        }
+        return output;
+    }
+
+    function countRecipients(x, y, width, height, offsets) {
+        var count = 0;
+        for (var i = 0; i < offsets.length; i += 1) {
+            var nx = x + offsets.offsetX[i];
+            var ny = y + offsets.offsetY[i];
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                count += 1;
             }
         }
-        return recipients.length;
+        return count;
+    }
+
+    function diffuseRecipients(
+        source,
+        index,
+        x,
+        y,
+        width,
+        height,
+        rowStride,
+        offsets,
+        errorR,
+        errorG,
+        errorB,
+        count
+    ) {
+        var shareR = errorR / count;
+        var shareG = errorG / count;
+        var shareB = errorB / count;
+        for (var i = 0; i < offsets.length; i += 1) {
+            var offsetX = offsets.offsetX[i];
+            var offsetY = offsets.offsetY[i];
+            var nx = x + offsetX;
+            var ny = y + offsetY;
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+                continue;
+            }
+            var recipientIndex = index + offsetY * rowStride + offsetX * 4;
+            source[recipientIndex] = clampByte(source[recipientIndex] + shareR);
+            source[recipientIndex + 1] = clampByte(source[recipientIndex + 1] + shareG);
+            source[recipientIndex + 2] = clampByte(source[recipientIndex + 2] + shareB);
+        }
     }
 
     app.pages.ditherEditor.dotDiffusion = {
@@ -55,13 +106,14 @@
             var source = new Float32Array(imageData.data);
             var output = new Uint8ClampedArray(source.length);
             var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
-            var recipients = [];
+            var rowStride = width * 4;
             if (!paletteMapper.length) {
                 return imageData;
             }
 
             for (var currentClass = 0; currentClass < CLASS_COORDS.length; currentClass += 1) {
                 var coord = CLASS_COORDS[currentClass];
+                var offsets = RECIPIENT_OFFSETS[currentClass];
                 for (var y = coord.y; y < height; y += 8) {
                     for (var x = coord.x; x < width; x += 8) {
                         var index = (y * width + x) * 4;
@@ -72,7 +124,7 @@
                         var errorR = oldR - nearest.r;
                         var errorG = oldG - nearest.g;
                         var errorB = oldB - nearest.b;
-                        var count = collectRecipients(x, y, width, height, currentClass, recipients);
+                        var count = countRecipients(x, y, width, height, offsets);
 
                         output[index] = nearest.r;
                         output[index + 1] = nearest.g;
@@ -82,15 +134,20 @@
                         if (!count) {
                             continue;
                         }
-                        var shareR = errorR / count;
-                        var shareG = errorG / count;
-                        var shareB = errorB / count;
-                        for (var i = 0; i < count; i += 1) {
-                            var recipientIndex = recipients[i];
-                            source[recipientIndex] = clampByte(source[recipientIndex] + shareR);
-                            source[recipientIndex + 1] = clampByte(source[recipientIndex + 1] + shareG);
-                            source[recipientIndex + 2] = clampByte(source[recipientIndex + 2] + shareB);
-                        }
+                        diffuseRecipients(
+                            source,
+                            index,
+                            x,
+                            y,
+                            width,
+                            height,
+                            rowStride,
+                            offsets,
+                            errorR,
+                            errorG,
+                            errorB,
+                            count
+                        );
                     }
                 }
             }
