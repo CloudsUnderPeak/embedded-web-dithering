@@ -6,6 +6,7 @@
         MAX_RESIZE_OUTPUT_SIZE: 4096,
         PREVIEW_DEBOUNCE_MS: 80,
         SHOW_PREVIEW_TIMING_LABEL: true,
+        PREVIEW_TIMING_LABEL_HIDE_DELAY_MS: 2000,
         DEFAULT_DITHER_ALGORITHM_ID: 'floyd-steinberg',
         DEFAULT_PALETTE_MAPPING_ID: 'nearest-color',
         DEFAULT_COLOR_DISTANCE_ID: 'euclidean-bt709',

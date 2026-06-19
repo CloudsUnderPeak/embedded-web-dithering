@@ -9,6 +9,7 @@
         this.renderLivePreview = options.renderLivePreview || options.render;
         this.setStatus = options.setStatus;
         this.previewTimer = null;
+        this.previewTimingHideTimer = null;
         this.livePreviewFrame = null;
         this.previewHoldDepth = 0;
         this.previewPending = false;
@@ -55,6 +56,7 @@
         state.uiRevision = revision;
         this.previewPending = false;
         this.previewHoldDepth = 0;
+        this.hidePreviewTimingLabel();
         app.pages.ditherEditor.pipelineRunner.clearStageCache(this.stageCache);
         clearTimeout(this.previewTimer);
         this.previewTimer = null;
@@ -76,6 +78,7 @@
         var max = app.pages.ditherEditor.constants.MAX_INPUT_LONG_EDGE;
         this.state.status = 'loading-image';
         this.state.previewRenderDurationMs = null;
+        this.hidePreviewTimingLabel();
         this.render(this.state);
         return app.core.imageLoader
             .loadDemoImage(max)
@@ -94,6 +97,7 @@
         var self = this;
         this.state.status = 'loading-image';
         this.state.previewRenderDurationMs = null;
+        this.hidePreviewTimingLabel();
         this.render(this.state);
         return app.core.imageLoader
             .loadImageFromFile(file, app.pages.ditherEditor.constants.MAX_INPUT_LONG_EDGE)
@@ -224,6 +228,38 @@
         }
     };
 
+    DitherEditorController.prototype.setPreviewTimingPhase = function setPreviewTimingPhase(phase, durationMs) {
+        clearTimeout(this.previewTimingHideTimer);
+        this.previewTimingHideTimer = null;
+        this.state.previewTimingLabel = {
+            phase: phase,
+            durationMs: Number.isFinite(durationMs) ? durationMs : null
+        };
+    };
+
+    DitherEditorController.prototype.hidePreviewTimingLabel = function hidePreviewTimingLabel() {
+        clearTimeout(this.previewTimingHideTimer);
+        this.previewTimingHideTimer = null;
+        this.state.previewTimingLabel = {
+            phase: 'hidden',
+            durationMs: null
+        };
+    };
+
+    DitherEditorController.prototype.schedulePreviewTimingHide = function schedulePreviewTimingHide() {
+        var self = this;
+        var delayMs = app.pages.ditherEditor.constants.PREVIEW_TIMING_LABEL_HIDE_DELAY_MS;
+        clearTimeout(this.previewTimingHideTimer);
+        this.previewTimingHideTimer = setTimeout(function () {
+            self.previewTimingHideTimer = null;
+            self.state.previewTimingLabel = {
+                phase: 'hidden',
+                durationMs: null
+            };
+            self.render(self.state);
+        }, delayMs);
+    };
+
     DitherEditorController.prototype.updatePreparedPreview = function updatePreparedPreview() {
         if (!this.state.sourceImageData) {
             this.state.preparedImageData = null;
@@ -318,6 +354,7 @@
             return;
         }
         clearTimeout(this.previewTimer);
+        this.setPreviewTimingPhase('rendering');
         this.state.status = 'processing-preview';
         if (this.state.viewMode === 'original') {
             try {
@@ -325,6 +362,7 @@
             } catch (error) {
                 this.state.status = 'error';
                 this.state.error = error.message;
+                this.hidePreviewTimingLabel();
                 this.render(this.state);
                 return;
             }
@@ -341,6 +379,7 @@
     DitherEditorController.prototype.runPreview = function runPreview() {
         if (!this.state.sourceImageData) {
             this.state.status = 'empty';
+            this.hidePreviewTimingLabel();
             this.render(this.state);
             return;
         }
@@ -354,14 +393,17 @@
                 { stageCache: this.stageCache }
             );
             this.state.previewRenderDurationMs = nowMs() - startMs;
+            this.setPreviewTimingPhase('done', this.state.previewRenderDurationMs);
             this.state.outputImageData = this.state.previewImageData;
             this.state.status = 'preview-ready';
             this.runFeatureHook('onAfterPreview', {});
             this.saveWorkspace();
+            this.schedulePreviewTimingHide();
         } catch (error) {
             this.state.status = 'error';
             this.state.error = error.message;
             this.state.previewRenderDurationMs = null;
+            this.hidePreviewTimingLabel();
         }
         this.state.livePreview = null;
         this.render(this.state);
@@ -425,12 +467,15 @@
     // 頁面卸載時清掉 timer/frame，避免背景頁面繼續更新。
     DitherEditorController.prototype.destroy = function destroy() {
         clearTimeout(this.previewTimer);
+        clearTimeout(this.previewTimingHideTimer);
+        this.previewTimingHideTimer = null;
         if (this.livePreviewFrame) {
             cancelAnimationFrame(this.livePreviewFrame);
             this.livePreviewFrame = null;
         }
         app.pages.ditherEditor.pipelineRunner.clearStageCache(this.stageCache);
         this.state.livePreview = null;
+        this.hidePreviewTimingLabel();
     };
 
     app.pages.ditherEditor.Controller = DitherEditorController;

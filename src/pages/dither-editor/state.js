@@ -47,6 +47,10 @@
             preparedImageData: null,
             previewImageData: null,
             previewRenderDurationMs: null,
+            previewTimingLabel: {
+                phase: 'hidden',
+                durationMs: null
+            },
             outputImageData: null,
             livePreview: null,
             activeTool: initialTool,

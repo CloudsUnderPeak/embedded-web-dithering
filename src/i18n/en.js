@@ -36,6 +36,7 @@
         uploadDropSeparator: 'OR',
         previewOriginal: 'Original',
         previewResult: 'Result',
+        previewRendering: 'Rendering...',
         optionNone: 'None',
         paletteOriginal: 'Original',
         paletteCustom: 'Custom',

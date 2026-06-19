@@ -441,7 +441,11 @@
     }
 
     function renderPreviewTimingLabel(state, cropVisible) {
-        var durationMs = state.previewRenderDurationMs;
+        var labelState = state.previewTimingLabel || {};
+        var phase = labelState.phase;
+        var durationMs = labelState.durationMs;
+        var hasText = phase === 'rendering'
+            || (phase === 'done' && Number.isFinite(durationMs));
         var visible = Boolean(
             refs.previewTimingLabel
             && refs.canvas
@@ -449,8 +453,9 @@
             && state.mode === modeMachine().groups.EDIT
             && state.viewMode === 'result'
             && !cropVisible
-            && state.previewImageData
-            && Number.isFinite(durationMs)
+            && state.sourceImageData
+            && !refs.canvas.hidden
+            && hasText
         );
         if (!visible) {
             refs.previewTimingLabel.hidden = true;
@@ -458,7 +463,9 @@
         }
         var stageRect = refs.previewStage.getBoundingClientRect();
         var canvasRect = refs.canvas.getBoundingClientRect();
-        refs.previewTimingLabel.textContent = formatPreviewDuration(durationMs);
+        refs.previewTimingLabel.textContent = phase === 'rendering'
+            ? t('previewRendering')
+            : formatPreviewDuration(durationMs);
         refs.previewTimingLabel.style.right = Math.max(6, stageRect.right - canvasRect.right + 6) + 'px';
         refs.previewTimingLabel.style.bottom = Math.max(6, stageRect.bottom - canvasRect.bottom + 6) + 'px';
         refs.previewTimingLabel.hidden = false;
