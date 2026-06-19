@@ -33,6 +33,19 @@
     }
 
     var CLUSTERED_DOT_MATRIX = buildClusteredDotMatrix(8);
+    var CLUSTERED_DOT_THRESHOLDS = (function buildThresholds() {
+        var matrixSize = CLUSTERED_DOT_MATRIX.length;
+        var levels = matrixSize * matrixSize;
+        var thresholds = new Float32Array(levels);
+        for (var y = 0; y < matrixSize; y += 1) {
+            for (var x = 0; x < matrixSize; x += 1) {
+                thresholds[y * matrixSize + x] = (
+                    CLUSTERED_DOT_MATRIX[y][x] + 0.5
+                ) / levels;
+            }
+        }
+        return thresholds;
+    })();
 
     app.pages.ditherEditor.patternDither = {
         // 執行 clustered-dot halftone，輸出仍會映射到 palette。
@@ -43,30 +56,22 @@
             var output = new Uint8ClampedArray(source.length);
             var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
             var matrixSize = CLUSTERED_DOT_MATRIX.length;
-            var levels = matrixSize * matrixSize;
+            if (!paletteMapper.length) {
+                return imageData;
+            }
 
             for (var y = 0; y < height; y += 1) {
+                var thresholdRow = (y % matrixSize) * matrixSize;
                 for (var x = 0; x < width; x += 1) {
                     var index = (y * width + x) * 4;
-                    var threshold = (
-                        CLUSTERED_DOT_MATRIX[y % matrixSize][x % matrixSize] + 0.5
-                    ) / levels;
-                    var nearest;
-                    if (paletteMapper.id === 'pair-mix' || paletteMapper.id === 'tri-mix') {
-                        nearest = paletteMapper.mapColor(
-                            source[index],
-                            source[index + 1],
-                            source[index + 2],
-                            threshold
-                        );
-                    } else {
-                        var amount = (threshold - 0.5) * 86;
-                        nearest = paletteMapper.mapColor(
-                            source[index] + amount,
-                            source[index + 1] + amount,
-                            source[index + 2] + amount
-                        );
-                    }
+                    var threshold = CLUSTERED_DOT_THRESHOLDS[thresholdRow + (x % matrixSize)];
+                    var nearest = paletteMapper.mapThresholdColor(
+                        source[index],
+                        source[index + 1],
+                        source[index + 2],
+                        threshold,
+                        86
+                    );
                     output[index] = nearest.r;
                     output[index + 1] = nearest.g;
                     output[index + 2] = nearest.b;

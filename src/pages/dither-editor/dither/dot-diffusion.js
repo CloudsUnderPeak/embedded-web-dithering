@@ -56,6 +56,9 @@
             var output = new Uint8ClampedArray(source.length);
             var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
             var recipients = [];
+            if (!paletteMapper.length) {
+                return imageData;
+            }
 
             for (var currentClass = 0; currentClass < CLASS_COORDS.length; currentClass += 1) {
                 var coord = CLASS_COORDS[currentClass];

@@ -73,6 +73,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-18: Error Diffusion 內建 processor 在擴散誤差寫回工作緩衝時必須 clamp 到 `0..255`，避免 Error Strength 增大時累積誤差爆掉造成破圖。
 - 2026-06-18: Dither 演算法改為使用 `dither-algorithm-registry.js` 註冊；演算法 metadata 指向 processor id，Dither feature 不再硬寫 ordered / pattern / error diffusion 分派。
 - 2026-06-18: Dither 演算法精簡為 Floyd-Steinberg、Atkinson、Jarvis-Judice-Ninke、Sierra Lite、Stevenson-Arce、Adaptive FS 3x3、Bayer 4x4、Bayer 8x8、Blue Noise 64、Dot Diffusion 8x8 與 Dot Halftone。
+- 2026-06-19: Palette Mapping 改為 dither strategy 介面，processor 只呼叫 `mapColor()` / `mapThresholdColor()`，不再依 `pair-mix` / `tri-mix` id 分支。
 - 2026-06-19: 新增共用 Palette Mapping 層，支援 Nearest Color 與 Pair Mix；Algorithm metadata 不再註冊 Pair Mix 組合項。
 
 ## Plug-and-Play 架構要求
@@ -731,6 +732,8 @@ Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-ste
 `serpentine` 的 panel control 必須使用 `panelUtils.toggleSwitchInput()`，避免和一般 checkbox 視覺混用。Adjust 與 Dither 的 range input、Toggle Switch checked state 必須使用 `--color-control-accent`，focus 或強調輪廓可沿用 `--color-accent-strong`，不可落回瀏覽器預設藍色或直接吃主 action accent。
 
 `palette-mapping-modes.js` 宣告使用者可選的 Palette Mapping。`nearest-color` 直接選目前 palette 中距離最近的單一色；`pair-mix` 先找最能近似輸入 RGB 的兩個 palette 色與混合比例，再由目前 Dither Algorithm 的掃描、誤差擴散或 threshold mask 決定輸出其中一色；`tri-mix` 先找最能近似輸入 RGB 的三個 palette 色與混合比例，再由目前 Dither Algorithm 決定輸出其中一色。Pair Mix 與 Tri Mix 不是獨立 Algorithm，不應用 `Palette Dot Halftone`、`Mix Ordered` 或 `Tri Mix Ordered` 這類組合項擴增 Algorithm 選單。
+
+`palette-mapping.js` 必須提供 dither strategy 介面。Dither processor 應只透過 `paletteMapping.createMapper(options)` 取得 mapper，並呼叫 `mapColor(r, g, b)` 或 `mapThresholdColor(r, g, b, threshold, thresholdScale)`；processor 不應依 `nearest-color`、`pair-mix` 或 `tri-mix` id 寫分支。Ordered / Pattern / Blue Noise 類 threshold 演算法應把 mask threshold 交給 `mapThresholdColor()`，由 mapping strategy 自行決定 threshold 是要當亮度偏移或 palette mix cutoff。
 
 `color-distance-metrics.js` 宣告使用者可選的距離公式。Dither feature 預設使用 `DEFAULT_COLOR_DISTANCE_ID`，目前為 `euclidean-bt709`。同一個 `colorDistance` 必須傳給 Error Diffusion、Ordered Dither、Pattern Dither，以及 Dither 關閉時 Palette operation 的直接最近色映射；在 `pair-mix` 與 `tri-mix` 下，`colorDistance` 必須用來評估哪一組 palette mix 的混合結果最接近輸入顏色。`euclidean-bt709` 是 RgbQuant-style BT.709 weighted euclidean distance；`euclidean-rgb` 是未加權 RGB squared distance；`manhattan-bt709` 是 BT.709 weighted Manhattan distance；`manhattan-rgb` 是未加權 Manhattan distance。舊 id `euclidean` / `bt709` 應正規化到 `euclidean-bt709`，舊 id `rgb` 應正規化到 `euclidean-rgb`，舊 id `manhattan` 應正規化到 `manhattan-rgb`。
 
@@ -1550,7 +1553,7 @@ const PREVIEW_TIMING_LABEL_HIDE_DELAY_MS = configuredDelayMs;
 - live feedback 只能在「拖曳中看到的結果」與「放開後正式 pipeline 結果」足夠一致時啟用；不一致時寧可不顯示假的即時效果。
 - `Adjust` 的 live feedback 僅允許 brightness、contrast、saturation，且只在 `Adjust` 是唯一啟用的 draggable effect 時使用。若 `Palette`、`Dither` 或其他 effect 會參與結果，拖曳中不套假的後處理濾鏡，放開後再更新正式 preview。
 - live feedback 應使用 feature 提供的 `createLivePreviewBase()` 與 `livePreviewFilter()`，由 page 只更新 canvas filter，不重跑整頁 render。
-- WebGL/GPU 可用於 operation 內部加速，但若需要同步 `readPixels()` 回到 `ImageData`，不可作為拖曳中即時 preview 的主要路徑。
+- WebGL/GPU 可用於 operation 內部加速，但若需要同步 `readPixels()` 回到 `ImageData`，不可作為拖曳中即時 preview 的主要路徑。Dither GPU 化應優先從 Ordered / Pattern / Palette Mapping 這類逐 pixel 獨立演算法開始；Error Diffusion 類演算法因相鄰像素依賴，不應作為第一批 GPU 化目標。
 - 若 1600px 以內工作圖的正式 preview 經常超過 `PREVIEW_SLOW_THRESHOLD_MS`，第二階段優先導入 Web Worker 或真正的 WebGL preview canvas。
 - UI 不硬性承諾每次 300ms 內完成，但必須避免使用者連續調整時主畫面長時間卡住。
 

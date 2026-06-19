@@ -11,122 +11,11 @@
         return Math.max(0, Math.min(150, percent)) / 100;
     }
 
-    function normalizedPalette(palette) {
-        var source = palette || [];
-        var red = new Array(source.length);
-        var green = new Array(source.length);
-        var blue = new Array(source.length);
-        for (var i = 0; i < source.length; i += 1) {
-            red[i] = Math.max(0, Math.min(255, Math.round(Number(source[i] && source[i].r) || 0)));
-            green[i] = Math.max(0, Math.min(255, Math.round(Number(source[i] && source[i].g) || 0)));
-            blue[i] = Math.max(0, Math.min(255, Math.round(Number(source[i] && source[i].b) || 0)));
-        }
-        return {
-            source: source,
-            red: red,
-            green: green,
-            blue: blue,
-            length: source.length
-        };
+    function mappedColor(paletteMapper, r, g, b) {
+        return paletteMapper.mapColor(r, g, b);
     }
 
-    function ciede2000IndexFinder(palette, colorDistanceId) {
-        var nearestColor = app.core.paletteUtils.createNearestColorFinder(palette.source, colorDistanceId);
-        return function nearestIndex(r, g, b) {
-            var color = nearestColor({ r: r, g: g, b: b });
-            for (var i = 0; i < palette.length; i += 1) {
-                if (palette.source[i] === color) {
-                    return i;
-                }
-            }
-            return 0;
-        };
-    }
-
-    function createNearestIndexFinder(palette, colorDistanceId) {
-        var mode = app.core.paletteUtils.normalizeColorDistanceId(colorDistanceId);
-        if (mode === 'ciede2000') {
-            return ciede2000IndexFinder(palette, mode);
-        }
-        if (mode === 'manhattan-rgb') {
-            return function nearestIndex(r, g, b) {
-                var bestIndex = 0;
-                var bestDistance = Infinity;
-                for (var i = 0; i < palette.length; i += 1) {
-                    var distance = Math.abs(r - palette.red[i])
-                        + Math.abs(g - palette.green[i])
-                        + Math.abs(b - palette.blue[i]);
-                    if (distance < bestDistance) {
-                        bestDistance = distance;
-                        bestIndex = i;
-                    }
-                }
-                return bestIndex;
-            };
-        }
-        if (mode === 'manhattan-bt709') {
-            return function nearestIndex(r, g, b) {
-                var bestIndex = 0;
-                var bestDistance = Infinity;
-                for (var i = 0; i < palette.length; i += 1) {
-                    var distance = 0.2126 * Math.abs(r - palette.red[i])
-                        + 0.7152 * Math.abs(g - palette.green[i])
-                        + 0.0722 * Math.abs(b - palette.blue[i]);
-                    if (distance < bestDistance) {
-                        bestDistance = distance;
-                        bestIndex = i;
-                    }
-                }
-                return bestIndex;
-            };
-        }
-        if (mode === 'euclidean-rgb') {
-            return function nearestIndex(r, g, b) {
-                var bestIndex = 0;
-                var bestDistance = Infinity;
-                for (var i = 0; i < palette.length; i += 1) {
-                    var dr = r - palette.red[i];
-                    var dg = g - palette.green[i];
-                    var db = b - palette.blue[i];
-                    var distance = dr * dr + dg * dg + db * db;
-                    if (distance < bestDistance) {
-                        bestDistance = distance;
-                        bestIndex = i;
-                    }
-                }
-                return bestIndex;
-            };
-        }
-        return function nearestIndex(r, g, b) {
-            var bestIndex = 0;
-            var bestDistance = Infinity;
-            for (var i = 0; i < palette.length; i += 1) {
-                var dr = r - palette.red[i];
-                var dg = g - palette.green[i];
-                var db = b - palette.blue[i];
-                var distance = 0.2126 * dr * dr + 0.7152 * dg * dg + 0.0722 * db * db;
-                if (distance < bestDistance) {
-                    bestDistance = distance;
-                    bestIndex = i;
-                }
-            }
-            return bestIndex;
-        };
-    }
-
-    function mappedColor(palette, nearestIndex, paletteMapper, r, g, b) {
-        if (paletteMapper && paletteMapper.id !== 'nearest-color') {
-            return paletteMapper.mapColor(r, g, b);
-        }
-        var paletteIndex = nearestIndex(r, g, b);
-        return {
-            r: palette.red[paletteIndex],
-            g: palette.green[paletteIndex],
-            b: palette.blue[paletteIndex]
-        };
-    }
-
-    function applyFloydSteinberg(imageData, palette, nearestIndex, paletteMapper, serpentine, strength) {
+    function applyFloydSteinberg(imageData, paletteMapper, serpentine, strength) {
         var width = imageData.width;
         var height = imageData.height;
         var data = new Float32Array(imageData.data);
@@ -147,7 +36,7 @@
                     var r = data[index];
                     var g = data[index + 1];
                     var b = data[index + 2];
-                    var mapped = mappedColor(palette, nearestIndex, paletteMapper, r, g, b);
+                    var mapped = mappedColor(paletteMapper, r, g, b);
                     var nr = mapped.r;
                     var ng = mapped.g;
                     var nb = mapped.b;
@@ -180,7 +69,7 @@
                     var rr = data[reverseIndex];
                     var rg = data[reverseIndex + 1];
                     var rb = data[reverseIndex + 2];
-                    var reverseMapped = mappedColor(palette, nearestIndex, paletteMapper, rr, rg, rb);
+                    var reverseMapped = mappedColor(paletteMapper, rr, rg, rb);
                     var rnr = reverseMapped.r;
                     var rng = reverseMapped.g;
                     var rnb = reverseMapped.b;
@@ -261,8 +150,8 @@
     function applyAdaptiveFloydSteinberg(imageData, options, radius) {
         var width = imageData.width;
         var height = imageData.height;
-        var palette = normalizedPalette(options.palette);
-        if (!palette.length) {
+        var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
+        if (!paletteMapper.length) {
             return imageData;
         }
 
@@ -270,8 +159,6 @@
         var meanMap = computeMeanMap(source, width, height, radius);
         var data = new Float32Array(source);
         var output = new Uint8ClampedArray(source.length);
-        var nearestIndex = createNearestIndexFinder(palette, options.colorDistance);
-        var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
         var strength = normalizeErrorStrength(options.errorStrength);
         var factor7 = (7 / 16) * strength;
         var factor3 = (3 / 16) * strength;
@@ -295,8 +182,6 @@
                 var localMean = meanMap[y * width + x];
                 var bias = (128 - localMean) * adaptiveBiasScale;
                 var mapped = mappedColor(
-                    palette,
-                    nearestIndex,
                     paletteMapper,
                     clampByte(r + bias),
                     clampByte(g + bias),
@@ -349,7 +234,7 @@
         return new ImageData(output, width, height);
     }
 
-    function applyMatrix(imageData, options, matrix, palette, nearestIndex, paletteMapper, strength) {
+    function applyMatrix(imageData, options, matrix, paletteMapper, strength) {
         var width = imageData.width;
         var height = imageData.height;
         var data = new Float32Array(imageData.data);
@@ -376,7 +261,7 @@
                 var r = data[index];
                 var g = data[index + 1];
                 var b = data[index + 2];
-                var mapped = mappedColor(palette, nearestIndex, paletteMapper, r, g, b);
+                var mapped = mappedColor(paletteMapper, r, g, b);
                 var nr = mapped.r;
                 var ng = mapped.g;
                 var nb = mapped.b;
@@ -406,27 +291,23 @@
     app.pages.ditherEditor.errorDiffusion = {
         // 執行 error diffusion，options.matrixId 決定誤差擴散權重。
         apply: function apply(imageData, options) {
-            var palette = normalizedPalette(options.palette);
-            if (!palette.length) {
+            var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
+            if (!paletteMapper.length) {
                 return imageData;
             }
             var matrices = app.pages.ditherEditor.ditherMatrices;
             var matrix = matrices[options.matrixId] || matrices.floydSteinberg;
-            var nearestIndex = createNearestIndexFinder(palette, options.colorDistance);
-            var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
             var errorStrength = normalizeErrorStrength(options.errorStrength);
             if (matrix === matrices.floydSteinberg) {
                 return applyFloydSteinberg(
                     imageData,
-                    palette,
-                    nearestIndex,
                     paletteMapper,
                     Boolean(options.serpentine),
                     errorStrength
                 );
             }
 
-            return applyMatrix(imageData, options, matrix, palette, nearestIndex, paletteMapper, errorStrength);
+            return applyMatrix(imageData, options, matrix, paletteMapper, errorStrength);
         }
     };
 

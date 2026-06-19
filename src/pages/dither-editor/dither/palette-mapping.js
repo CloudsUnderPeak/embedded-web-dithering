@@ -1,5 +1,6 @@
 (function (app) {
     // Palette Mapping 是 Dither 的選色層：決定輸入 RGB 如何落到固定 palette。
+    // Dither processor 只呼叫 mapColor / mapThresholdColor，不應知道具體 mapping id。
     app.pages.ditherEditor = app.pages.ditherEditor || {};
 
     function clampByte(value) {
@@ -18,9 +19,9 @@
 
     function normalizedPalette(palette) {
         var source = palette || [];
-        var red = new Array(source.length);
-        var green = new Array(source.length);
-        var blue = new Array(source.length);
+        var red = new Uint8ClampedArray(source.length);
+        var green = new Uint8ClampedArray(source.length);
+        var blue = new Uint8ClampedArray(source.length);
         for (var i = 0; i < source.length; i += 1) {
             red[i] = clampByte(Math.round(Number(source[i] && source[i].r) || 0));
             green[i] = clampByte(Math.round(Number(source[i] && source[i].g) || 0));
@@ -35,16 +36,73 @@
         };
     }
 
+    function createDistanceContext(colorDistanceId) {
+        var mode = app.core.paletteUtils.normalizeColorDistanceId(colorDistanceId);
+        if (mode === 'manhattan-rgb') {
+            return {
+                rgb: function rgb(r1, g1, b1, r2, g2, b2) {
+                    return Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
+                }
+            };
+        }
+        if (mode === 'manhattan-bt709') {
+            return {
+                rgb: function rgb(r1, g1, b1, r2, g2, b2) {
+                    return 0.2126 * Math.abs(r1 - r2)
+                        + 0.7152 * Math.abs(g1 - g2)
+                        + 0.0722 * Math.abs(b1 - b2);
+                }
+            };
+        }
+        if (mode === 'euclidean-rgb') {
+            return {
+                rgb: function rgb(r1, g1, b1, r2, g2, b2) {
+                    var dr = r1 - r2;
+                    var dg = g1 - g2;
+                    var db = b1 - b2;
+                    return dr * dr + dg * dg + db * db;
+                }
+            };
+        }
+        if (mode === 'euclidean-bt709') {
+            return {
+                rgb: function rgb(r1, g1, b1, r2, g2, b2) {
+                    var dr = r1 - r2;
+                    var dg = g1 - g2;
+                    var db = b1 - b2;
+                    return 0.2126 * dr * dr + 0.7152 * dg * dg + 0.0722 * db * db;
+                }
+            };
+        }
+
+        var measure = app.core.paletteUtils.createColorDistanceMeasurer(mode);
+        var a = { r: 0, g: 0, b: 0 };
+        var b = { r: 0, g: 0, b: 0 };
+        return {
+            rgb: function rgb(r1, g1, b1, r2, g2, b2) {
+                a.r = r1;
+                a.g = g1;
+                a.b = b1;
+                b.r = r2;
+                b.g = g2;
+                b.b = b2;
+                return measure(a, b);
+            }
+        };
+    }
+
     function nearestIndex(palette, distance, r, g, b) {
         var bestIndex = 0;
         var bestDistance = Infinity;
-        var color = { r: r, g: g, b: b };
         for (var i = 0; i < palette.length; i += 1) {
-            var current = distance(color, {
-                r: palette.red[i],
-                g: palette.green[i],
-                b: palette.blue[i]
-            });
+            var current = distance.rgb(
+                r,
+                g,
+                b,
+                palette.red[i],
+                palette.green[i],
+                palette.blue[i]
+            );
             if (current < bestDistance) {
                 bestDistance = current;
                 bestIndex = i;
@@ -53,67 +111,96 @@
         return bestIndex;
     }
 
-    function mixChoice(palette, distance, r, g, b) {
-        var bestNearest = nearestIndex(palette, distance, r, g, b);
-        var best = {
-            a: bestNearest,
-            b: bestNearest,
-            ratio: 0,
-            distance: Infinity
-        };
-        var target = { r: r, g: g, b: b };
+    function setResultFromIndex(palette, index, result) {
+        result.index = index;
+        result.r = palette.red[index];
+        result.g = palette.green[index];
+        result.b = palette.blue[index];
+        return result;
+    }
 
+    function thresholdOffset(threshold, thresholdScale) {
+        var cutoff = Number.isFinite(threshold) ? threshold : 0.5;
+        var scale = Number.isFinite(thresholdScale) ? thresholdScale : 0;
+        return (cutoff - 0.5) * scale;
+    }
+
+    function createPairCache(palette) {
+        var pairs = [];
         for (var a = 0; a < palette.length; a += 1) {
-            for (var bIndex = a + 1; bIndex < palette.length; bIndex += 1) {
-                var ar = palette.red[a];
-                var ag = palette.green[a];
-                var ab = palette.blue[a];
-                var br = palette.red[bIndex];
-                var bg = palette.green[bIndex];
-                var bb = palette.blue[bIndex];
-                var vr = br - ar;
-                var vg = bg - ag;
-                var vb = bb - ab;
+            for (var b = a + 1; b < palette.length; b += 1) {
+                var vr = palette.red[b] - palette.red[a];
+                var vg = palette.green[b] - palette.green[a];
+                var vb = palette.blue[b] - palette.blue[a];
                 var lengthSq = vr * vr + vg * vg + vb * vb;
                 if (!lengthSq) {
                     continue;
                 }
-                var ratio = ((r - ar) * vr + (g - ag) * vg + (b - ab) * vb) / lengthSq;
-                ratio = Math.max(0, Math.min(1, ratio));
-                var mixed = {
-                    r: ar + vr * ratio,
-                    g: ag + vg * ratio,
-                    b: ab + vb * ratio
-                };
-                var current = distance(target, mixed);
-                if (current < best.distance) {
-                    best.a = a;
-                    best.b = bIndex;
-                    best.ratio = ratio;
-                    best.distance = current;
-                }
+                pairs.push({
+                    a: a,
+                    b: b,
+                    vr: vr,
+                    vg: vg,
+                    vb: vb,
+                    invLengthSq: 1 / lengthSq
+                });
+            }
+        }
+        return pairs;
+    }
+
+    function mixChoice(palette, distance, pairs, r, g, b, choice) {
+        var bestNearest = nearestIndex(palette, distance, r, g, b);
+        choice.a = bestNearest;
+        choice.b = bestNearest;
+        choice.ratio = 0;
+        choice.distance = Infinity;
+
+        for (var i = 0; i < pairs.length; i += 1) {
+            var pair = pairs[i];
+            var ar = palette.red[pair.a];
+            var ag = palette.green[pair.a];
+            var ab = palette.blue[pair.a];
+            var ratio = ((r - ar) * pair.vr + (g - ag) * pair.vg + (b - ab) * pair.vb)
+                * pair.invLengthSq;
+            ratio = Math.max(0, Math.min(1, ratio));
+            var mixedR = ar + pair.vr * ratio;
+            var mixedG = ag + pair.vg * ratio;
+            var mixedB = ab + pair.vb * ratio;
+            var current = distance.rgb(r, g, b, mixedR, mixedG, mixedB);
+            if (current < choice.distance) {
+                choice.a = pair.a;
+                choice.b = pair.b;
+                choice.ratio = ratio;
+                choice.distance = current;
             }
         }
 
-        return best;
+        return choice;
     }
 
-    function topCandidateIndexes(palette, distance, r, g, b, limit) {
-        var target = { r: r, g: g, b: b };
-        var candidates = [];
+    function topCandidateIndexes(palette, distance, r, g, b, indexes, scores) {
+        var count = 0;
         for (var i = 0; i < palette.length; i += 1) {
-            var score = distance(target, colorFromIndex(palette, i));
-            candidates.push({ index: i, score: score });
+            var score = distance.rgb(r, g, b, palette.red[i], palette.green[i], palette.blue[i]);
+            var insertAt = count;
+            while (insertAt > 0 && score < scores[insertAt - 1]) {
+                if (insertAt < indexes.length) {
+                    indexes[insertAt] = indexes[insertAt - 1];
+                    scores[insertAt] = scores[insertAt - 1];
+                }
+                insertAt -= 1;
+            }
+            if (insertAt < indexes.length) {
+                indexes[insertAt] = i;
+                scores[insertAt] = score;
+            }
+            count = Math.min(indexes.length, count + 1);
         }
-        candidates.sort(function (a, b) {
-            return a.score - b.score;
-        });
-        return candidates.slice(0, Math.min(limit, candidates.length)).map(function (candidate) {
-            return candidate.index;
-        });
+        return count;
     }
 
-    function barycentricWeights(palette, a, bIndex, c, r, g, b) {
+    function barycentricWeights(palette, a, bIndex, c, r, g, b, weights) {
         var ar = palette.red[a];
         var ag = palette.green[a];
         var ab = palette.blue[a];
@@ -134,7 +221,7 @@
         var denom = d00 * d11 - d01 * d01;
 
         if (Math.abs(denom) < 0.000001) {
-            return null;
+            return false;
         }
 
         var second = (d11 * d20 - d01 * d21) / denom;
@@ -145,111 +232,142 @@
         third = Math.max(0, third);
         var total = first + second + third;
         if (!total) {
-            return null;
+            return false;
         }
-        return [first / total, second / total, third / total];
+        weights[0] = first / total;
+        weights[1] = second / total;
+        weights[2] = third / total;
+        return true;
     }
 
-    function triChoice(palette, distance, r, g, b) {
-        var candidates = topCandidateIndexes(palette, distance, r, g, b, 6);
-        var target = { r: r, g: g, b: b };
-        var nearest = candidates[0] || 0;
-        var best = {
-            indexes: [nearest, nearest, nearest],
-            weights: [1, 0, 0],
-            distance: Infinity
-        };
+    function triChoice(palette, distance, r, g, b, buffers) {
+        var count = topCandidateIndexes(
+            palette,
+            distance,
+            r,
+            g,
+            b,
+            buffers.candidateIndexes,
+            buffers.candidateScores
+        );
+        var nearest = buffers.candidateIndexes[0] || 0;
+        buffers.choiceIndexes[0] = nearest;
+        buffers.choiceIndexes[1] = nearest;
+        buffers.choiceIndexes[2] = nearest;
+        buffers.choiceWeights[0] = 1;
+        buffers.choiceWeights[1] = 0;
+        buffers.choiceWeights[2] = 0;
+        buffers.choiceDistance = Infinity;
 
-        for (var i = 0; i < candidates.length - 2; i += 1) {
-            for (var j = i + 1; j < candidates.length - 1; j += 1) {
-                for (var k = j + 1; k < candidates.length; k += 1) {
-                    var a = candidates[i];
-                    var bIndex = candidates[j];
-                    var c = candidates[k];
-                    var weights = barycentricWeights(palette, a, bIndex, c, r, g, b);
-                    if (!weights) {
+        for (var i = 0; i < count - 2; i += 1) {
+            for (var j = i + 1; j < count - 1; j += 1) {
+                for (var k = j + 1; k < count; k += 1) {
+                    var a = buffers.candidateIndexes[i];
+                    var bIndex = buffers.candidateIndexes[j];
+                    var c = buffers.candidateIndexes[k];
+                    if (!barycentricWeights(palette, a, bIndex, c, r, g, b, buffers.weights)) {
                         continue;
                     }
-                    var mixed = {
-                        r: palette.red[a] * weights[0]
-                            + palette.red[bIndex] * weights[1]
-                            + palette.red[c] * weights[2],
-                        g: palette.green[a] * weights[0]
-                            + palette.green[bIndex] * weights[1]
-                            + palette.green[c] * weights[2],
-                        b: palette.blue[a] * weights[0]
-                            + palette.blue[bIndex] * weights[1]
-                            + palette.blue[c] * weights[2]
-                    };
-                    var current = distance(target, mixed);
-                    if (current < best.distance) {
-                        best.indexes = [a, bIndex, c];
-                        best.weights = weights;
-                        best.distance = current;
+                    var mixedR = palette.red[a] * buffers.weights[0]
+                        + palette.red[bIndex] * buffers.weights[1]
+                        + palette.red[c] * buffers.weights[2];
+                    var mixedG = palette.green[a] * buffers.weights[0]
+                        + palette.green[bIndex] * buffers.weights[1]
+                        + palette.green[c] * buffers.weights[2];
+                    var mixedB = palette.blue[a] * buffers.weights[0]
+                        + palette.blue[bIndex] * buffers.weights[1]
+                        + palette.blue[c] * buffers.weights[2];
+                    var current = distance.rgb(r, g, b, mixedR, mixedG, mixedB);
+                    if (current < buffers.choiceDistance) {
+                        buffers.choiceIndexes[0] = a;
+                        buffers.choiceIndexes[1] = bIndex;
+                        buffers.choiceIndexes[2] = c;
+                        buffers.choiceWeights[0] = buffers.weights[0];
+                        buffers.choiceWeights[1] = buffers.weights[1];
+                        buffers.choiceWeights[2] = buffers.weights[2];
+                        buffers.choiceDistance = current;
                     }
                 }
             }
         }
 
-        return best;
+        return buffers;
     }
 
-    function colorFromIndex(palette, index) {
-        return {
-            r: palette.red[index],
-            g: palette.green[index],
-            b: palette.blue[index]
-        };
-    }
-
-    function createNearestMapper(palette, colorDistance) {
-        var nearestColor = app.core.paletteUtils.createNearestColorFinder(palette.source, colorDistance);
+    function createNearestMapper(palette, distance) {
+        var result = { index: 0, r: 0, g: 0, b: 0 };
         return {
             id: 'nearest-color',
+            palette: palette,
+            length: palette.length,
             mapColor: function mapColor(r, g, b) {
-                return nearestColor({ r: r, g: g, b: b });
+                return setResultFromIndex(palette, nearestIndex(palette, distance, r, g, b), result);
+            },
+            mapThresholdColor: function mapThresholdColor(r, g, b, threshold, thresholdScale) {
+                var amount = thresholdOffset(threshold, thresholdScale);
+                return this.mapColor(r + amount, g + amount, b + amount);
             }
         };
     }
 
-    function createPairMixMapper(palette, colorDistance) {
-        var distance = app.core.paletteUtils.createColorDistanceMeasurer(colorDistance);
+    function createPairMixMapper(palette, distance) {
+        var pairs = createPairCache(palette);
+        var result = { index: 0, r: 0, g: 0, b: 0 };
+        var choice = { a: 0, b: 0, ratio: 0, distance: Infinity };
         return {
             id: 'pair-mix',
+            palette: palette,
+            length: palette.length,
             mapColor: function mapColor(r, g, b, threshold) {
-                var choice = mixChoice(palette, distance, r, g, b);
+                mixChoice(palette, distance, pairs, r, g, b, choice);
                 var cutoff = Number.isFinite(threshold) ? threshold : 0.5;
-                return colorFromIndex(palette, choice.ratio > cutoff ? choice.b : choice.a);
+                return setResultFromIndex(palette, choice.ratio > cutoff ? choice.b : choice.a, result);
+            },
+            mapThresholdColor: function mapThresholdColor(r, g, b, threshold) {
+                return this.mapColor(r, g, b, threshold);
             }
         };
     }
 
-    function createTriMixMapper(palette, colorDistance) {
-        var distance = app.core.paletteUtils.createColorDistanceMeasurer(colorDistance);
+    function createTriMixMapper(palette, distance) {
+        var result = { index: 0, r: 0, g: 0, b: 0 };
+        var buffers = {
+            candidateIndexes: new Array(6),
+            candidateScores: new Array(6),
+            weights: [0, 0, 0],
+            choiceIndexes: [0, 0, 0],
+            choiceWeights: [1, 0, 0],
+            choiceDistance: Infinity
+        };
         return {
             id: 'tri-mix',
+            palette: palette,
+            length: palette.length,
             mapColor: function mapColor(r, g, b, threshold) {
-                var choice = triChoice(palette, distance, r, g, b);
+                triChoice(palette, distance, r, g, b, buffers);
                 var cutoff = Number.isFinite(threshold) ? threshold : null;
-                var selected = choice.indexes[0];
+                var selected = buffers.choiceIndexes[0];
 
                 if (cutoff !== null) {
-                    if (cutoff > choice.weights[0] + choice.weights[1]) {
-                        selected = choice.indexes[2];
-                    } else if (cutoff > choice.weights[0]) {
-                        selected = choice.indexes[1];
+                    if (cutoff > buffers.choiceWeights[0] + buffers.choiceWeights[1]) {
+                        selected = buffers.choiceIndexes[2];
+                    } else if (cutoff > buffers.choiceWeights[0]) {
+                        selected = buffers.choiceIndexes[1];
                     }
                 } else {
-                    var bestWeight = choice.weights[0];
-                    for (var i = 1; i < choice.weights.length; i += 1) {
-                        if (choice.weights[i] > bestWeight) {
-                            bestWeight = choice.weights[i];
-                            selected = choice.indexes[i];
+                    var bestWeight = buffers.choiceWeights[0];
+                    for (var i = 1; i < buffers.choiceWeights.length; i += 1) {
+                        if (buffers.choiceWeights[i] > bestWeight) {
+                            bestWeight = buffers.choiceWeights[i];
+                            selected = buffers.choiceIndexes[i];
                         }
                     }
                 }
 
-                return colorFromIndex(palette, selected);
+                return setResultFromIndex(palette, selected, result);
+            },
+            mapThresholdColor: function mapThresholdColor(r, g, b, threshold) {
+                return this.mapColor(r, g, b, threshold);
             }
         };
     }
@@ -258,15 +376,15 @@
         normalizeId: normalizeId,
         createMapper: function createMapper(options) {
             var palette = normalizedPalette(options && options.palette);
-            var colorDistance = options && options.colorDistance;
+            var distance = createDistanceContext(options && options.colorDistance);
             var id = normalizeId(options && options.paletteMapping);
             if (id === 'pair-mix' && palette.length >= 2) {
-                return createPairMixMapper(palette, colorDistance);
+                return createPairMixMapper(palette, distance);
             }
             if (id === 'tri-mix' && palette.length >= 3) {
-                return createTriMixMapper(palette, colorDistance);
+                return createTriMixMapper(palette, distance);
             }
-            return createNearestMapper(palette, colorDistance);
+            return createNearestMapper(palette, distance);
         }
     };
 })(window.DitherApp);
