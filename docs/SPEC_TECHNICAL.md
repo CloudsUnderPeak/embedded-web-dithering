@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-19
+Last Updated: 2026-06-20
 Split From: SPEC_INDEX.md
 ```
 
@@ -29,6 +29,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-13: `viewport-renderer.js` 改為 buffer 組幀後提交可見 canvas；首次進入 `edit` 且 result 尚未完成時保留上一個 preview frame。
 - 2026-06-13: preview frame fit 改用 preview stage content-box 尺寸，避免 border-box 導致 prepare / edit 之間出現微小對齊差。
 - 2026-06-13: Demo data asset 改為按下 Load Demo 時才載入；動態 script loader 改為同批並行下載、依插入順序執行。
+- 2026-06-20: Demo 圖以 `assets/demo/demo-16x9.png` 作為 server 模式來源；`assets/demo/demo-16x9-data.js` 僅作為 `file://` fallback，並由工具產生。
 - 2026-06-13: `edit` 的 Original preview 改為使用 `prepare` group operations 產生的 `preparedImageData`，不直接顯示 raw source。
 - 2026-06-13: Palette 預設維持 Original；Dither 預設改為 Floyd-Steinberg error diffusion 且 Serpentine 關閉，Dither 啟用時 Palette 不先量化像素。
 - 2026-06-13: Original palette 萃取改為使用明暗錨點、灰階錨點、高飽和色相分區與加權填補，避免純頻率排序漏掉視覺重要色。
@@ -1586,7 +1587,7 @@ accept="image/png,image/jpeg,image/webp"
 
 禁止讓 `SVG`、遠端圖片 URL 或可引用外部資源的圖片進入 canvas 後再呼叫 `getImageData()`，因為它們可能造成 canvas taint。若 `getImageData()` 仍遇到 `SecurityError`，必須轉成使用者可理解的錯誤訊息，不能讓瀏覽器原始例外直接漏到 UI。
 
-內建 demo 應保留來源圖片於 `assets/demo/*`，並提供由該圖片產生的 JS data asset，例如 `assets/demo/demo-16x9-data.js`。JS data asset 不應阻塞首頁初載，應在使用者按下 Load Demo 時才透過 classic script lazy load；Standalone `file://` 模式必須優先從 JS data asset 載入 demo，再轉成 `Blob -> createImageBitmap -> ImageData`。不可在 `file://` 下直接把相對路徑圖片畫進 canvas 後呼叫 `getImageData()`，否則瀏覽器可能因 origin 規則造成 canvas taint。
+內建 demo 的來源圖片應保留為 `assets/demo/demo-16x9.png`。Server/GitHub Pages 情境應直接以 `fetch()` 取得同源 PNG blob，再轉成 `Blob -> createImageBitmap -> ImageData`，不需要轉換。Standalone `file://` 模式若因瀏覽器 origin 規則無法讀取 PNG pixels，才 fallback 到 `assets/demo/demo-16x9-data.js`。該 data asset 必須由 `tools/generate-demo-data.py` 從 `assets/demo/demo-16x9.png` 產生，不應手動編輯；替換 demo PNG 後，只有需要支援 `file://` Load Demo 時才必須重新產生。
 
 ## 圖片尺寸與效能策略
 

@@ -12,7 +12,7 @@
     var SUPPORTED_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];
     var UNSUPPORTED_FORMAT_MESSAGE = 'Only PNG, JPEG, and WebP images are supported.';
 
-    // 以 HTMLImageElement 載入 URL，保留給 data URL 或 blob URL fallback 使用。
+    // 以 HTMLImageElement 載入 URL，保留給本機 demo 或 blob URL fallback 使用。
     function loadImageFromUrl(url) {
         return new Promise(function (resolve, reject) {
             var image = new Image();
@@ -71,7 +71,7 @@
     // 優先使用 createImageBitmap，因為它通常不會造成 file:// demo 的 canvas taint。
     function blobToImageData(blob, maxLongEdge) {
         if (window.createImageBitmap) {
-            // createImageBitmap 先由瀏覽器解碼 Blob，通常比直接 <img src=objectURL> 更不容易遇到 file:// taint。
+            // createImageBitmap 先由瀏覽器解碼 Blob，通常比直接 <img src=objectURL> 更不容易遇到 canvas taint。
             return createImageBitmap(blob)
                 .then(function (bitmap) {
                     return imageBitmapToImageData(bitmap, maxLongEdge);
@@ -83,28 +83,26 @@
         return blobUrlToImageData(blob, maxLongEdge);
     }
 
-    // 載入內嵌 demo data URL；先嘗試 fetch 成 blob，再 fallback 到 ImageElement。
-    function loadDataUrlImage(dataUrl, maxLongEdge) {
-        if (window.fetch) {
-            // Demo 在 standalone file:// 下優先走 JS data asset，再轉 Blob/ImageBitmap，
-            // 避免相對路徑圖片直接 drawImage 後污染 canvas。
-            return fetch(dataUrl)
-                .then(function (response) {
-                    return response.blob();
-                })
-                .then(function (blob) {
-                    return blobToImageData(blob, maxLongEdge);
-                })
-                .catch(function () {
-                    return loadImageFromUrl(dataUrl)
-                        .then(function (image) {
-                            return app.core.canvasUtils.imageToImageData(image, maxLongEdge);
-                        });
-                });
-        }
-        return loadImageFromUrl(dataUrl)
+    function imageUrlToImageData(url, maxLongEdge) {
+        return loadImageFromUrl(url)
             .then(function (image) {
                 return app.core.canvasUtils.imageToImageData(image, maxLongEdge);
+            });
+    }
+
+    function loadDataUrlImage(dataUrl, maxLongEdge) {
+        if (!window.fetch) {
+            return imageUrlToImageData(dataUrl, maxLongEdge);
+        }
+        return fetch(dataUrl)
+            .then(function (response) {
+                return response.blob();
+            })
+            .then(function (blob) {
+                return blobToImageData(blob, maxLongEdge);
+            })
+            .catch(function () {
+                return imageUrlToImageData(dataUrl, maxLongEdge);
             });
     }
 
@@ -119,10 +117,26 @@
         return blobToImageData(file, maxLongEdge);
     }
 
+    function loadGeneratedDemoImage(maxLongEdge) {
+        if (!app.app || !app.app.scriptLoader || !app.app.scriptLoader.load) {
+            return Promise.reject(new Error('Demo image could not be loaded.'));
+        }
+        return app.app.scriptLoader.load(DEMO_IMAGE_DATA_SCRIPT)
+            .then(function () {
+                var embeddedDemo = app.assets
+                    && app.assets.demoImages
+                    && app.assets.demoImages.demo16x9;
+                if (!embeddedDemo) {
+                    throw new Error('Demo image data asset is missing.');
+                }
+                return loadDataUrlImage(embeddedDemo, maxLongEdge);
+            });
+    }
+
     function loadDemoImageFile(maxLongEdge) {
-        // 若 data asset 未載入，才退回同源 demo 檔；開發伺服器情境可用，file:// 可能被擋。
+        // Server/GitHub Pages 情境直接讀 PNG；file:// 若被擋，外層會 fallback 到 data asset。
         if (!window.fetch) {
-            return Promise.reject(new Error('Demo image data asset is missing.'));
+            return imageUrlToImageData(DEMO_IMAGE_URL, maxLongEdge);
         }
         return fetch(DEMO_IMAGE_URL)
             .then(function (response) {
@@ -133,31 +147,18 @@
             })
             .then(function (blob) {
                 return blobToImageData(blob, maxLongEdge);
+            })
+            .catch(function () {
+                return imageUrlToImageData(DEMO_IMAGE_URL, maxLongEdge);
             });
     }
 
-    // 載入專案內建 demo 圖；優先使用 data asset 避免 file:// 跨來源限制。
+    // 載入專案內建 demo 圖。
     function loadDemoImage(maxLongEdge) {
-        var embeddedDemo = app.assets && app.assets.demoImages && app.assets.demoImages.demo16x9;
-        if (embeddedDemo) {
-            return loadDataUrlImage(embeddedDemo, maxLongEdge);
-        }
-        if (app.app && app.app.scriptLoader && app.app.scriptLoader.load) {
-            return app.app.scriptLoader.load(DEMO_IMAGE_DATA_SCRIPT)
-                .then(function () {
-                    var loadedDemo = app.assets
-                        && app.assets.demoImages
-                        && app.assets.demoImages.demo16x9;
-                    if (!loadedDemo) {
-                        throw new Error('Demo image data asset is missing.');
-                    }
-                    return loadDataUrlImage(loadedDemo, maxLongEdge);
-                })
-                .catch(function () {
-                    return loadDemoImageFile(maxLongEdge);
-                });
-        }
-        return loadDemoImageFile(maxLongEdge);
+        return loadDemoImageFile(maxLongEdge)
+            .catch(function () {
+                return loadGeneratedDemoImage(maxLongEdge);
+            });
     }
 
     // 建立白底空白 ImageData；目前 UI 不直接暴露 blank canvas 建立入口。

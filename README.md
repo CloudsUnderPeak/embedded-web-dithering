@@ -6,9 +6,17 @@ Embedded Web Dithering is an image dithering tool you can use directly in the br
 
 ## Try It Online
 
-Live app: `https://cloudsunderpeak.github.io/embedded-web-dithering/`
+Live app: [https://cloudsunderpeak.github.io/embedded-web-dithering/](https://cloudsunderpeak.github.io/embedded-web-dithering/)
 
 You can also download the project and open `index.html` locally.
+
+## Replace the Demo Image
+
+Replace `assets/demo/demo-16x9.png` to change the bundled demo image. Server/GitHub Pages loads the PNG directly and does not need conversion. If you need Load Demo to work when opening `index.html` directly with `file://`, regenerate `assets/demo/demo-16x9-data.js` after replacing the PNG:
+
+```bash
+python3 tools/generate-demo-data.py
+```
 
 ## Why This Project
 
