@@ -68,6 +68,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-19: Dither 設定新增 Palette Mapping，支援 Nearest Color 與 Pair Mix；Dither Algorithm 選單只保留分布演算法。
 - 2026-06-19: Edit Result preview 的計時 label 改為正式繪製開始時顯示 Rendering，繪製完成後顯示耗時，依設定延遲自動隱藏並等待下一次繪製再出現。
 - 2026-06-19: Edit Result preview 的計時 label 自動隱藏時，不應關閉或重置使用者正在操作的面板表單。
+- 2026-06-22: Edit Result preview 縮小顯示時改用正常 canvas 重採樣，不使用 pixelated 硬縮放，避免 dither 細點在預覽中產生與匯出 PNG 明顯不同的 alias 視覺。
 
 ## 產品目標
 
@@ -539,6 +540,8 @@ Crop preview 要求：
 slider 控制的填色與 thumb、Toggle Switch 的啟用狀態必須使用較淡的 control accent 主題色，不使用瀏覽器預設藍色。
 
 Edit Result preview 應在圖片右下角顯示正式 preview 狀態：繪製開始時顯示 Rendering，繪製完成後顯示最近一次正式 preview 完成耗時，並依設定延遲自動隱藏。空狀態、prepare crop preview、Original view，或全域顯示開關關閉時，不顯示此計時 label。此 label 只描述目前繪製在 preview canvas 上、使用者可見的 Result 圖片。計時 label 自動隱藏不可關閉、重置或打斷使用者正在操作的其他 panel form。
+
+Edit Result preview 為了放入 preview stage 而縮小顯示時，應使用正常重採樣呈現 canvas，不使用 pixelated 硬縮放。Dither 結果包含大量單像素點陣，硬縮放會產生 alias / moire，使網頁預覽看起來比實際匯出的 PNG 更髒或顏色偏移。
 
 主要狀態：
 

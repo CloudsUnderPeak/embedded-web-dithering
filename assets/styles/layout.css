@@ -212,7 +212,7 @@
     max-height: calc(100vh - 190px);
     border-radius: 4px;
     box-shadow: 0 18px 44px var(--color-shadow-strong);
-    image-rendering: pixelated;
+    image-rendering: auto;
 }
 
 .preview-stage.is-sized-preview canvas,
