@@ -1,8 +1,8 @@
 (function (app) {
     // 圖片載入入口：所有使用者圖片都必須先通過格式 gate，再轉成 origin-clean ImageData。
     // 只允許 PNG / JPEG / WebP，是為了讓後續 canvas 演算法流程穩定可預期。
-    var DEMO_IMAGE_URL = 'assets/demo/demo-16x9.png';
-    var DEMO_IMAGE_DATA_SCRIPT = 'assets/demo/demo-16x9-data.js';
+    var DEMO_IMAGE_MANIFEST_SCRIPT = 'assets/demo/demo-manifest.js';
+    var DEMO_IMAGE_DATA_SCRIPT = 'assets/demo/demo-data.js';
     var ACCEPTED_IMAGE_TYPES = 'image/png,image/jpeg,image/webp';
     var SUPPORTED_IMAGE_TYPES = {
         'image/png': true,
@@ -117,28 +117,41 @@
         return blobToImageData(file, maxLongEdge);
     }
 
-    function loadGeneratedDemoImage(maxLongEdge) {
+    function loadDemoManifest() {
         if (!app.app || !app.app.scriptLoader || !app.app.scriptLoader.load) {
             return Promise.reject(new Error('Demo image could not be loaded.'));
         }
-        return app.app.scriptLoader.load(DEMO_IMAGE_DATA_SCRIPT)
+        return app.app.scriptLoader.load(DEMO_IMAGE_MANIFEST_SCRIPT)
             .then(function () {
-                var embeddedDemo = app.assets
-                    && app.assets.demoImages
-                    && app.assets.demoImages.demo16x9;
-                if (!embeddedDemo) {
-                    throw new Error('Demo image data asset is missing.');
+                var demoImage = app.assets && app.assets.demoImage;
+                if (!demoImage || !demoImage.url || !demoImage.fileName) {
+                    throw new Error('Demo image manifest is missing.');
                 }
-                return loadDataUrlImage(embeddedDemo, maxLongEdge);
+                return demoImage;
             });
     }
 
-    function loadDemoImageFile(maxLongEdge) {
-        // Server/GitHub Pages 情境直接讀 PNG；file:// 若被擋，外層會 fallback 到 data asset。
-        if (!window.fetch) {
-            return imageUrlToImageData(DEMO_IMAGE_URL, maxLongEdge);
+    function loadGeneratedDemoImage(demoImage, maxLongEdge) {
+        var dataScript = demoImage.dataScript || DEMO_IMAGE_DATA_SCRIPT;
+        if (!app.app || !app.app.scriptLoader || !app.app.scriptLoader.load) {
+            return Promise.reject(new Error('Demo image could not be loaded.'));
         }
-        return fetch(DEMO_IMAGE_URL)
+        return app.app.scriptLoader.load(dataScript)
+            .then(function () {
+                var embeddedDemo = app.assets && app.assets.demoImageData;
+                if (!embeddedDemo || !embeddedDemo.dataUrl) {
+                    throw new Error('Demo image data asset is missing.');
+                }
+                return loadDataUrlImage(embeddedDemo.dataUrl, maxLongEdge);
+            });
+    }
+
+    function loadDemoImageFile(demoImage, maxLongEdge) {
+        // Server/GitHub Pages 情境直接讀 source image；file:// 若被擋，外層會 fallback 到 data asset。
+        if (!window.fetch) {
+            return imageUrlToImageData(demoImage.url, maxLongEdge);
+        }
+        return fetch(demoImage.url)
             .then(function (response) {
                 if (!response.ok) {
                     throw new Error('Demo image could not be loaded.');
@@ -149,15 +162,22 @@
                 return blobToImageData(blob, maxLongEdge);
             })
             .catch(function () {
-                return imageUrlToImageData(DEMO_IMAGE_URL, maxLongEdge);
+                return imageUrlToImageData(demoImage.url, maxLongEdge);
             });
     }
 
     // 載入專案內建 demo 圖。
     function loadDemoImage(maxLongEdge) {
-        return loadDemoImageFile(maxLongEdge)
-            .catch(function () {
-                return loadGeneratedDemoImage(maxLongEdge);
+        return loadDemoManifest()
+            .then(function (demoImage) {
+                return loadDemoImageFile(demoImage, maxLongEdge)
+                    .catch(function () {
+                        return loadGeneratedDemoImage(demoImage, maxLongEdge);
+                    })
+                    .then(function (result) {
+                        result.fileName = demoImage.fileName;
+                        return result;
+                    });
             });
     }
 

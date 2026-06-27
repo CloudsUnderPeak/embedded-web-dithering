@@ -44,7 +44,7 @@ These tools are for local agent workflows. They should help future changes produ
 - `tools/build/`
   - Use this when producing the optional static release output.
   - Primary purpose: copy server/device static app files to a timestamped folder under ignored `build/`, optionally minify HTML/CSS/JS/SVG, and optionally replace output files with gzip-only `.gz` versions.
-  - Build output is for HTTP server/device serving, not `file://`; exclude `assets/demo/demo-16x9-data.js` from build output.
+  - Build output is for HTTP server/device serving, not `file://`; exclude generated demo data fallback files such as `assets/demo/demo-data.js` from build output.
   - Minify and gzip replacement are enabled by default. Use `--no-minify` or `--no-gzip` only when the task explicitly needs raw output or normal files.
   - Prefer the runner:
 
@@ -56,8 +56,8 @@ These tools are for local agent workflows. They should help future changes produ
   - `make build` is the convenience entrypoint for minify plus gzip-only output. `make minify` runs minify only. `make gzip` copies raw files and keeps only gzip versions.
 
 - `tools/generate-demo-data/`
-  - Use this after replacing `assets/demo/demo-16x9.png` when `file://` Load Demo fallback support is needed.
-  - Primary purpose: regenerate `assets/demo/demo-16x9-data.js` from the bundled PNG.
+  - Use this after replacing the single supported image in `assets/demo/` when demo metadata or `file://` Load Demo fallback support is needed.
+  - Primary purpose: auto-detect the only supported demo image in `assets/demo/`, then regenerate `assets/demo/demo-manifest.js` and `assets/demo/demo-data.js`.
   - Prefer the runner:
 
     ```bash

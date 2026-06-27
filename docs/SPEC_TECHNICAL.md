@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-27
+Last Updated: 2026-06-28
 Split From: SPEC_INDEX.md
 ```
 
@@ -29,8 +29,9 @@ Split From: SPEC_INDEX.md
 - 2026-06-13: `viewport-renderer.js` 改為 buffer 組幀後提交可見 canvas；首次進入 `edit` 且 result 尚未完成時保留上一個 preview frame。
 - 2026-06-13: preview frame fit 改用 preview stage content-box 尺寸，避免 border-box 導致 prepare / edit 之間出現微小對齊差。
 - 2026-06-13: Demo data asset 改為按下 Load Demo 時才載入；動態 script loader 改為同批並行下載、依插入順序執行。
-- 2026-06-20: Demo 圖以 `assets/demo/demo-16x9.png` 作為 server 模式來源；`assets/demo/demo-16x9-data.js` 僅作為 `file://` fallback，並由工具產生。
-- 2026-06-27: 新增選用的 Python/Make 發佈 build，輸出 ignored `build/` 底下的時間戳子資料夾，只做 server/device 靜態檔案複製、minify 與 gzip-only 輸出；minify / gzip 預設啟用並可用 CLI 參數關閉。build 產物不支援 `file://` fallback，必須排除 `assets/demo/demo-16x9-data.js`。原始專案仍不可依賴 build step、npm 或 bundler 才能使用。`tools/` 底下工具必須放在各自子資料夾，以 `run.py` 作為主要 CLI 入口。
+- 2026-06-20: Demo 圖以專案內 `assets/demo/` 圖片作為 server 模式來源；demo data asset 僅作為 `file://` fallback，並由工具產生。
+- 2026-06-27: 新增選用的 Python/Make 發佈 build，輸出 ignored `build/` 底下的時間戳子資料夾，只做 server/device 靜態檔案複製、minify 與 gzip-only 輸出；minify / gzip 預設啟用並可用 CLI 參數關閉。build 產物不支援 `file://` fallback，必須排除 generated demo data fallback。原始專案仍不可依賴 build step、npm 或 bundler 才能使用。`tools/` 底下工具必須放在各自子資料夾，以 `run.py` 作為主要 CLI 入口。
+- 2026-06-28: `tools/generate-demo-data/run.py` 改為自動偵測 `assets/demo/` 內唯一支援格式 demo 圖，產生固定入口 `assets/demo/demo-manifest.js` 與 `assets/demo/demo-data.js`；runtime 不可硬綁 demo 圖檔名或 16:9 比例。
 - 2026-06-13: `edit` 的 Original preview 改為使用 `prepare` group operations 產生的 `preparedImageData`，不直接顯示 raw source。
 - 2026-06-13: Palette 預設維持 Original；Dither 預設改為 Floyd-Steinberg error diffusion 且 Serpentine 關閉，Dither 啟用時 Palette 不先量化像素。
 - 2026-06-13: Original palette 萃取改為使用明暗錨點、灰階錨點、高飽和色相分區與加權填補，避免純頻率排序漏掉視覺重要色。
@@ -1588,7 +1589,9 @@ accept="image/png,image/jpeg,image/webp"
 
 禁止讓 `SVG`、遠端圖片 URL 或可引用外部資源的圖片進入 canvas 後再呼叫 `getImageData()`，因為它們可能造成 canvas taint。若 `getImageData()` 仍遇到 `SecurityError`，必須轉成使用者可理解的錯誤訊息，不能讓瀏覽器原始例外直接漏到 UI。
 
-內建 demo 的來源圖片應保留為 `assets/demo/demo-16x9.png`。Server/GitHub Pages 情境應直接以 `fetch()` 取得同源 PNG blob，再轉成 `Blob -> createImageBitmap -> ImageData`，不需要轉換。Standalone `file://` 模式若因瀏覽器 origin 規則無法讀取 PNG pixels，才 fallback 到 `assets/demo/demo-16x9-data.js`。該 data asset 必須由 `tools/generate-demo-data/run.py` 從 `assets/demo/demo-16x9.png` 產生，不應手動編輯；替換 demo PNG 後，只有需要支援 `file://` Load Demo 時才必須重新產生。Server/device build 產物不支援 `file://`，必須排除 `assets/demo/demo-16x9-data.js`。
+內建 demo 的來源圖片由 `tools/generate-demo-data/run.py` 掃描 `assets/demo/` 決定。該目錄根層必須剛好有一張支援格式圖片作為 demo source；支援 `.png`、`.jpg`、`.jpeg`、`.webp`，副檔名大小寫不敏感，且不要求固定檔名或 16:9 比例。若找不到候選圖或找到多張候選圖，工具必須報錯並要求使用者保留剛好一張 demo source，避免靜默選錯圖。
+
+`tools/generate-demo-data/run.py` 必須產生固定入口 `assets/demo/demo-manifest.js` 與 `assets/demo/demo-data.js`。Manifest 記錄實際 demo 檔名、同源 URL 與 fallback data script；runtime Load Demo 必須先載入 manifest，再於 Server/GitHub Pages 情境以 `fetch()` 取得同源圖片 blob，轉成 `Blob -> createImageBitmap -> ImageData`。Standalone `file://` 模式若因瀏覽器 origin 規則無法讀取 source image pixels，才 fallback 到 `assets/demo/demo-data.js` 的 data URL。Generated manifest/data 不應手動編輯；替換、重新命名或改變 demo source 後，應重新執行 `python3 tools/generate-demo-data/run.py`。Server/device build 產物不支援 `file://`，必須排除 generated demo data fallback，但保留 manifest 與 source image，讓 server/device runtime 仍可讀取 demo。
 
 ## 圖片尺寸與效能策略
 

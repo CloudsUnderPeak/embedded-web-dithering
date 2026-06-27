@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-19
+Last Updated: 2026-06-28
 Split From: SPEC_INDEX.md
 ```
 
@@ -70,6 +70,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-19: Edit Result preview 的計時 label 自動隱藏時，不應關閉或重置使用者正在操作的面板表單。
 - 2026-06-22: Edit Result preview 縮小顯示時改用正常 canvas 重採樣，不使用 pixelated 硬縮放，避免 dither 細點在預覽中產生與匯出 PNG 明顯不同的 alias 視覺。
 - 2026-06-27: MVP 儲存範圍收斂為 Web Setting theme 跨重新整理保存；Dither Editor 工作圖片與 pipeline/settings 不做跨重新整理或關閉瀏覽器後的持久化，只在同一次 SPA 頁面切換期間保留 session 狀態。
+- 2026-06-28: 內建 demo 圖改為由 `assets/demo/` 中唯一支援格式圖片決定，不要求檔名或 16:9 比例；替換 demo 後須重新產生 demo metadata/fallback。
 
 ## 產品目標
 
@@ -360,7 +361,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 - MVP 匯入格式只支援 `PNG`、`JPEG/JPG`、`WebP`。
 - 不支援 `SVG`、`GIF`、`AVIF`、`HEIC/HEIF`、`RAW`、`PSD`、`TIFF`、`BMP` 等格式進入演算法流程。
 - 不支援格式必須在進入 canvas / pipeline 前被拒絕，並顯示明確錯誤。
-- demo 必須來自專案內 `assets/demo/*` 圖片資源，不可依賴遠端 URL，也不可在 runtime 由程式臨時產生假 demo。
+- demo 必須來自專案內 `assets/demo/*` 的單一支援格式圖片資源，不可依賴遠端 URL，也不可在 runtime 由程式臨時產生假 demo；demo 圖檔名稱與比例不應被固定為特定值。
 - Image Input panel 在任何流程下都不應顯示獨立的 Choose Image row 或 panel Drop Zone；無來源圖片時的主要上傳入口必須集中在畫布中央。
 - 不接受遠端圖片 URL 作為 MVP 輸入來源。
 

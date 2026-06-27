@@ -8,15 +8,19 @@ from datetime import datetime
 import gzip
 import re
 import shutil
+import sys
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tools" / "shared"))
+
+from demo_assets import generated_demo_data_paths  # noqa: E402
+
+
 DEFAULT_OUTPUT = ROOT / "build"
 COPY_PATHS = ("index.html", "assets", "src", "LICENSE")
-EXCLUDE_PATHS = {
-    Path("assets/demo/demo-16x9-data.js"),
-}
+EXCLUDE_PATHS = generated_demo_data_paths()
 MINIFY_SUFFIXES = {".html", ".css", ".js", ".svg"}
 
 

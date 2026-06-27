@@ -12,11 +12,13 @@ You can also download the project and open `index.html` locally.
 
 ## Replace the Demo Image
 
-Replace `assets/demo/demo-16x9.png` to change the bundled demo image. Server/GitHub Pages loads the PNG directly and does not need conversion. If you need Load Demo to work when opening `index.html` directly with `file://`, regenerate `assets/demo/demo-16x9-data.js` after replacing the PNG:
+Put exactly one supported image file in `assets/demo/` to change the bundled demo image. PNG, JPEG/JPG, and WebP are supported, and the image does not need to be 16:9. After replacing or renaming the image, regenerate the demo metadata and `file://` fallback:
 
 ```bash
 python3 tools/generate-demo-data/run.py
 ```
+
+Server/GitHub Pages loads the selected image directly. The generated `assets/demo/demo-data.js` fallback is only needed when opening `index.html` directly with `file://`.
 
 ## Why This Project
 

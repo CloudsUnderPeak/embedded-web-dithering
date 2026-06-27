@@ -84,7 +84,7 @@
         return app.core.imageLoader
             .loadDemoImage(max)
             .then(function (result) {
-                self.loadResult(result, 'demo-16x9.png');
+                self.loadResult(result, result.fileName || 'Demo image');
             })
             .catch(function (error) {
                 self.state.status = 'error';
