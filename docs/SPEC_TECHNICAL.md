@@ -11,7 +11,7 @@ Split From: SPEC_INDEX.md
 
 ## History
 
-- 2026-05-16: 定調目前專案版本為 `0.1.0`；此版本號與 storage / document `schemaVersion` 分開管理。
+- 2026-05-16: 定調目前專案版本為 `0.1.0`；此版本號與 localStorage `schemaVersion` 分開管理。
 - 2026-05-16: 新增 `editor-mode-state-machine.js` 與 editor `mode` 狀態，集中管理 `empty`、`crop`、`edit` 轉換；重新載入圖片或 demo 時 controller 必須重建 default editor state，避免沿用上一張圖的演算法設定。
 - 2026-05-16: 明確規範 Crop mode 不執行正式 preview pipeline，非允許工具與 action 必須由 controller guard；preview toolbar 必須由 mode 決定顯示列，未啟用列要真正 hidden，且各模式 toolbar 按鈕尺寸一致。
 - 2026-05-21: Empty 模式的 upload/drop affordance 由 `page.js` 掛在 preview stage 中央，支援 hidden file input 的 Browse File 與 drop event；Image Input panel 不應顯示 Choose/Drop controls，empty canvas placeholder 必須隱藏。
@@ -82,6 +82,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-19: 新增 `threshold-dither-processor.js` 作為 WebGL threshold dither fast path；Ordered / Dot Halftone 類在 Nearest Color 與 Pair Mix mapping 可走 GPU，Tri Mix 或 WebGL 不可用時保留 CPU fallback。
 - 2026-06-19: Tri Mix CPU hot path 預先列出 top-6 candidate 的三色組合並攤平 barycentric loop；不得改 top candidate 數量、組合順序、權重 clamp/normalize 或 threshold 選色規則。
 - 2026-06-19: 新增共用 Palette Mapping 層，支援 Nearest Color 與 Pair Mix；Algorithm metadata 不再註冊 Pair Mix 組合項。
+- 2026-06-27: MVP 移除未完成的 IndexedDB workspace 持久化路徑；`settings-store.js` 只透過 localStorage 保存 app shell preference/theme，Dither Editor 工作圖片與 pipeline/settings 僅透過 page module in-memory cache 在同一次 SPA 頁面切換期間保留。
 
 ## Plug-and-Play 架構要求
 
@@ -146,7 +147,6 @@ window.DitherApp.pages = window.DitherApp.pages || {};
 - `DragEvent`
 - `PointerEvent`
 - `localStorage`
-- `IndexedDB`
 - `Web Worker`，第二階段後再加入
 
 ## 頁面切換架構
@@ -372,7 +372,6 @@ embedded-web-dithering/
       storage/
         storage-keys.js
         settings-store.js
-        document-store.js
       image/
         image-loader.js
         image-document.js
@@ -618,7 +617,7 @@ const editorState = {
 - Dither Editor 頁面在 app menu 切到 `Web Setting`、`About`、`Help` 或其他頁面再切回來時，必須保留 editor state、圖片與目前 preview。此保留屬於頁面模組層級的 in-memory state cache，不是 IndexedDB 持久化。
 - `page.js` 在 `unmount()` 時應保存目前 `controller.state`；下次 `mount()` 時應把保存的 state 以 `initialState` 傳回 controller。第一次進入 Dither Editor 且沒有 cached state 時，必須停在 `source` group 且沒有來源圖片，不可自動建立 `New Image`。
 - 若切頁時狀態停在 `loading-image`、`processing-preview` 或 `exporting` 這類 transient status，回到 Dither Editor 時應正規化或重新排 preview，避免畫面卡在不可完成的中間狀態。
-- 載入舊文件時，已不存在的 feature settings 不可讓頁面 crash；應由 migration 忽略、保留到 unknown 區，或交給對應 feature 處理。
+- 若未來重新加入 workspace 持久化並需要載入舊文件，已不存在的 feature settings 不可讓頁面 crash；應由 migration 忽略、保留到 unknown 區，或交給對應 feature 處理。
 
 ### Editor Mode State Machine
 
@@ -648,12 +647,11 @@ Groups：
 - 非目前模式的 preview toolbar row 必須使用 `hidden` 真正移出 layout，不可只做 disabled 或透明處理。
 - `edit` 的 Original / Result buttons 必須共用固定尺寸設定；`prepare` 的 Crop zoom `+` / `-` buttons 使用 compact square size，OK button 使用 primary action size。
 
-`schemaVersion` 必須同步用於 `settings-store.js` 與 `document-store.js`。讀取儲存資料時：
+`schemaVersion` 必須用於 `settings-store.js` 的 localStorage 資料。讀取儲存資料時：
 
 - schemaVersion 相同：正常載入。
-- schemaVersion 較舊：執行 migration。
-- schemaVersion 不存在或 migration 失敗：回退到 default editor state，並提示使用者建立新工作區。
-- schemaVersion 較新：不嘗試讀取，提示使用者此資料來自較新版工具。
+- schemaVersion 不存在、不相同或解析失敗：回退到 default app shell preference。
+- Dither Editor 工作圖片與 pipeline/settings 不從 localStorage 或 IndexedDB 還原。
 
 ## Preset 與演算法擴充
 
@@ -909,7 +907,7 @@ pipeline 順序也必須由 enabled features 的 `pipelineStage` 與 `pipelineOr
 
 ### Feature Migration
 
-儲存文件載入時，migration 可以分兩層：
+若未來重新加入 workspace 持久化，migration 可以分兩層：
 
 - 全域 migration 負責 `schemaVersion` 與 state shape。
 - feature migration 負責該 feature 自己的 settings。
@@ -1345,7 +1343,7 @@ function runPipeline(sourceImageData, state) {
 
 規則：
 
-- Stage Cache 只保存 in-memory `ImageData`，不可寫入 localStorage、IndexedDB 或 document data。
+- Stage Cache 只保存 in-memory `ImageData`，不可寫入 localStorage、IndexedDB 或其他 browser storage。
 - controller 擁有單一 Stage Cache，`runPreview()`、`updatePreparedPreview()` 與 live preview base 可共用；換新圖、重建 state 或 `destroy()` 時必須清空。
 - Stage Cache 必須有固定容量上限，避免大圖連續設定變更時無限制保留 `ImageData`。
 - 預設 cache key 只包含 operation 自己的 settings；若 operation 讀取其他 feature state 或 pipeline enabled 狀態，該 operation 必須提供 `cacheKey()`。例如 `Palette` 會讀取 Dither 啟用狀態與 Dither settings，因此必須把這些值納入額外 cache key。
@@ -1714,19 +1712,20 @@ const DEFAULT_TRANSPARENT_BACKGROUND = {
 
 ## 儲存策略
 
-使用者設定與圖片工作區都要保存。
+MVP 只持久化 app shell preference。Dither Editor 工作圖片、pipeline 與 feature settings 不做跨重新整理或關閉瀏覽器後的持久化。
 
-這一節處理「重新整理頁面或關閉瀏覽器後仍要還原」的持久化；Menu 切頁後回到 Dither Editor 的短期保留，應由 Dither Editor page module 的 in-memory state cache 處理，不應依賴每次切頁都讀寫 IndexedDB。
+這一節處理 browser storage 邊界；Menu 切頁後回到 Dither Editor 的短期保留，應由 Dither Editor page module 的 in-memory state cache 處理，不依賴 localStorage 或 IndexedDB。
 
 儲存方式：
 
-- `localStorage`：保存 Web Setting、theme、language、defaultPipeline 這類輕量設定，讓下次重新打開瀏覽器頁面時仍遵照設定。
-- `IndexedDB`：保存圖片工作區與較大的資料。
+- `localStorage`：保存 Web Setting / app shell preference，目前只有 theme 需要跨重新整理保留。
 - `cookie`：現階段不使用。未來若加入後端登入、session 或伺服器需要讀取的狀態，再另行導入。
+- `IndexedDB`：MVP 不使用。未來若重新加入 workspace restore，必須先補完整 source image persistence 與 load flow，再更新本 spec。
 
 現階段決策：
 - Web Setting 與 app shell preference 只使用 `localStorage`，不使用 cookie。
-- 圖片、workspace、canvas 相關大型資料只使用 `IndexedDB`，不塞進 `localStorage`。
+- Dither Editor 的圖片、workspace、canvas、pipeline settings 與 feature settings 不寫入 localStorage、IndexedDB 或 cookie。
+- 同一次 SPA session 的 Dither Editor 狀態保留只靠 `pages/dither-editor/page.js` 的 module-level in-memory `cachedState`。
 - cookie 不作為設定 fallback，避免同一份設定有兩個來源造成維護混亂。
 - 未來加入後端登入時，cookie 只處理登入/session/server-readable state，不接管目前的 local app settings。
 
@@ -1737,89 +1736,30 @@ const SETTINGS_STORAGE_KEY = 'dither-app:settings:v1';
 
 const settingsValue = {
     schemaVersion: 1,
-    language: 'en',
     theme: 'light',
-    lastDocumentId: 'current',
-    lastDemoPreset: null,
-    defaultPipeline: {
-        effectsOrder: ['adjust', 'palette', 'dither'],
-        enabled: {},
-    },
-    defaultSettings: {},
-};
-```
-
-### IndexedDB schema
-
-```js
-const DB_NAME = 'DitherAppDB';
-const DB_VERSION = 1;
-
-const DOCUMENT_STORE = 'documents';
-```
-
-Object store:
-
-```text
-documents
-  keyPath: id
-```
-
-Current document key:
-
-```js
-const CURRENT_DOCUMENT_ID = 'current';
-```
-
-Document value:
-
-```js
-const documentValue = {
-    id: 'current',
-    schemaVersion: 1,
-    name: 'Untitled',
-    createdAt: 0,
-    updatedAt: 0,
-    sourceBlob: null,
-    sourceMimeType: 'image/png',
-    originalSize: {
-        width: 0,
-        height: 0,
-    },
-    workingSize: {
-        width: 800,
-        height: 480,
-    },
-    pipeline: {
-        fixedBefore: ['crop', 'resize'],
-        effectsOrder: ['adjust', 'palette', 'dither'],
-        fixedAfter: ['export'],
-        enabled: {},
-    },
-    settings: {},
 };
 ```
 
 儲存規則：
 
-- 使用者圖片以 `Blob` 保存，不保存 base64。
+- 使用者圖片不做 browser storage 持久化。
 - 不保存 preview `ImageData`。
 - 不保存每一步 operation 的中間結果。
-- `sourceBlob` 保存縮小後的工作圖來源，不保存原始超大圖。
-- document load 時必須檢查 `schemaVersion`。
-- IndexedDB 開啟失敗或 quota exceeded 時，功能仍可繼續編輯，但要提示使用者目前無法保存工作區。
+- 不保存縮小後的工作圖來源。
+- localStorage load 時必須檢查 `schemaVersion`。
+- localStorage 開啟或寫入失敗時，功能仍可繼續編輯，但 theme 可能無法跨重新整理保留。
 
 需要保存：
 
-- pipeline effects order。
-- operation enabled 狀態。
-- crop / resize / adjust / palette / dither / export settings；crop settings 需包含 `flipX` / `flipY`，讓頁面切換、重新整理或工作區載入後能維持翻轉狀態。
-- 最近使用的 demo preset。
-- 使用者目前的工作圖片。
-- 最近一次輸出相關設定。
+- Web Setting theme。
+- 同一次 SPA 頁面切換返回 Dither Editor 所需的 in-memory editor state、工作圖片與目前 preview。
 
 不需要保存：
 
+- pipeline effects order、operation enabled 狀態或 feature settings 的跨重新整理持久化。
+- 使用者目前工作圖片的跨重新整理持久化。
+- 最近使用的 demo preset。
+- 最近一次輸出相關設定。
 - undo / redo history，MVP 可不保存。
 - 每次 preview 的中間結果。
 

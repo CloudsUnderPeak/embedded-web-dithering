@@ -402,7 +402,6 @@
             this.state.outputImageData = this.state.previewImageData;
             this.state.status = 'preview-ready';
             this.runFeatureHook('onAfterPreview', {});
-            this.saveWorkspace();
             this.schedulePreviewTimingHide();
         } catch (error) {
             this.state.status = 'error';
@@ -442,31 +441,6 @@
                 self.state.error = error.message;
                 self.render(self.state);
             });
-    };
-
-    // 儲存輕量 workspace 狀態，供離開頁面再回來時恢復設定。
-    DitherEditorController.prototype.saveWorkspace = function saveWorkspace() {
-        var state = this.state;
-        // settingsStore 保存輕量偏好；documentStore 保存目前工作區 metadata/settings。
-        // 目前不保存 ImageData 本體，避免 localStorage/IndexedDB 負擔失控。
-        app.core.settingsStore.save({
-            language: 'en',
-            theme: app.app.state.theme || 'light',
-            lastDocumentId: app.core.storageKeys.currentDocumentId,
-            defaultPipeline: {
-                effectsOrder: state.pipeline.effectsOrder,
-                enabled: state.pipeline.enabled
-            },
-            defaultSettings: state.settings
-        });
-        app.core.documentStore.saveCurrent({
-            name: state.fileName,
-            updatedAt: Date.now(),
-            originalSize: state.originalSize,
-            workingSize: state.workingSize,
-            pipeline: state.pipeline,
-            settings: state.settings
-        }).catch(function () {});
     };
 
     // 頁面卸載時清掉 timer/frame，避免背景頁面繼續更新。

@@ -947,47 +947,6 @@ body.is-sorting * {
     pointer-events: none;
 }
 
-.dropzone {
-    display: grid;
-    place-items: center;
-    min-height: 92px;
-    padding: 16px;
-    border: 1px dashed var(--color-border-heavy);
-    border-radius: 8px;
-    color: var(--color-text-soft);
-    background: var(--color-surface-muted);
-    text-align: center;
-}
-
-.dropzone.is-over {
-    border-color: var(--color-accent);
-    background: var(--color-accent-soft);
-}
-
-.pipeline-list {
-    display: grid;
-    gap: 8px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.pipeline-item {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 8px;
-    align-items: center;
-    min-height: 40px;
-    padding: 7px 8px;
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-    background: var(--color-surface);
-}
-
-.pipeline-handle {
-    color: var(--color-muted);
-}
-
 .export-action {
     display: grid;
     margin-top: 2px;
@@ -1117,12 +1076,6 @@ body.is-sorting * {
     display: none;
 }
 
-.metric-strip {
-    display: none;
-    color: var(--color-text-soft);
-    font-size: 13px;
-}
-
 .app-menu {
     position: fixed;
     top: 56px;
@@ -1152,11 +1105,6 @@ body.is-sorting * {
 
 .app-menu button:hover {
     background: var(--color-surface-hover);
-}
-
-.notice {
-    color: var(--color-muted);
-    font-size: 13px;
 }
 
 .error-text {

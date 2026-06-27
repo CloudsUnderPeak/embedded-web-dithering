@@ -8,8 +8,7 @@
 
     // 持久化 theme 偏好；失敗時不阻斷 UI，因為主功能仍可使用。
     function saveTheme(theme) {
-        var current = app.core.settingsStore.load() || {};
-        app.core.settingsStore.save(Object.assign({}, current, { theme: theme }));
+        app.core.settingsStore.save({ theme: theme });
     }
 
     // 套用 theme 到 state 與 body attribute，必要時同步寫入 localStorage。

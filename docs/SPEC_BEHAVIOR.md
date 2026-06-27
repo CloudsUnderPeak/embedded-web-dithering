@@ -69,6 +69,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-19: Edit Result preview 的計時 label 改為正式繪製開始時顯示 Rendering，繪製完成後顯示耗時，依設定延遲自動隱藏並等待下一次繪製再出現。
 - 2026-06-19: Edit Result preview 的計時 label 自動隱藏時，不應關閉或重置使用者正在操作的面板表單。
 - 2026-06-22: Edit Result preview 縮小顯示時改用正常 canvas 重採樣，不使用 pixelated 硬縮放，避免 dither 細點在預覽中產生與匯出 PNG 明顯不同的 alias 視覺。
+- 2026-06-27: MVP 儲存範圍收斂為 Web Setting theme 跨重新整理保存；Dither Editor 工作圖片與 pipeline/settings 不做跨重新整理或關閉瀏覽器後的持久化，只在同一次 SPA 頁面切換期間保留 session 狀態。
 
 ## 產品目標
 
@@ -565,14 +566,14 @@ Edit Result preview 為了放入 preview stage 而縮小顯示時，應使用正
 
 MVP 應保存：
 
-- pipeline effects order。
-- operation enabled 狀態。
-- crop / resize / adjust / palette / dither / export settings。
-- 使用者選擇的 demo preset 或目前工作圖片狀態。
-- 頁面切換後返回 Dither Editor 所需的 session 狀態。
+- Web Setting theme，重新整理或下次重新打開瀏覽器頁面後仍保留。
+- 同一次 SPA session 內，從 Dither Editor 切到 Web Setting / Help / About 再返回時所需的 editor state、工作圖片與目前 preview。
 
 MVP 不要求：
 
+- 重新整理頁面或關閉瀏覽器後還原 Dither Editor 工作圖片。
+- 重新整理頁面或關閉瀏覽器後還原 crop / resize / adjust / palette / dither / export settings。
+- 跨 browser session 保存 pipeline effects order 或 operation enabled 狀態。
 - 完整 undo / redo history。
 - 每一次 preview 的歷史版本。
 
@@ -607,8 +608,9 @@ MVP 驗收重點：
 - resize 輸出尺寸符合設定。
 - 透明像素會以白色背景合成。
 - 超過最大尺寸的圖片會先縮小再進入編輯流程。
-- 設定與工作圖片可保存並重新載入。
-- schemaVersion 不符時會 fallback 或 migration，不會造成 runtime crash。
+- Web Setting theme 可保存並在重新整理後套用。
+- Dither Editor 工作圖片與設定在同一次 SPA 頁面切換返回時保留。
+- localStorage schemaVersion 不符時會 fallback，不會造成 runtime crash。
 - export PNG 可以產生 Blob。
 
 ## 里程碑
@@ -740,6 +742,6 @@ Reviewer 應確認：
 - Effects order 改變後會重新產生結果。
 - Crop overlay 在桌面與手機版都穩定。
 - Pipeline 失敗時會停止並呈現錯誤。
-- 設定與 session 狀態保存符合預期。
+- Web Setting theme 與 Dither Editor 頁面切換 session 狀態保存符合預期。
 - UI 文字集中管理。
 - ESP32 Device Mode 沒有混入 MVP 主要流程。

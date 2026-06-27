@@ -1,6 +1,6 @@
 (function (app) {
-    // localStorage 只保存輕量 app preference / default settings。
-    // 圖片與大型工作區資料交給 document-store，不塞進 localStorage。
+    // localStorage 只保存輕量 app preference。
+    // 圖片、canvas 與 Dither Editor workspace 不做跨重新整理持久化。
     // 解析 localStorage JSON，並確認 schema key 相符。
     function parseSettings(raw, keys) {
         if (!raw) {
