@@ -5,6 +5,7 @@
     var MIN_RESIZE_SIZE = 1;
     var constants = app.pages.ditherEditor.constants || {};
     var MAX_RESIZE_SIZE = constants.MAX_RESIZE_OUTPUT_SIZE || 4096;
+    var panelRefs = null;
 
     function clampSize(value, maxSize) {
         maxSize = maxSize || MAX_RESIZE_SIZE;
@@ -90,6 +91,20 @@
         });
     }
 
+    function updatePanel(state) {
+        if (!panelRefs || !state.settings || !state.settings.resize) {
+            return;
+        }
+        var resize = state.settings.resize;
+        resize.aspectRatio = normalizedRatio(resize.aspectRatio || ratioFromSize(resize.width, resize.height));
+        var maxWidth = widthLimit(resize.aspectRatio);
+        var maxHeight = heightLimit(resize.aspectRatio);
+        panelRefs.width.setRange(MIN_RESIZE_SIZE, maxWidth);
+        panelRefs.height.setRange(MIN_RESIZE_SIZE, maxHeight);
+        panelRefs.width.setValue(resize.width);
+        panelRefs.height.setValue(resize.height);
+    }
+
     app.pages.ditherEditor.featureRegistry.register({
         id: 'resize',
         icon: '<>',
@@ -125,6 +140,9 @@
             );
             Object.assign(context.state.settings.resize, next);
         },
+        onRender: function onRender(context) {
+            updatePanel(context.state);
+        },
         // 建立等比鎖定的 resize 寬高控制。
         buildPanel: function buildPanel(context) {
             var state = context.state;
@@ -153,6 +171,10 @@
                 heightInput.setValue(next.height, true);
                 controller.updateSettings('resize', next);
             });
+            panelRefs = {
+                width: widthInput,
+                height: heightInput
+            };
             return ui.section('panelResize', [
                 app.utils.dom.el('div', {
                     className: 'resize-size-row',

@@ -32,6 +32,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-20: Demo 圖以專案內 `assets/demo/` 圖片作為 server 模式來源；demo data asset 僅作為 `file://` fallback，並由工具產生。
 - 2026-06-27: 新增選用的 Python/Make 發佈 build，輸出 ignored `build/` 底下的時間戳子資料夾，只做 server/device 靜態檔案複製、minify 與 gzip-only 輸出；minify / gzip 預設啟用並可用 CLI 參數關閉。build 產物不支援 `file://` fallback，必須排除 generated demo data fallback。原始專案仍不可依賴 build step、npm 或 bundler 才能使用。`tools/` 底下工具必須放在各自子資料夾，以 `run.py` 作為主要 CLI 入口。
 - 2026-06-28: `tools/generate-demo-data/run.py` 改為自動偵測 `assets/demo/` 內唯一支援格式 demo 圖，產生固定入口 `assets/demo/demo-manifest.js` 與 `assets/demo/demo-data.js`；runtime 不可硬綁 demo 圖檔名或 16:9 比例。
+- 2026-06-28: Resize feature 必須在 render 後同步 width / height controls，確保 Crop ratio 變更後隱藏過的 Resize panel 不顯示舊尺寸。
 - 2026-06-13: `edit` 的 Original preview 改為使用 `prepare` group operations 產生的 `preparedImageData`，不直接顯示 raw source。
 - 2026-06-13: Palette 預設維持 Original；Dither 預設改為 Floyd-Steinberg error diffusion 且 Serpentine 關閉，Dither 啟用時 Palette 不先量化像素。
 - 2026-06-13: Original palette 萃取改為使用明暗錨點、灰階錨點、高飽和色相分區與加權填補，避免純頻率排序漏掉視覺重要色。
@@ -1286,8 +1287,10 @@ Resize feature 固定維持等比 resize，不提供 Fit / Stretch / Contain / C
 - 使用者調整 `width` 時，`height` 必須立即依 `aspectRatio` 更新。
 - 使用者調整 `height` 時，`width` 必須立即依 `aspectRatio` 更新。
 - Resize width / height controls 必須使用 `panelUtils.unitNumberInput(..., 'px', ...)`，以和 Crop zoom / rotation 共用數字輸入樣式與長按 stepper 行為。
+- `panelUtils.unitNumberInput` 必須提供可由 feature 更新的 value 與 range，讓不重建 panel 的 render cycle 仍可同步最新 constraints。
 - 等比換算若會讓另一邊超過 `MAX_RESIZE_OUTPUT_SIZE`，正在調整的尺寸也必須 clamp 到可維持比例的最大值。
 - Crop ratio 改變時，Resize 應以目前 resize width 為錨點更新 `aspectRatio` 與對應 height，避免 pipeline 把 crop 結果拉伸成不同輸出比例。
+- Resize feature 必須在 `onRender` 將最新 `settings.resize.width` / `height` 與 ratio 對應的合法範圍同步回既有 DOM controls，避免 panel 被隱藏後重新打開時顯示舊值。
 
 ### Adjust Controls
 

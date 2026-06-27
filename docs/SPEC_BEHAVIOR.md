@@ -71,6 +71,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-22: Edit Result preview 縮小顯示時改用正常 canvas 重採樣，不使用 pixelated 硬縮放，避免 dither 細點在預覽中產生與匯出 PNG 明顯不同的 alias 視覺。
 - 2026-06-27: MVP 儲存範圍收斂為 Web Setting theme 跨重新整理保存；Dither Editor 工作圖片與 pipeline/settings 不做跨重新整理或關閉瀏覽器後的持久化，只在同一次 SPA 頁面切換期間保留 session 狀態。
 - 2026-06-28: 內建 demo 圖改為由 `assets/demo/` 中唯一支援格式圖片決定，不要求檔名或 16:9 比例；替換 demo 後須重新產生 demo metadata/fallback。
+- 2026-06-28: 重新展開 Crop 並改變裁切比例後，Resize 的鎖定寬高必須同步反映新的 crop output ratio。
 
 ## 產品目標
 
@@ -204,6 +205,7 @@ Acceptance:
 
 - The user can set output width and output height.
 - Width and height stay locked to the same aspect ratio; changing either value updates the other immediately.
+- When the user reopens Crop after editing and changes the crop ratio, Resize width / height must update to the new crop output ratio before the user returns to Resize.
 - Width and height are shown on the same row.
 - Width and height show a linked-ratio indicator between the two controls.
 - Width and height use the same repeated-step unit-number input style as Crop zoom and rotation.
@@ -420,6 +422,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 
 - Width 與 Height 固定等比連動。
 - 使用者調整任一尺寸時，另一個尺寸必須立即依目前比例更新。
+- 使用者在 `edit` 重新展開 Crop 並改變 crop ratio 後，Resize 的 Width / Height 欄位必須同步更新到新的 crop output ratio。
 - Width 與 Height 必須顯示在同一列。
 - Width 與 Height 中間必須顯示等比連動提示圖示。
 - Width 與 Height 必須使用和 Crop zoom / rotation 一致的數字輸入樣式；按住上下箭頭時數值必須連續增減。

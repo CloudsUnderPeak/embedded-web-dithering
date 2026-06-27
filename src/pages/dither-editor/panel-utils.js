@@ -86,6 +86,14 @@
             }
         }
 
+        function setRange(nextMin, nextMax) {
+            min = Number(nextMin);
+            max = Number(nextMax);
+            input.min = min;
+            input.max = max;
+            setValue(currentValue);
+        }
+
         // 確認新值並通知呼叫端。
         function commit(nextValue) {
             setValue(nextValue, true);
@@ -167,6 +175,7 @@
         bindStep(decrease, -1);
 
         wrapper.setValue = setValue;
+        wrapper.setRange = setRange;
         return wrapper;
     }
 
