@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-20
+Last Updated: 2026-06-27
 Split From: SPEC_INDEX.md
 ```
 
@@ -30,6 +30,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-13: preview frame fit 改用 preview stage content-box 尺寸，避免 border-box 導致 prepare / edit 之間出現微小對齊差。
 - 2026-06-13: Demo data asset 改為按下 Load Demo 時才載入；動態 script loader 改為同批並行下載、依插入順序執行。
 - 2026-06-20: Demo 圖以 `assets/demo/demo-16x9.png` 作為 server 模式來源；`assets/demo/demo-16x9-data.js` 僅作為 `file://` fallback，並由工具產生。
+- 2026-06-27: 新增選用的 Python/Make 發佈 build，輸出 ignored `build/` 底下的時間戳子資料夾，只做 server/device 靜態檔案複製、minify 與 gzip-only 輸出；minify / gzip 預設啟用並可用 CLI 參數關閉。build 產物不支援 `file://` fallback，必須排除 `assets/demo/demo-16x9-data.js`。原始專案仍不可依賴 build step、npm 或 bundler 才能使用。`tools/` 底下工具必須放在各自子資料夾，以 `run.py` 作為主要 CLI 入口。
 - 2026-06-13: `edit` 的 Original preview 改為使用 `prepare` group operations 產生的 `preparedImageData`，不直接顯示 raw source。
 - 2026-06-13: Palette 預設維持 Original；Dither 預設改為 Floyd-Steinberg error diffusion 且 Serpentine 關閉，Dither 啟用時 Palette 不先量化像素。
 - 2026-06-13: Original palette 萃取改為使用明暗錨點、灰階錨點、高飽和色相分區與加權填補，避免純頻率排序漏掉視覺重要色。
@@ -118,7 +119,7 @@ HTML + CSS + classic JavaScript scripts + Canvas API
 - demo 圖片、圖示、字型、樣式都必須保留在專案內；demo 不可由 runtime 程式臨時產生。
 - 使用者必須能直接雙擊 `index.html` 使用，不可要求另外執行 `python -m http.server` 或其他本機指令。
 - 開發時可用 VS Code Live Server 預覽，但正式使用方式不能依賴 Live Server。
-- 完全不使用 build step；不可要求 npm install、npm run build 或 bundler。
+- 原始專案必須不依賴 build step；不可要求 npm install、npm run build 或 bundler 才能使用。可提供選用的 Python/Make 發佈 build，輸出到 ignored `build/` 底下的時間戳子資料夾，只做 server/device 靜態檔案複製、minify 與 gzip-only 輸出，不改變 runtime 載入架構。minify 與 gzip 預設都必須啟用，且必須能用 CLI 參數分別關閉；啟用 gzip 時，輸出資料夾內只保留 gzip 後的 `.gz` 檔，不保留同名未壓縮檔。同一秒內多次 build 不可覆蓋既有輸出。
 - MVP 以 Standalone Mode 為主；下一版可加入 ESP32 Device Mode。
 
 因為要支援直接雙擊 `index.html`，不要使用 JavaScript ES Modules 的 `import` / `export`。多檔案仍然可以拆分，但要用 classic `<script>` 依序載入，並透過單一 namespace 暴露模組。
@@ -534,7 +535,7 @@ const defaultDitherOptions = {
 
 ### Script 載入順序
 
-因為專案堅持無 build step 且要支援直接雙擊 `index.html`，`index.html` 必須用 deferred classic scripts 載入共用基礎檔與 page entries，讓瀏覽器可並行下載並仍依 HTML 順序執行。單一頁面內部需要的 scripts 不應攤平在 `index.html`，必須交給該頁的 `entry.js` 管理。
+因為原始專案必須支援直接雙擊 `index.html`，`index.html` 必須用 deferred classic scripts 載入共用基礎檔與 page entries，讓瀏覽器可並行下載並仍依 HTML 順序執行。單一頁面內部需要的 scripts 不應攤平在 `index.html`，必須交給該頁的 `entry.js` 管理。選用的發佈 build 不可 bundling 或改寫此載入模型。
 
 示意：
 
@@ -1589,7 +1590,7 @@ accept="image/png,image/jpeg,image/webp"
 
 禁止讓 `SVG`、遠端圖片 URL 或可引用外部資源的圖片進入 canvas 後再呼叫 `getImageData()`，因為它們可能造成 canvas taint。若 `getImageData()` 仍遇到 `SecurityError`，必須轉成使用者可理解的錯誤訊息，不能讓瀏覽器原始例外直接漏到 UI。
 
-內建 demo 的來源圖片應保留為 `assets/demo/demo-16x9.png`。Server/GitHub Pages 情境應直接以 `fetch()` 取得同源 PNG blob，再轉成 `Blob -> createImageBitmap -> ImageData`，不需要轉換。Standalone `file://` 模式若因瀏覽器 origin 規則無法讀取 PNG pixels，才 fallback 到 `assets/demo/demo-16x9-data.js`。該 data asset 必須由 `tools/generate-demo-data.py` 從 `assets/demo/demo-16x9.png` 產生，不應手動編輯；替換 demo PNG 後，只有需要支援 `file://` Load Demo 時才必須重新產生。
+內建 demo 的來源圖片應保留為 `assets/demo/demo-16x9.png`。Server/GitHub Pages 情境應直接以 `fetch()` 取得同源 PNG blob，再轉成 `Blob -> createImageBitmap -> ImageData`，不需要轉換。Standalone `file://` 模式若因瀏覽器 origin 規則無法讀取 PNG pixels，才 fallback 到 `assets/demo/demo-16x9-data.js`。該 data asset 必須由 `tools/generate-demo-data/run.py` 從 `assets/demo/demo-16x9.png` 產生，不應手動編輯；替換 demo PNG 後，只有需要支援 `file://` Load Demo 時才必須重新產生。Server/device build 產物不支援 `file://`，必須排除 `assets/demo/demo-16x9-data.js`。
 
 ## 圖片尺寸與效能策略
 

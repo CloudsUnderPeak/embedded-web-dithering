@@ -15,7 +15,7 @@ Embedded Web Dithering 是一個可直接在瀏覽器使用的圖片 dithering �
 替換 `assets/demo/demo-16x9.png` 即可更換內建 demo 圖。Server/GitHub Pages 會直接讀取 PNG，不需要轉換。只有直接用 `file://` 開啟 `index.html` 且要使用 Load Demo 時，才需要在替換 PNG 後重新產生 `assets/demo/demo-16x9-data.js`：
 
 ```bash
-python3 tools/generate-demo-data.py
+python3 tools/generate-demo-data/run.py
 ```
 
 ## 為什麼做這個專案

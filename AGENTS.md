@@ -39,6 +39,31 @@ Before changing requirements, specs, or behavior expectations, read `docs/SPEC_I
 
 These tools are for local agent workflows. They should help future changes produce evidence, but they are not product features.
 
+- All tools under `tools/` must live in a named subdirectory. Use `run.py` as the primary CLI entry when the tool is script-driven; do not add new one-off files directly under `tools/`.
+
+- `tools/build/`
+  - Use this when producing the optional static release output.
+  - Primary purpose: copy server/device static app files to a timestamped folder under ignored `build/`, optionally minify HTML/CSS/JS/SVG, and optionally replace output files with gzip-only `.gz` versions.
+  - Build output is for HTTP server/device serving, not `file://`; exclude `assets/demo/demo-16x9-data.js` from build output.
+  - Minify and gzip replacement are enabled by default. Use `--no-minify` or `--no-gzip` only when the task explicitly needs raw output or normal files.
+  - Prefer the runner:
+
+    ```bash
+    python3 tools/build/run.py
+    ```
+
+  - For repeated builds, keep each run in its generated timestamp folder, for example `build/20260627-143015/`. If multiple builds happen in the same second, the tool appends a numeric suffix.
+  - `make build` is the convenience entrypoint for minify plus gzip-only output. `make minify` runs minify only. `make gzip` copies raw files and keeps only gzip versions.
+
+- `tools/generate-demo-data/`
+  - Use this after replacing `assets/demo/demo-16x9.png` when `file://` Load Demo fallback support is needed.
+  - Primary purpose: regenerate `assets/demo/demo-16x9-data.js` from the bundled PNG.
+  - Prefer the runner:
+
+    ```bash
+    python3 tools/generate-demo-data/run.py
+    ```
+
 - `tools/dither-benchmark/`
   - Use this when changing dither algorithms, Palette Mapping, Color Distance, CPU hot paths, or GPU paths.
   - Primary purpose: collect before/after performance data and verify CPU/GPU output consistency with checksum.
@@ -63,9 +88,9 @@ These tools are for local agent workflows. They should help future changes produ
   - Use `--input` for a real source image, or omit it to generate a synthetic source.
   - Read `tools/dither-render/README.md` for supported options.
 
-- Both tools load browser-oriented project scripts through an internal HTML runner. Keep this design unless the dither core is intentionally refactored into a shared non-browser module.
+- The dither benchmark and render tools load browser-oriented project scripts through an internal HTML runner. Keep this design unless the dither core is intentionally refactored into a shared non-browser module.
 - Do not add hardcoded local absolute paths to these tools or their docs. Prefer CLI arguments, environment variables, PATH lookup, or documented relative paths.
-- These tools may use a headless browser, but they do not require starting a dev server.
+- The dither benchmark and render tools may use a headless browser, but they do not require starting a dev server.
 
 ## Think Before Coding
 
