@@ -72,6 +72,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-27: MVP 儲存範圍收斂為 Web Setting theme 跨重新整理保存；Dither Editor 工作圖片與 pipeline/settings 不做跨重新整理或關閉瀏覽器後的持久化，只在同一次 SPA 頁面切換期間保留 session 狀態。
 - 2026-06-28: 內建 demo 圖改為由 `assets/demo/` 中唯一支援格式圖片決定，不要求檔名或 16:9 比例；替換 demo 後須重新產生 demo metadata/fallback。
 - 2026-06-28: 重新展開 Crop 並改變裁切比例後，Resize 的鎖定寬高必須同步反映新的 crop output ratio。
+- 2026-06-28: Original palette 改為以 Crop/prepare 後的裁切範圍取樣，但 Resize 與 Original palette 只在 prepare 結束進入 edit 時重新計算，不在 Crop zoom/pan 操作中即時計算。
 
 ## 產品目標
 
@@ -460,7 +461,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 
 - Palette 預設為 Original。
 - Original palette 必須使用專案內 vendored RgbQuant 的代表色萃取流程，而不是手寫明暗錨點 heuristic。
-- Original palette 應以原始來源圖的區塊統計、hue retention 與 BT.709 euclidean 色距合併產生代表色。
+- Original palette 應以 Crop/prepare 後的裁切範圍做區塊統計、hue retention 與 BT.709 euclidean 色距合併產生代表色；使用者重新調整 Crop 後，Original 色票必須在離開 prepare 進入 edit 時重新萃取。
 - Original palette 的 Colors 預設為 8，可調範圍為 2 到 32；此控制位於 Preset 下方，且只在 Palette 為 Original 時顯示，並需保留上下調整按鈕前的緩衝區以降低窄螢幕誤點。
 - Original 不主動改變圖片。
 - 手動變更色票後，狀態切換為 Custom。

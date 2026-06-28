@@ -5,6 +5,7 @@
     var constants = app.pages.ditherEditor.constants;
     var ORIGINAL_PRESET_ID = 'original';
     var CUSTOM_PRESET_ID = 'custom';
+    var activePanelContext = null;
 
     function normalizeOriginalPaletteSize(value) {
         var size = Number(value);
@@ -75,14 +76,29 @@
         );
     }
 
-    // Original palette samples the loaded source image, not crop/resize/adjust output.
-    // 重新從來源圖片萃取 Original 色票。
+    function originalPaletteSource(state) {
+        if (!state.sourceImageData) {
+            return null;
+        }
+        return app.pages.ditherEditor.pipelineRunner.runPanelGroup(
+            state.sourceImageData,
+            state,
+            app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE
+        );
+    }
+
+    // Original palette samples the crop/prepare output before resize/adjust/dither.
+    // 重新從裁切後範圍萃取 Original 色票。
     function refreshOriginalPalette(state, imageData) {
+        var source = imageData || originalPaletteSource(state);
+        if (!source) {
+            return;
+        }
         state.settings.palette.originalPaletteSize = normalizeOriginalPaletteSize(
             state.settings.palette.originalPaletteSize
         );
         state.settings.palette.originalPalette = extractOriginalPalette(
-            imageData || state.sourceImageData,
+            source,
             state.settings.palette.originalPaletteSize
         );
     }
@@ -90,7 +106,19 @@
     // 面板打開時若尚未萃取色票，就補萃取一次。
     function ensureOriginalPalette(state) {
         if (!state.settings.palette.originalPalette || !state.settings.palette.originalPalette.length) {
-            refreshOriginalPalette(state, state.sourceImageData);
+            refreshOriginalPalette(state);
+        }
+    }
+
+    function syncOriginalPalettePanel(state) {
+        if (!activePanelContext || activePanelContext.state !== state) {
+            return;
+        }
+        if (activePanelContext.renderSwatches) {
+            activePanelContext.renderSwatches();
+        }
+        if (activePanelContext.updateOriginalControls) {
+            activePanelContext.updateOriginalControls();
         }
     }
 
@@ -233,10 +261,9 @@
                 originalPaletteSize: constants.DEFAULT_ORIGINAL_PALETTE_SIZE
             };
         },
-        // 新圖片載入後重新萃取 Original 色票，並同步給 dither。
+        // 新圖片載入後只重設 Original 狀態；prepare 結束時才萃取色票。
         onImageLoaded: function onImageLoaded(context) {
             var settings = context.state.settings.palette;
-            refreshOriginalPalette(context.state, context.result.imageData);
             if (normalizePresetId(settings.presetId) === ORIGINAL_PRESET_ID) {
                 settings.presetId = ORIGINAL_PRESET_ID;
                 settings.palette = null;
@@ -268,6 +295,14 @@
             context.state.settings.palette.palette = copyPalette(preset.colors);
             syncDitherPalette(context.state);
         },
+        onPrepareCommitted: function onPrepareCommitted(context) {
+            refreshOriginalPalette(context.state);
+            if (normalizePresetId(context.state.settings.palette.presetId) === ORIGINAL_PRESET_ID) {
+                context.state.settings.palette.palette = null;
+                syncDitherPalette(context.state);
+            }
+            syncOriginalPalettePanel(context.state);
+        },
         // 建立 palette 色票編輯器與 preset 下拉選單。
         buildPanel: function buildPanel(context) {
             var state = context.state;
@@ -293,6 +328,7 @@
                 renderSwatches: null,
                 updateOriginalControls: null
             };
+            activePanelContext = paletteContext;
             var originalSizeInput = ui.unitNumberInput(
                 state.settings.palette.originalPaletteSize,
                 constants.MIN_ORIGINAL_PALETTE_SIZE,
@@ -301,7 +337,7 @@
                 '',
                 function (value) {
                     state.settings.palette.originalPaletteSize = normalizeOriginalPaletteSize(value);
-                    refreshOriginalPalette(state, state.sourceImageData);
+                    refreshOriginalPalette(state);
                     syncDitherPalette(state);
                     paletteContext.renderSwatches();
                     controller.schedulePreview();

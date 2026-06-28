@@ -38,6 +38,7 @@
         app.pages.ditherEditor.editorModeStateMachine.enterPrepare(this.state);
         // 新圖載入後若有 prepare 入口就直接跳到 prepare；否則進入 edit 並排正式 preview。
         if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.EDIT) {
+            this.commitPrepareChanges();
             this.schedulePreview();
             return;
         }
@@ -121,7 +122,6 @@
         this.state.settings[group][key] = value;
         // previous 讓 feature 可以在 normalize 或 UI sync 時知道變更前狀態。
         this.runFeatureHook('onSettingChanged', { id: group, key: key, value: value, previous: previous }, { broadcast: true });
-        this.invalidatePreparedPreview(group);
         if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE) {
             this.state.status = 'ready';
             this.render(this.state);
@@ -138,7 +138,6 @@
         var previous = Object.assign({}, this.state.settings[group]);
         Object.assign(this.state.settings[group], values);
         this.runFeatureHook('onSettingChanged', { id: group, key: null, values: values, previous: previous }, { broadcast: true });
-        this.invalidatePreparedPreview(group);
         if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE) {
             this.state.status = 'ready';
             this.render(this.state);
@@ -222,11 +221,9 @@
         this.schedulePreview();
     };
 
-    DitherEditorController.prototype.invalidatePreparedPreview = function invalidatePreparedPreview(group) {
-        if (app.pages.ditherEditor.featureRegistry.panelGroupFor(group)
-            === app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE) {
-            this.state.preparedImageData = null;
-        }
+    DitherEditorController.prototype.commitPrepareChanges = function commitPrepareChanges() {
+        this.state.preparedImageData = null;
+        this.runFeatureHook('onPrepareCommitted', {}, { broadcast: true });
     };
 
     DitherEditorController.prototype.setPreviewTimingPhase = function setPreviewTimingPhase(phase, durationMs) {
@@ -306,6 +303,7 @@
         this.state.status = 'ready';
         app.pages.ditherEditor.editorModeStateMachine.enterPrepare(this.state);
         if (this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.EDIT) {
+            this.commitPrepareChanges();
             this.schedulePreview();
             return;
         }
@@ -329,6 +327,7 @@
         var wasPrepareMode = this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.PREPARE;
         app.pages.ditherEditor.editorModeStateMachine.openEditPanel(this.state, activeTool);
         if (wasPrepareMode && this.state.mode === app.pages.ditherEditor.editorModeStateMachine.groups.EDIT) {
+            this.commitPrepareChanges();
             this.schedulePreview();
             return;
         }
@@ -340,6 +339,7 @@
             return;
         }
         app.pages.ditherEditor.editorModeStateMachine.enterEdit(this.state);
+        this.commitPrepareChanges();
         this.schedulePreview();
     };
 

@@ -33,6 +33,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-27: 新增選用的 Python/Make 發佈 build，輸出 ignored `build/` 底下的時間戳子資料夾，只做 server/device 靜態檔案複製、minify 與 gzip-only 輸出；minify / gzip 預設啟用並可用 CLI 參數關閉。build 產物不支援 `file://` fallback，必須排除 generated demo data fallback。原始專案仍不可依賴 build step、npm 或 bundler 才能使用。`tools/` 底下工具必須放在各自子資料夾，以 `run.py` 作為主要 CLI 入口。
 - 2026-06-28: `tools/generate-demo-data/run.py` 改為自動偵測 `assets/demo/` 內唯一支援格式 demo 圖，產生固定入口 `assets/demo/demo-manifest.js` 與 `assets/demo/demo-data.js`；runtime 不可硬綁 demo 圖檔名或 16:9 比例。
 - 2026-06-28: Resize feature 必須在 render 後同步 width / height controls，確保 Crop ratio 變更後隱藏過的 Resize panel 不顯示舊尺寸。
+- 2026-06-28: Original palette 萃取來源改為 `prepare` group 輸出；Resize、Original palette 與 `preparedImageData` invalidation 必須延後到 prepare commit，不可在 Crop zoom/pan setting 熱路徑即時計算。
 - 2026-06-13: `edit` 的 Original preview 改為使用 `prepare` group operations 產生的 `preparedImageData`，不直接顯示 raw source。
 - 2026-06-13: Palette 預設維持 Original；Dither 預設改為 Floyd-Steinberg error diffusion 且 Serpentine 關閉，Dither 啟用時 Palette 不先量化像素。
 - 2026-06-13: Original palette 萃取改為使用明暗錨點、灰階錨點、高飽和色相分區與加權填補，避免純頻率排序漏掉視覺重要色。
@@ -699,10 +700,11 @@ Palette feature 必須把 preset 與使用者自訂色票分清楚：
 
 - 固定 preset 只來自 `palette-presets.js`。
 - MVP 內建 fixed presets 至少包含 `monochrome`、`game-boy`、`warm-ink`、`e6-color-epaper`；`e6-color-epaper` 使用黑、白、紅、黃、藍、綠六色色票。
-- `Original` 是 Palette 的預設選項，色票從載入時的原始 `sourceImageData` 萃取，不考慮 crop、resize、adjust 或其他 pipeline step。
+- `Original` 是 Palette 的預設選項，色票從 `sourceImageData` 跑過 `prepare` group 後的 ImageData 萃取，也就是 Crop 後的裁切範圍；不可包含 Resize、Adjust、Palette、Dither 或其他 edit / export pipeline step。
+- 離開 `prepare` 並進入 `edit` 時，Palette feature 必須重新跑 `prepare` group 取得最新裁切輸出再萃取 `originalPalette`；Crop zoom/pan 等 prepare setting 變更期間不可即時重算 Original palette。
 - `Original` palette 萃取必須透過 `rgbquant-adapter.js` 呼叫 vendored RgbQuant，設定使用 `colors: settings.originalPaletteSize`、`method: 2`、`boxSize: [8, 8]`、`boxPxls: 2`、`minHueCols: 2000` 與 `colorDist: 'euclidean'`。`ditherit-v2` options 雖包含 `initColors: 4096`，但 RgbQuant `method: 2` 的 `buildPal()` 實際使用完整 2D histogram，不以 `initColors` 截斷候選。
 - `originalPaletteSize` 預設為 `8`，允許範圍為 `2..32`，面板必須在 Preset row 下方用短寬度、靠左的 `unitNumberInput` 呈現 Colors；當 `presetId` 不是 `original` 時，此控制必須隱藏。此 unitless control 必須保留 input 與 stepper 之間的固定緩衝欄，避免窄螢幕調整上下值時誤點到數字輸入。
-- `Original` 只負責顯示原始圖片代表色並同步給 `Dither`，palette operation 不主動改變圖片。
+- `Original` 只負責顯示裁切範圍代表色並同步給 `Dither`，palette operation 不主動改變圖片。
 - `Custom` 只代表目前 settings 中的色票陣列，不應被加入 `palette-presets.js`。
 - 選擇固定 preset 時，feature 應複製 preset colors 到目前 settings，避免使用者後續編輯污染 config。
 - `Palette` 不提供 `Quantize` 開關；Dither 啟用且 Dither operation 未被停用時，palette operation 不先量化像素，只同步有效色票給 Dither。
@@ -1289,7 +1291,7 @@ Resize feature 固定維持等比 resize，不提供 Fit / Stretch / Contain / C
 - Resize width / height controls 必須使用 `panelUtils.unitNumberInput(..., 'px', ...)`，以和 Crop zoom / rotation 共用數字輸入樣式與長按 stepper 行為。
 - `panelUtils.unitNumberInput` 必須提供可由 feature 更新的 value 與 range，讓不重建 panel 的 render cycle 仍可同步最新 constraints。
 - 等比換算若會讓另一邊超過 `MAX_RESIZE_OUTPUT_SIZE`，正在調整的尺寸也必須 clamp 到可維持比例的最大值。
-- Crop ratio 改變時，Resize 應以目前 resize width 為錨點更新 `aspectRatio` 與對應 height，避免 pipeline 把 crop 結果拉伸成不同輸出比例。
+- Crop ratio 改變後，Resize 應在 prepare commit 時以目前 resize width 為錨點更新 `aspectRatio` 與對應 height，避免 pipeline 把 crop 結果拉伸成不同輸出比例；Crop zoom/pan 熱路徑不可即時觸發 Resize 重算。
 - Resize feature 必須在 `onRender` 將最新 `settings.resize.width` / `height` 與 ratio 對應的合法範圍同步回既有 DOM controls，避免 panel 被隱藏後重新打開時顯示舊值。
 
 ### Adjust Controls
@@ -1559,6 +1561,7 @@ const PREVIEW_TIMING_LABEL_HIDE_DELAY_MS = configuredDelayMs;
 - `viewport-renderer.js` 必須先把一般 preview 與 crop transformed preview 畫到 buffer canvas，再提交到可見 canvas，避免 resize canvas 時露出清空畫面。
 - `page.js` 在 `edit` result 第一次算完前不可用 `sourceImageData` 當 result fallback 畫面；應保留上一個可見 preview frame，直到 pipeline 結果完成。
 - `page.js` 在 `edit` 的 Original view 必須使用 `preparedImageData`；`preparedImageData` 由 `pipeline-runner.runPanelGroup(..., 'prepare')` 產生，代表 prepare group operations 後、edit effects 前的 source。
+- prepare setting 變更期間不可即時清掉 `preparedImageData`；離開 `prepare` 並進入 `edit` 時才 invalidated，讓後續 Original view 或正式 preview 使用最新 prepare output。
 - `page.js` 的 crop frame fit 與 edit preview fit 必須使用同一個 preview stage content-box 尺寸；若 stage 有 border，需排除 border 厚度再計算置中與縮放。
 - 使用者調整 slider、select、color、effects order 時，不立即每次重算，先 debounce `PREVIEW_DEBOUNCE_MS`。
 - 正式 preview 使用 working image 的完整尺寸，不使用降低解析度的 `ImageData` 當成使用者可見的最終預覽，避免拖曳中與放開後出現不可信的跳變。

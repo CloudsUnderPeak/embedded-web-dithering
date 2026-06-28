@@ -128,8 +128,8 @@
             context.state.settings.resize.height = size.height;
             context.state.settings.resize.aspectRatio = ratioFromSize(size.width, size.height);
         },
-        onSettingChanged: function onSettingChanged(context) {
-            if (context.id !== 'crop' || !context.state.settings.resize) {
+        onPrepareCommitted: function onPrepareCommitted(context) {
+            if (!context.state.settings.resize) {
                 return;
             }
             var size = cropOutputSize(context.state, context.state.workingSize);
