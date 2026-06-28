@@ -1604,13 +1604,13 @@ accept="image/png,image/jpeg,image/webp"
 MVP 建議最大輸入尺寸：
 
 ```js
-const MAX_INPUT_LONG_EDGE = 1600;
+const MAX_INPUT_LONG_EDGE = 800;
 ```
 
 規則：
 
 - 使用者丟入圖片後，先檢查寬高。
-- 如果圖片長邊超過 `MAX_INPUT_LONG_EDGE`，依比例縮小到長邊 1600px。
+- 如果圖片長邊超過 `MAX_INPUT_LONG_EDGE`，依比例縮小到長邊 800px。
 - 編輯器後續使用縮小後的圖片作為工作圖。
 - UI 需提示使用者圖片已被縮小，顯示原始尺寸與工作尺寸。
 - MVP 不要求 Web Worker；大型圖片先靠輸入縮小策略控制效能。
