@@ -230,6 +230,13 @@
                 return canvas.toDataURL('image/png');
             }
 
+            function thresholdScaleFor(algorithm, errorStrength) {
+                if (!algorithm.supportsThresholdStrength) {
+                    return null;
+                }
+                return (algorithm.thresholdScale || 70) * errorStrength / 100;
+            }
+
             function render(settings) {
                 var inputPromise = settings.input
                     ? loadInputImageData(settings.input)
@@ -241,7 +248,7 @@
                         throw new Error('Unknown dither algorithm: ' + settings.algorithm);
                     }
                     var started = performance.now();
-                    var output = registry.run(imageData, algorithm, {
+                    var options = {
                         matrixId: algorithm.matrixId,
                         palette: settings.palette,
                         paletteMapping: settings.mapping,
@@ -249,7 +256,13 @@
                         ditherBackend: settings.backend,
                         serpentine: algorithm.supportsSerpentine ? settings.serpentine : false,
                         errorStrength: settings.errorStrength
-                    });
+                    };
+                    var thresholdScale = thresholdScaleFor(algorithm, settings.errorStrength);
+                    if (thresholdScale !== null) {
+                        options.thresholdScale = thresholdScale;
+                        options.thresholdStrength = settings.errorStrength / 100;
+                    }
+                    var output = registry.run(imageData, algorithm, options);
                     var thresholdProcessor = window.DitherApp.pages.ditherEditor.thresholdDitherProcessor;
                     return {
                         width: output.width,

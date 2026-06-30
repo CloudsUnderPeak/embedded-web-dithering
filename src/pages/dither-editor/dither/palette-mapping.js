@@ -125,6 +125,12 @@
         return (cutoff - 0.5) * scale;
     }
 
+    function thresholdCutoff(threshold, thresholdStrength) {
+        var cutoff = Number.isFinite(threshold) ? threshold : 0.5;
+        var strength = Number.isFinite(thresholdStrength) ? thresholdStrength : 1;
+        return 0.5 + (cutoff - 0.5) * strength;
+    }
+
     function createPairCache(palette) {
         var pairs = [];
         for (var a = 0; a < palette.length; a += 1) {
@@ -318,7 +324,7 @@
         };
     }
 
-    function createPairMixMapper(palette, distance) {
+    function createPairMixMapper(palette, distance, thresholdStrength) {
         var pairs = createPairCache(palette);
         var result = { index: 0, r: 0, g: 0, b: 0 };
         var choice = { a: 0, b: 0, ratio: 0, distance: Infinity };
@@ -332,12 +338,12 @@
                 return setResultFromIndex(palette, choice.ratio > cutoff ? choice.b : choice.a, result);
             },
             mapThresholdColor: function mapThresholdColor(r, g, b, threshold) {
-                return this.mapColor(r, g, b, threshold);
+                return this.mapColor(r, g, b, thresholdCutoff(threshold, thresholdStrength));
             }
         };
     }
 
-    function createTriMixMapper(palette, distance) {
+    function createTriMixMapper(palette, distance, thresholdStrength) {
         var result = { index: 0, r: 0, g: 0, b: 0 };
         var buffers = {
             candidateIndexes: new Array(6),
@@ -374,7 +380,7 @@
                 return setResultFromIndex(palette, selected, result);
             },
             mapThresholdColor: function mapThresholdColor(r, g, b, threshold) {
-                return this.mapColor(r, g, b, threshold);
+                return this.mapColor(r, g, b, thresholdCutoff(threshold, thresholdStrength));
             }
         };
     }
@@ -385,11 +391,12 @@
             var palette = normalizedPalette(options && options.palette);
             var distance = createDistanceContext(options && options.colorDistance);
             var id = normalizeId(options && options.paletteMapping);
+            var thresholdStrength = Number(options && options.thresholdStrength);
             if (id === 'pair-mix' && palette.length >= 2) {
-                return createPairMixMapper(palette, distance);
+                return createPairMixMapper(palette, distance, thresholdStrength);
             }
             if (id === 'tri-mix' && palette.length >= 3) {
-                return createTriMixMapper(palette, distance);
+                return createTriMixMapper(palette, distance, thresholdStrength);
             }
             return createNearestMapper(palette, distance);
         }

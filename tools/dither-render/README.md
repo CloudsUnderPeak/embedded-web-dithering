@@ -83,6 +83,8 @@ Backends:
 - `cpu`
 - `gpu`
 
+`--error-strength` uses the same shared strength value as the app: Error Diffusion treats it as error strength, while Bayer algorithms treat it as dither strength for `thresholdScale` and Palette Mapping cutoff spread.
+
 ## Custom Palette
 
 Use `--colors` for a comma-separated hex palette:

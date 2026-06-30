@@ -75,6 +75,7 @@
             paletteLength: gl.getUniformLocation(program, 'u_paletteLength'),
             palette: gl.getUniformLocation(program, 'u_palette'),
             thresholdScale: gl.getUniformLocation(program, 'u_thresholdScale'),
+            thresholdStrength: gl.getUniformLocation(program, 'u_thresholdStrength'),
             distanceMode: gl.getUniformLocation(program, 'u_distanceMode'),
             mappingMode: gl.getUniformLocation(program, 'u_mappingMode')
         };
@@ -143,6 +144,7 @@
                 gl.uniform1i(uniforms.paletteLength, options.palette.length);
                 gl.uniform3fv(uniforms.palette, paletteUniform(options.palette));
                 gl.uniform1f(uniforms.thresholdScale, thresholdConfig.thresholdScale / 255);
+                gl.uniform1f(uniforms.thresholdStrength, thresholdConfig.thresholdStrength || 1);
                 gl.uniform1i(uniforms.distanceMode, distanceMode(options.colorDistance));
                 gl.uniform1i(uniforms.mappingMode, mappingMode(options.paletteMapping));
 
@@ -276,6 +278,7 @@
             'uniform int u_paletteLength;',
             'uniform vec3 u_palette[MAX_PALETTE_COLORS];',
             'uniform float u_thresholdScale;',
+            'uniform float u_thresholdStrength;',
             'uniform int u_distanceMode;',
             'uniform int u_mappingMode;',
             'varying vec2 v_texCoord;',
@@ -351,7 +354,8 @@
             '  vec2 pixel = vec2(floor(gl_FragCoord.x), floor(u_imageSize.y - gl_FragCoord.y));',
             '  float threshold = thresholdAt(pixel);',
             '  if (u_mappingMode == 1) {',
-            '    gl_FragColor = vec4(pairMixColor(source.rgb, threshold), 1.0);',
+            '    float cutoff = 0.5 + (threshold - 0.5) * u_thresholdStrength;',
+            '    gl_FragColor = vec4(pairMixColor(source.rgb, cutoff), 1.0);',
             '  } else {',
             '    float offset = (threshold - 0.5) * u_thresholdScale;',
             '    gl_FragColor = vec4(nearestColor(source.rgb + vec3(offset)), 1.0);',

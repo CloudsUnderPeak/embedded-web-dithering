@@ -54,13 +54,17 @@
         id: 'bayer-4',
         labelKey: 'algorithmBayer4',
         processorId: 'ordered',
-        matrixId: 'bayer4'
+        matrixId: 'bayer4',
+        thresholdScale: 70,
+        supportsThresholdStrength: true
     });
     registry.register({
         id: 'bayer-8',
         labelKey: 'algorithmBayer8',
         processorId: 'ordered',
-        matrixId: 'bayer8'
+        matrixId: 'bayer8',
+        thresholdScale: 70,
+        supportsThresholdStrength: true
     });
     registry.register({
         id: 'blue-noise-64',

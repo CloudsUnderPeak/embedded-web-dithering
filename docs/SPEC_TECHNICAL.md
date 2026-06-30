@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-28
+Last Updated: 2026-07-01
 Split From: SPEC_INDEX.md
 ```
 
@@ -35,6 +35,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-28: Resize feature 必須在 render 後同步 width / height controls，確保 Crop ratio 變更後隱藏過的 Resize panel 不顯示舊尺寸。
 - 2026-06-28: Original palette 萃取來源改為 `prepare` group 輸出；Resize、Original palette 與 `preparedImageData` invalidation 必須延後到 prepare commit，不可在 Crop zoom/pan setting 熱路徑即時計算。
 - 2026-06-28: Edit preview 新增 Expand 檢視，內部使用 `pixel` viewMode 與同一份 Result ImageData 以真實 canvas CSS 尺寸顯示；初始 scroll 對準 Result 中心點，並讓 preview stage 可捲動、可拖曳平移。
+- 2026-07-01: Dither `errorStrength` 保持為共用百分比強度；Error Diffusion 將其套用到誤差擴散倍率，Bayer 演算法將其套用到 thresholdScale 並在 UI 顯示為 Dither Strength。
 - 2026-06-13: `edit` 的 Original preview 改為使用 `prepare` group operations 產生的 `preparedImageData`，不直接顯示 raw source。
 - 2026-06-13: Palette 預設維持 Original；Dither 預設改為 Floyd-Steinberg error diffusion 且 Serpentine 關閉，Dither 啟用時 Palette 不先量化像素。
 - 2026-06-13: Original palette 萃取改為使用明暗錨點、灰階錨點、高飽和色相分區與加權填補，避免純頻率排序漏掉視覺重要色。
@@ -738,19 +739,21 @@ Dither algorithm 必須透過 `ditherAlgorithmRegistry.register()` 註冊 metada
 
 Dither feature 傳給 processor 的 `serpentine` 必須尊重 algorithm metadata；只有 `supportsSerpentine === true` 的演算法可收到 `serpentine: true`。非 serpentine 演算法即使 UI state 為 true，也必須以標準掃描方向執行。
 
-Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-steinberg`，且 `serpentine` 預設為 `false`。`DEFAULT_PALETTE_MAPPING_ID` 目前為 `nearest-color`。`DEFAULT_DITHER_ERROR_STRENGTH` 目前為 `100`，代表標準 error diffusion 擴散強度。Dither 啟用時 output 必須以目前有效 Palette 作為固定輸出色，不自行產生新的顏色。
+Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-steinberg`，且 `serpentine` 預設為 `false`。`DEFAULT_PALETTE_MAPPING_ID` 目前為 `nearest-color`。`DEFAULT_DITHER_ERROR_STRENGTH` 目前為 `100`，代表共用強度百分比；Error Diffusion 演算法以其作為誤差擴散倍率，Bayer 演算法以其換算 ordered threshold strength。Dither 啟用時 output 必須以目前有效 Palette 作為固定輸出色，不自行產生新的顏色。
+
+Dither panel 只能顯示一個強度 slider，並共用 `settings.dither.errorStrength` 作為百分比 state。選到 `supportsErrorStrength === true` 的演算法時，label 顯示 `Error Strength`；選到 `supportsThresholdStrength === true` 的 Bayer 演算法時，label 顯示 `Dither Strength`。切換演算法時不可重設或切換到另一份強度 state，避免使用者看到同一個強度控制在不同演算法間數值不一致。
 
 `serpentine` 的 panel control 必須使用 `panelUtils.toggleSwitchInput()`，避免和一般 checkbox 視覺混用。Adjust 與 Dither 的 range input、Toggle Switch checked state 必須使用 `--color-control-accent`，focus 或強調輪廓可沿用 `--color-accent-strong`，不可落回瀏覽器預設藍色或直接吃主 action accent。
 
 `palette-mapping-modes.js` 宣告使用者可選的 Palette Mapping。`nearest-color` 直接選目前 palette 中距離最近的單一色；`pair-mix` 先找最能近似輸入 RGB 的兩個 palette 色與混合比例，再由目前 Dither Algorithm 的掃描、誤差擴散或 threshold mask 決定輸出其中一色；`tri-mix` 先找最能近似輸入 RGB 的三個 palette 色與混合比例，再由目前 Dither Algorithm 決定輸出其中一色。Pair Mix 與 Tri Mix 不是獨立 Algorithm，不應用 `Palette Dot Halftone`、`Mix Ordered` 或 `Tri Mix Ordered` 這類組合項擴增 Algorithm 選單。
 
-`palette-mapping.js` 必須提供 dither strategy 介面。Dither processor 應只透過 `paletteMapping.createMapper(options)` 取得 mapper，並呼叫 `mapColor(r, g, b)` 或 `mapThresholdColor(r, g, b, threshold, thresholdScale)`；processor 不應依 `nearest-color`、`pair-mix` 或 `tri-mix` id 寫分支。Ordered / Pattern / Blue Noise 類 threshold 演算法應把 mask threshold 交給 `mapThresholdColor()`，由 mapping strategy 自行決定 threshold 是要當亮度偏移或 palette mix cutoff。
+`palette-mapping.js` 必須提供 dither strategy 介面。Dither processor 應只透過 `paletteMapping.createMapper(options)` 取得 mapper，並呼叫 `mapColor(r, g, b)` 或 `mapThresholdColor(r, g, b, threshold, thresholdScale)`；processor 不應依 `nearest-color`、`pair-mix` 或 `tri-mix` id 寫分支。Ordered / Pattern / Blue Noise 類 threshold 演算法應把 mask threshold 交給 `mapThresholdColor()`，由 mapping strategy 自行決定 threshold 是要當亮度偏移或 palette mix cutoff。Bayer 的 Dither Strength 對 `nearest-color` 應使用 `thresholdScale` 控制 RGB 亮度偏移；對 `pair-mix` / `tri-mix` 應使用 `thresholdStrength` 將 cutoff 套用 `0.5 + (threshold - 0.5) * thresholdStrength`，讓同一個 slider 在所有 Palette Mapping 下都有可見效果。
 
-Dither hot-path optimization 只能改資料結構、查表與快取，不可改變演算法定義。Dot Diffusion 可預先計算每個 class 的 recipient relative offsets，但邊界像素仍必須依實際圖片尺寸重新計算有效 recipient 數；Error Diffusion 可快取 matrix offsets，但不可改 kernel factor、serpentine 掃描方向或 error strength 語意；Ordered / Pattern Dither 可快取 normalized threshold map，但不可改 matrix ranking、thresholdScale 或 Palette Mapping 的選色結果。
+Dither hot-path optimization 只能改資料結構、查表與快取，不可改變演算法定義。Dot Diffusion 可預先計算每個 class 的 recipient relative offsets，但邊界像素仍必須依實際圖片尺寸重新計算有效 recipient 數；Error Diffusion 可快取 matrix offsets，但不可改 kernel factor、serpentine 掃描方向或 error strength 語意；Ordered / Pattern Dither 可快取 normalized threshold map，但不可改 matrix ranking、thresholdScale 或 Palette Mapping 的選色結果。Bayer algorithm metadata 的 `thresholdScale` 是 100% strength 的基準值；實際傳給 ordered processor 的 `options.thresholdScale` 必須使用 `algorithm.thresholdScale * errorStrength / 100`，`options.thresholdStrength` 必須使用 `errorStrength / 100`，因此 `100%` 必須保留既有 Bayer 輸出。
 
 Tri Mix CPU optimization 可預先列出 top-6 candidate 內的 20 組三色組合，並可將 barycentric weight 計算攤平到 hot loop；但不可改變 top candidate 數量、candidate insertion tie-break、三色組合枚舉順序、`denom` epsilon、weight clamp/normalize 流程、Color Distance 評分或 threshold 選色比較。優化後必須用 benchmark checksum 確認輸出與優化前一致。
 
-`threshold-dither-processor.js` 是 Ordered / Pattern threshold 類演算法的可選 WebGL fast path。它只能在 `nearest-color` 或 `pair-mix` Palette Mapping、已支援的 Color Distance、palette 長度不超過 shader 上限，且瀏覽器可建立 WebGL context 時啟用；`tri-mix` 必須走 CPU，避免 shader 組合量過高且難以維持 Palette Mapping 語意。GPU path 必須使用同一份 threshold rank、`thresholdScale`、palette 與 Color Distance；`nearest-color` 應把 threshold 當亮度偏移，`pair-mix` 應先找最佳 palette pair 與混合比例，再把 threshold 當 cutoff 決定輸出 pair 的哪個顏色。`auto` backend 必須以 CPU fallback 保留功能可用性；forced `gpu` backend 在不支援目前 options 時必須報錯。benchmark 工具應用 checksum 驗證 CPU/GPU 輸出一致後才報告速度差異。
+`threshold-dither-processor.js` 是 Ordered / Pattern threshold 類演算法的可選 WebGL fast path。它只能在 `nearest-color` 或 `pair-mix` Palette Mapping、已支援的 Color Distance、palette 長度不超過 shader 上限，且瀏覽器可建立 WebGL context 時啟用；`tri-mix` 必須走 CPU，避免 shader 組合量過高且難以維持 Palette Mapping 語意。GPU path 必須使用同一份 threshold rank、`thresholdScale`、`thresholdStrength`、palette 與 Color Distance；`nearest-color` 應把 threshold 當亮度偏移，`pair-mix` 應先找最佳 palette pair 與混合比例，再把縮放後 threshold 當 cutoff 決定輸出 pair 的哪個顏色。`auto` backend 必須以 CPU fallback 保留功能可用性；forced `gpu` backend 在不支援目前 options 時必須報錯。benchmark 工具應用 checksum 驗證 CPU/GPU 輸出一致後才報告速度差異。
 
 `color-distance-metrics.js` 宣告使用者可選的距離公式。Dither feature 預設使用 `DEFAULT_COLOR_DISTANCE_ID`，目前為 `euclidean-bt709`。同一個 `colorDistance` 必須傳給 Error Diffusion、Ordered Dither、Pattern Dither，以及 Dither 關閉時 Palette operation 的直接最近色映射；在 `pair-mix` 與 `tri-mix` 下，`colorDistance` 必須用來評估哪一組 palette mix 的混合結果最接近輸入顏色。`euclidean-bt709` 是 RgbQuant-style BT.709 weighted euclidean distance；`euclidean-rgb` 是未加權 RGB squared distance；`manhattan-bt709` 是 BT.709 weighted Manhattan distance；`manhattan-rgb` 是未加權 Manhattan distance。舊 id `euclidean` / `bt709` 應正規化到 `euclidean-bt709`，舊 id `rgb` 應正規化到 `euclidean-rgb`，舊 id `manhattan` 應正規化到 `manhattan-rgb`。
 

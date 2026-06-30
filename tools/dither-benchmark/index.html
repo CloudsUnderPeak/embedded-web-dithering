@@ -387,15 +387,21 @@
             }
 
             function optionsFor(algorithm, palette, mapping) {
-                return {
+                var errorStrength = 100;
+                var options = {
                     matrixId: algorithm.matrixId,
                     palette: palette,
                     paletteMapping: mapping,
                     colorDistance: 'euclidean-bt709',
                     ditherBackend: window.__DITHER_BENCHMARK_BACKEND__ || 'auto',
                     serpentine: Boolean(algorithm.supportsSerpentine),
-                    errorStrength: 100
+                    errorStrength: errorStrength
                 };
+                if (algorithm.supportsThresholdStrength) {
+                    options.thresholdScale = (algorithm.thresholdScale || 70) * errorStrength / 100;
+                    options.thresholdStrength = errorStrength / 100;
+                }
+                return options;
             }
 
             function runOne(imageData, algorithm, options) {

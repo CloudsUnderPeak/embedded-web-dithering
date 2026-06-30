@@ -77,15 +77,19 @@
             var levels = matrixLevels(matrix, size);
             var thresholds = thresholdMap(matrix, size, levels);
             var wrapMask = (size & (size - 1)) === 0 ? size - 1 : null;
-            var thresholdScale = algorithm && algorithm.thresholdScale || 70;
+            var thresholdScale = Number.isFinite(options.thresholdScale)
+                ? options.thresholdScale
+                : algorithm && algorithm.thresholdScale || 70;
+            var thresholdStrength = Number.isFinite(options.thresholdStrength) ? options.thresholdStrength : 1;
             var gpuProcessor = app.pages.ditherEditor.thresholdDitherProcessor;
             if (gpuProcessor) {
                 return gpuProcessor.apply(imageData, options, {
-                    cacheKey: 'ordered:' + (options.matrixId || 'bayer4') + ':' + thresholdScale,
+                    cacheKey: 'ordered:' + (options.matrixId || 'bayer4') + ':' + thresholdScale + ':' + thresholdStrength,
                     matrixSize: size,
                     levels: levels,
                     thresholds: thresholds,
-                    thresholdScale: thresholdScale
+                    thresholdScale: thresholdScale,
+                    thresholdStrength: thresholdStrength
                 }, function fallback() {
                     return applyCpu(imageData, options, thresholds, size, wrapMask, thresholdScale);
                 });

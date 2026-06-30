@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-06-28
+Last Updated: 2026-07-01
 Split From: SPEC_INDEX.md
 ```
 
@@ -74,6 +74,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-28: 重新展開 Crop 並改變裁切比例後，Resize 的鎖定寬高必須同步反映新的 crop output ratio。
 - 2026-06-28: Original palette 改為以 Crop/prepare 後的裁切範圍取樣，但 Resize 與 Original palette 只在 prepare 結束進入 edit 時重新計算，不在 Crop zoom/pan 操作中即時計算。
 - 2026-06-28: Edit preview toolbar 新增 Expand 檢視，讓使用者以真實輸出像素檢查 Result；Expand 初始視角需對準 Result 的圖片中心點，大圖可用較寬捲軸或拖曳查看其他區域。
+- 2026-07-01: Dither 的強度 slider 在 Error Diffusion 演算法下顯示 Error Strength，在 Bayer 演算法下顯示 Dither Strength；切換演算法時百分比數值保持一致。
 
 ## 產品目標
 
@@ -250,11 +251,13 @@ Acceptance:
 - Dither starts from Floyd-Steinberg.
 - Serpentine starts disabled.
 - Color Distance starts from `Euclidean BT.709`.
-- Error Strength starts from `100%` and applies to Error Diffusion algorithms.
-- Error Strength is adjustable from `0%` to `150%` in `2%` steps.
+- The shared strength slider starts from `100%` and is adjustable from `0%` to `150%` in `2%` steps.
+- The strength slider is shown as `Error Strength` for Error Diffusion algorithms and applies to error diffusion coefficients.
+- The same strength slider is shown as `Dither Strength` for Bayer algorithms and applies to the Bayer threshold strength across Palette Mapping modes.
+- Switching between algorithms preserves the current strength percentage.
 - Choosing an algorithm updates the result preview.
 - Choosing a Color Distance updates the result preview.
-- Changing Error Strength updates the result preview when the selected algorithm uses Error Diffusion.
+- Changing the strength slider updates the result preview when the selected algorithm supports strength adjustment.
 - Returning to `None` disables dither output changes while leaving Palette behavior available.
 - Dither uses the current effective palette as fixed output colors.
 

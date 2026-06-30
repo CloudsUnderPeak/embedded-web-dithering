@@ -20,6 +20,17 @@
         return app.pages.ditherEditor.ditherAlgorithmRegistry.get(id);
     }
 
+    function strengthLabelKey(id) {
+        return app.pages.ditherEditor.ditherAlgorithmRegistry.supportsThresholdStrength(id)
+            ? 'labelDitherStrength'
+            : 'labelErrorStrength';
+    }
+
+    function supportsStrength(id) {
+        var registry = app.pages.ditherEditor.ditherAlgorithmRegistry;
+        return registry.supportsErrorStrength(id) || registry.supportsThresholdStrength(id);
+    }
+
     function normalizeErrorStrength(value) {
         var number = Number(value);
         if (!Number.isFinite(number)) {
@@ -109,16 +120,21 @@
                 function (value) {
                     controller.updateSetting('dither', 'errorStrength', value);
                 },
-                !app.pages.ditherEditor.ditherAlgorithmRegistry.supportsErrorStrength(
-                    state.settings.dither.algorithm
-                ),
+                !supportsStrength(state.settings.dither.algorithm),
                 previewHold
             );
+            var strengthRow = ui.row(
+                ui.t(strengthLabelKey(state.settings.dither.algorithm)),
+                errorStrengthControl
+            );
+            var strengthLabel = strengthRow.querySelector('label');
+            function updateStrengthControl(algorithmId) {
+                strengthLabel.textContent = ui.t(strengthLabelKey(algorithmId));
+                errorStrengthControl.setDisabled(!supportsStrength(algorithmId));
+            }
             var rows = [
                 ui.row('Algorithm', ui.selectInput(state.settings.dither.algorithm, options, function (value) {
-                    errorStrengthControl.setDisabled(
-                        !app.pages.ditherEditor.ditherAlgorithmRegistry.supportsErrorStrength(value)
-                    );
+                    updateStrengthControl(value);
                     controller.updateSetting('dither', 'algorithm', value);
                 })),
                 ui.row(ui.t('labelPaletteMapping'), ui.selectInput(
@@ -138,7 +154,7 @@
                 ui.row('Serpentine', ui.toggleSwitchInput(state.settings.dither.serpentine, function (value) {
                     controller.updateSetting('dither', 'serpentine', value);
                 })),
-                ui.row(ui.t('labelErrorStrength'), errorStrengthControl)
+                strengthRow
             ];
             return ui.section('panelDither', rows, 'dither');
         },
@@ -158,14 +174,19 @@
                 if (!palette.length) {
                     return imageData;
                 }
+                var strength = normalizeErrorStrength(settings.errorStrength);
                 var options = {
                     matrixId: algorithm.matrixId,
                     palette: palette,
                     paletteMapping: app.pages.ditherEditor.paletteMapping.normalizeId(settings.paletteMapping),
                     colorDistance: app.core.paletteUtils.normalizeColorDistanceId(settings.colorDistance),
                     serpentine: Boolean(settings.serpentine && algorithm.supportsSerpentine),
-                    errorStrength: normalizeErrorStrength(settings.errorStrength)
+                    errorStrength: strength
                 };
+                if (algorithm.supportsThresholdStrength) {
+                    options.thresholdScale = (algorithm.thresholdScale || 70) * strength / 100;
+                    options.thresholdStrength = strength / 100;
+                }
                 return registry.run(imageData, algorithm, options);
             }
         }

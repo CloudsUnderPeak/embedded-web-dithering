@@ -15,6 +15,7 @@
         entry.supportsPalette = entry.supportsPalette !== false;
         entry.supportsSerpentine = entry.supportsSerpentine === true;
         entry.supportsErrorStrength = entry.supportsErrorStrength === true;
+        entry.supportsThresholdStrength = entry.supportsThresholdStrength === true;
         return entry;
     }
 
@@ -65,6 +66,11 @@
         supportsErrorStrength: function supportsErrorStrength(id) {
             var algorithm = algorithmById[id];
             return Boolean(algorithm && algorithm.supportsErrorStrength);
+        },
+
+        supportsThresholdStrength: function supportsThresholdStrength(id) {
+            var algorithm = algorithmById[id];
+            return Boolean(algorithm && algorithm.supportsThresholdStrength);
         },
 
         supportsSerpentine: function supportsSerpentine(id) {

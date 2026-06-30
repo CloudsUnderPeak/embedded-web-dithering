@@ -46,6 +46,7 @@
         labelPaletteMapping: 'Palette Mapping',
         labelColorDistance: 'Color Distance',
         labelErrorStrength: 'Error Strength',
+        labelDitherStrength: 'Dither Strength',
         paletteMappingNearestColor: 'Nearest Color',
         paletteMappingPairMix: 'Pair Mix',
         paletteMappingTriMix: 'Tri Mix',
