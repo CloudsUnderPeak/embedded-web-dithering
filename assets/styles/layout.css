@@ -225,6 +225,54 @@
     position: absolute;
 }
 
+.preview-stage.is-pixel-preview {
+    align-items: center;
+    justify-items: center;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-color: var(--color-scroll-thumb) transparent;
+    scrollbar-width: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.preview-stage.is-pixel-overflow-x {
+    justify-items: start;
+}
+
+.preview-stage.is-pixel-overflow-y {
+    align-items: start;
+}
+
+.preview-stage.is-pixel-overflowing {
+    cursor: grab;
+}
+
+.preview-stage.is-pixel-dragging {
+    cursor: grabbing;
+}
+
+.preview-stage.is-pixel-preview canvas {
+    max-width: none;
+    max-height: none;
+    user-select: none;
+}
+
+.preview-stage.is-pixel-preview::-webkit-scrollbar {
+    width: 14px;
+    height: 14px;
+}
+
+.preview-stage.is-pixel-preview::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background: var(--color-scroll-thumb);
+    background-clip: content-box;
+}
+
+.preview-stage.is-pixel-preview::-webkit-scrollbar-track {
+    background: transparent;
+}
+
 .simple-page {
     max-width: 760px;
     margin: 0 auto;

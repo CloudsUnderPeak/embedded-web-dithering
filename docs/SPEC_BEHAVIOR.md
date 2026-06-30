@@ -73,6 +73,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-28: 內建 demo 圖改為由 `assets/demo/` 中唯一支援格式圖片決定，不要求檔名或 16:9 比例；替換 demo 後須重新產生 demo metadata/fallback。
 - 2026-06-28: 重新展開 Crop 並改變裁切比例後，Resize 的鎖定寬高必須同步反映新的 crop output ratio。
 - 2026-06-28: Original palette 改為以 Crop/prepare 後的裁切範圍取樣，但 Resize 與 Original palette 只在 prepare 結束進入 edit 時重新計算，不在 Crop zoom/pan 操作中即時計算。
+- 2026-06-28: Edit preview toolbar 新增 Expand 檢視，讓使用者以真實輸出像素檢查 Result；Expand 初始視角需對準 Result 的圖片中心點，大圖可用較寬捲軸或拖曳查看其他區域。
 
 ## 產品目標
 
@@ -120,7 +121,7 @@ MVP 不包含：
 6. 使用者按下右下角顯眼的 OK 或自行收合 Crop 時，App 進入 `edit` group 並展開 Resize、Adjust、Palette、Dither；若使用者改點單一 edit tool，則只展開該 edit panel。
 7. `edit` group 會依 Crop 範圍與 Resize、Adjust、Palette、Dither 等設定更新 Result。
 8. App 依固定 Effects order 更新圖片處理結果。
-9. 使用者可在圖片呈現區右下角切換 Original / Result。
+9. 使用者可在圖片呈現區右下角切換 Original / Result / Expand。
 10. 使用者確認結果後匯出 PNG。
 11. 使用者可切換到 Web Setting、Help 或 About，再返回編輯頁並保留目前工作狀態。
 
@@ -338,7 +339,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 
 - `source`：來源輸入流程。沒有來源圖片時，Image Input 面板自動展開並保持可用；Crop、Resize、Adjust、Palette、Dither、Effects Order、Export 與 Original / Result 反灰或隱藏，不可設定；右下角 preview toolbar 不顯示任何按鈕。已有來源圖片時手動回到 `source`，其他 tool panel 必須收合，preview toolbar 不顯示按鈕但保留高度。
 - `prepare`：正式編輯前準備流程。目前 Crop 是唯一的 `prepare` tool。Preview 顯示原圖與 crop transform，不套用 Resize、Adjust、Palette、Dither 或其他非 Crop 演算法。Image Input、Crop 與 edit tool rows 可選；右下角 preview toolbar 只顯示 `+`、`-`、OK 三個按鈕。
-- `edit`：Crop 已確認或收合。App 以 Crop 範圍作為 pipeline 輸入，依目前演算法設定更新 Result；Original 顯示 prepare 後的原圖，不顯示未經 prepare 的 source image。從 Crop 進入 `edit` 時，Resize、Adjust、Palette、Dither 預設展開，右下角 preview toolbar 顯示 Original 與 Result。
+- `edit`：Crop 已確認或收合。App 以 Crop 範圍作為 pipeline 輸入，依目前演算法設定更新 Result；Original 顯示 prepare 後的原圖，不顯示未經 prepare 的 source image。Expand 顯示 Result 的真實輸出像素。從 Crop 進入 `edit` 時，Resize、Adjust、Palette、Dither 預設展開，右下角 preview toolbar 顯示 Original、Result 與 Expand。
 - `none`：無工具面板流程歸屬。未宣告 `panelGroup` 的 feature 不顯示在左側工具面板，也不形成使用者可切換的流程。
 
 流程轉換：
@@ -516,14 +517,14 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 
 - 顯示目前圖片。
 - 顯示處理後結果。
-- 在 `edit` 支援 Original / Result 切換；Original 必須顯示 prepare 後、edit effects 前的原圖。
+- 在 `edit` 支援 Original / Result / Expand 切換；Original 必須顯示 prepare 後、edit effects 前的原圖，Expand 必須顯示 Result 的真實輸出像素。
 - 支援 zoom / pan。
 - 在 `prepare` 顯示 crop overlay。
 - 讓使用者拖曳原圖位置並看到即時位置變化。
 - 在 `source` 右下角 preview toolbar 不顯示任何按鈕；已有來源圖片時仍需預留 toolbar 高度，避免切換到 `prepare` 或 `edit` 後圖片重新縮放。
 - 在 `prepare` 右下角 preview toolbar 只能顯示 `+`、`-`、OK 三個按鈕。
-- 在 `edit` 右下角 preview toolbar 只能顯示 Original、Result 兩個按鈕。
-- `edit` 的 Original / Result 切換必須採用 Theme choice 風格且尺寸一致；`prepare` 的 `+` / `-` buttons 必須是 compact square buttons，OK button 可維持較寬的 primary action 尺寸。
+- 在 `edit` 右下角 preview toolbar 只能顯示 Original、Result、Expand 三個按鈕。
+- `edit` 的 Original / Result / Expand 切換必須採用 Theme choice 風格且尺寸一致；`prepare` 的 `+` / `-` buttons 必須是 compact square buttons，OK button 可維持較寬的 primary action 尺寸。
 
 Crop preview 要求：
 
@@ -548,6 +549,8 @@ slider 控制的填色與 thumb、Toggle Switch 的啟用狀態必須使用較�
 Edit Result preview 應在圖片右下角顯示正式 preview 狀態：繪製開始時顯示 Rendering，繪製完成後顯示最近一次正式 preview 完成耗時，並依設定延遲自動隱藏。空狀態、prepare crop preview、Original view，或全域顯示開關關閉時，不顯示此計時 label。此 label 只描述目前繪製在 preview canvas 上、使用者可見的 Result 圖片。計時 label 自動隱藏不可關閉、重置或打斷使用者正在操作的其他 panel form。
 
 Edit Result preview 為了放入 preview stage 而縮小顯示時，應使用正常重採樣呈現 canvas，不使用 pixelated 硬縮放。Dither 結果包含大量單像素點陣，硬縮放會產生 alias / moire，使網頁預覽看起來比實際匯出的 PNG 更髒或顏色偏移。
+
+Edit Expand preview 必須使用和 Result 相同的正式輸出結果，但以真實像素尺寸顯示，不為了畫面尺寸重新 resize 或重新 dither。Expand 初始視角必須對準 Result fit preview 的圖片中心點；當圖片尺寸大於 preview stage 時，使用者必須能透過較寬的水平/垂直捲軸或拖曳 preview stage 查看其他區域。
 
 主要狀態：
 

@@ -8,6 +8,7 @@
     var sortable = null;
     var refs = {};
     var cachedState = null;
+    var pixelPreviewDrag = null;
 
     // 取得 UI 文字，缺字串時回傳 key 方便除錯。
     function t(key) {
@@ -288,9 +289,11 @@
         refs.cropZoomOutButton.disabled = !isPrepareMode;
         refs.cropOkButton.disabled = !isPrepareMode;
         refs.originalInput.checked = state.viewMode === 'original';
-        refs.resultInput.checked = state.viewMode !== 'original';
+        refs.resultInput.checked = state.viewMode === 'result';
+        refs.pixelInput.checked = state.viewMode === 'pixel';
         refs.originalInput.disabled = !isEditMode;
         refs.resultInput.disabled = !isEditMode;
+        refs.pixelInput.disabled = !isEditMode;
     }
 
     function loadEmptyUploadFile(file) {
@@ -381,6 +384,59 @@
         window.addEventListener('resize', refs.handleResize);
     }
 
+    function pixelPreviewCanDrag() {
+        return Boolean(
+            refs.previewStage
+            && refs.previewStage.classList.contains('is-pixel-preview')
+            && (
+                refs.previewStage.scrollWidth > refs.previewStage.clientWidth
+                || refs.previewStage.scrollHeight > refs.previewStage.clientHeight
+            )
+        );
+    }
+
+    function bindPixelPreviewDrag() {
+        refs.previewStage.addEventListener('pointerdown', function (event) {
+            if (event.button !== 0 || !pixelPreviewCanDrag()) {
+                return;
+            }
+            pixelPreviewDrag = {
+                pointerId: event.pointerId,
+                x: event.clientX,
+                y: event.clientY,
+                scrollLeft: refs.previewStage.scrollLeft,
+                scrollTop: refs.previewStage.scrollTop
+            };
+            refs.previewStage.classList.add('is-pixel-dragging');
+            if (refs.previewStage.setPointerCapture) {
+                refs.previewStage.setPointerCapture(event.pointerId);
+            }
+            event.preventDefault();
+        });
+        refs.previewStage.addEventListener('pointermove', function (event) {
+            if (!pixelPreviewDrag || pixelPreviewDrag.pointerId !== event.pointerId) {
+                return;
+            }
+            if (!pixelPreviewCanDrag()) {
+                pixelPreviewDrag = null;
+                refs.previewStage.classList.remove('is-pixel-dragging');
+                return;
+            }
+            refs.previewStage.scrollLeft = pixelPreviewDrag.scrollLeft - (event.clientX - pixelPreviewDrag.x);
+            refs.previewStage.scrollTop = pixelPreviewDrag.scrollTop - (event.clientY - pixelPreviewDrag.y);
+            event.preventDefault();
+        });
+        ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (name) {
+            refs.previewStage.addEventListener(name, function (event) {
+                if (!pixelPreviewDrag || pixelPreviewDrag.pointerId !== event.pointerId) {
+                    return;
+                }
+                pixelPreviewDrag = null;
+                refs.previewStage.classList.remove('is-pixel-dragging');
+            });
+        });
+    }
+
     // Page 主渲染入口：決定要畫 original/result/crop preview，並同步 UI 狀態。
     function render(state) {
         modeMachine().normalize(state);
@@ -410,7 +466,9 @@
             overlayRenderer.updateCanvasDisplay(state, false, image);
             refs.lastRenderedPreviewKind = state.viewMode === 'original'
                 ? 'original'
-                : state.previewImageData || state.outputImageData
+                : state.viewMode === 'pixel'
+                    ? 'pixel'
+                    : state.previewImageData || state.outputImageData
                     ? 'result'
                     : state.sourceImageData
                         ? 'source'
@@ -608,6 +666,7 @@
                 prepareMode: modeMachine().groups.PREPARE
             });
             bindViewportResize();
+            bindPixelPreviewDrag();
 
             renderer = new app.pages.ditherEditor.ViewportRenderer(refs.canvas);
             var state = controller.state;
@@ -639,6 +698,18 @@
                     controller.setViewMode('result');
                 }
             });
+            var pixelInput = app.utils.dom.el('input', {
+                attrs: {
+                    type: 'radio',
+                    name: 'preview-view-mode',
+                    value: 'pixel'
+                }
+            });
+            pixelInput.addEventListener('change', function () {
+                if (pixelInput.checked) {
+                    controller.setViewMode('pixel');
+                }
+            });
             var originalButton = app.utils.dom.el('label', {
                 className: 'setting-choice preview-view-choice',
                 children: [
@@ -651,6 +722,13 @@
                 children: [
                     resultInput,
                     app.utils.dom.el('span', { text: t('previewResult') })
+                ]
+            });
+            var pixelButton = app.utils.dom.el('label', {
+                className: 'setting-choice preview-view-choice',
+                children: [
+                    pixelInput,
+                    app.utils.dom.el('span', { text: t('previewExpand') })
                 ]
             });
             var cropZoomInButton = app.utils.dom.el('button', {
@@ -679,6 +757,7 @@
             });
             refs.originalInput = originalInput;
             refs.resultInput = resultInput;
+            refs.pixelInput = pixelInput;
             refs.cropZoomInButton = cropZoomInButton;
             refs.cropZoomOutButton = cropZoomOutButton;
             refs.cropOkButton = cropOkButton;
@@ -688,7 +767,7 @@
             });
             refs.previewToggleRow = app.utils.dom.el('div', {
                 className: 'setting-choice-list preview-view-choice-list',
-                children: [originalButton, resultButton]
+                children: [originalButton, resultButton, pixelButton]
             });
 
             preview.appendChild(refs.previewStage);
@@ -743,6 +822,7 @@
             overlayRenderer = null;
             controller = null;
             renderer = null;
+            pixelPreviewDrag = null;
             refs = {};
         }
     };

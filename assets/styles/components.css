@@ -1017,6 +1017,20 @@ body.is-sorting * {
     white-space: nowrap;
 }
 
+@media (max-width: 560px) {
+    .preview-toolbar .preview-view-choice-list {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .preview-toolbar .preview-view-choice {
+        width: auto;
+        min-width: 0;
+        padding: 0 8px;
+    }
+}
+
 .preview-toolbar .crop-zoom-button {
     width: 44px;
     min-width: 44px;

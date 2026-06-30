@@ -12,6 +12,7 @@
         this.cropOverlay = options.cropOverlay;
         this.cropOverlayLabel = options.cropOverlayLabel;
         this.prepareMode = options.prepareMode;
+        this.pixelPreviewKey = '';
     }
 
     ViewportOverlayRenderer.prototype.shouldShowCropOverlay = function shouldShowCropOverlay(state) {
@@ -107,18 +108,64 @@
         );
     };
 
+    ViewportOverlayRenderer.prototype.updatePixelPreviewOverflow = function updatePixelPreviewOverflow(imageData) {
+        var stageRect = this.previewStageBox();
+        var overflowX = Boolean(imageData && imageData.width > stageRect.width);
+        var overflowY = Boolean(imageData && imageData.height > stageRect.height);
+        this.previewStage.classList.toggle('is-pixel-overflow-x', overflowX);
+        this.previewStage.classList.toggle('is-pixel-overflow-y', overflowY);
+        this.previewStage.classList.toggle('is-pixel-overflowing', overflowX || overflowY);
+    };
+
+    ViewportOverlayRenderer.prototype.centerPixelPreview = function centerPixelPreview(imageData) {
+        var stageRect = this.previewStageBox();
+        var key = [
+            imageData.width,
+            imageData.height,
+            Math.round(stageRect.width),
+            Math.round(stageRect.height)
+        ].join('|');
+        if (this.pixelPreviewKey === key) {
+            return;
+        }
+        this.pixelPreviewKey = key;
+        this.previewStage.scrollLeft = Math.max(
+            0,
+            (imageData.width - stageRect.width) / 2
+        );
+        this.previewStage.scrollTop = Math.max(
+            0,
+            (imageData.height - stageRect.height) / 2
+        );
+    };
+
     ViewportOverlayRenderer.prototype.updateCanvasDisplay = function updateCanvasDisplay(state, cropVisible, imageData) {
         if (!this.canvas || !this.previewStage) {
             return null;
         }
+        var pixelPreview = Boolean(!cropVisible && imageData && state.viewMode === 'pixel');
         this.previewStage.classList.toggle('is-crop-preview', cropVisible);
         this.previewStage.classList.toggle('is-sized-preview', Boolean(cropVisible || imageData));
+        this.previewStage.classList.toggle('is-pixel-preview', pixelPreview);
+        if (!pixelPreview) {
+            this.pixelPreviewKey = '';
+            this.updatePixelPreviewOverflow(null);
+            this.previewStage.scrollLeft = 0;
+            this.previewStage.scrollTop = 0;
+        }
         if (!cropVisible || !state.sourceImageData) {
             this.canvas.style.width = '';
             this.canvas.style.height = '';
             this.canvas.style.left = '';
             this.canvas.style.top = '';
             this.previewStage.style.height = '';
+            if (pixelPreview) {
+                this.canvas.style.width = imageData.width + 'px';
+                this.canvas.style.height = imageData.height + 'px';
+                this.updatePixelPreviewOverflow(imageData);
+                this.centerPixelPreview(imageData);
+                return null;
+            }
             var previewMetrics = this.previewDisplayMetrics(imageData);
             if (previewMetrics) {
                 this.canvas.style.width = previewMetrics.width + 'px';

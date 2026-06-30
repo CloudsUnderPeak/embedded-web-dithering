@@ -34,6 +34,7 @@ Split From: SPEC_INDEX.md
 - 2026-06-28: `tools/generate-demo-data/run.py` 改為自動偵測 `assets/demo/` 內唯一支援格式 demo 圖，產生固定入口 `assets/demo/demo-manifest.js` 與 `assets/demo/demo-data.js`；runtime 不可硬綁 demo 圖檔名或 16:9 比例。
 - 2026-06-28: Resize feature 必須在 render 後同步 width / height controls，確保 Crop ratio 變更後隱藏過的 Resize panel 不顯示舊尺寸。
 - 2026-06-28: Original palette 萃取來源改為 `prepare` group 輸出；Resize、Original palette 與 `preparedImageData` invalidation 必須延後到 prepare commit，不可在 Crop zoom/pan setting 熱路徑即時計算。
+- 2026-06-28: Edit preview 新增 Expand 檢視，內部使用 `pixel` viewMode 與同一份 Result ImageData 以真實 canvas CSS 尺寸顯示；初始 scroll 對準 Result 中心點，並讓 preview stage 可捲動、可拖曳平移。
 - 2026-06-13: `edit` 的 Original preview 改為使用 `prepare` group operations 產生的 `preparedImageData`，不直接顯示 raw source。
 - 2026-06-13: Palette 預設維持 Original；Dither 預設改為 Floyd-Steinberg error diffusion 且 Serpentine 關閉，Dither 啟用時 Palette 不先量化像素。
 - 2026-06-13: Original palette 萃取改為使用明暗錨點、灰階錨點、高飽和色相分區與加權填補，避免純頻率排序漏掉視覺重要色。
@@ -630,7 +631,7 @@ Groups：
 
 - `source`：來源輸入 group。沒有來源圖片時只展開 `panelGroup: 'source'` 的 tool，且只有 `source` tool 可操作；右下角 preview toolbar 不可顯示任何按鈕。Preview stage 必須顯示中央 upload dropzone，支援 drop 與 Browse File；Image Input panel 不應重複顯示 Choose/Drop controls。有來源圖片時手動回到 `source` group 必須收合其他 group，preview toolbar 不顯示按鈕但保留 toolbar 高度。
 - `prepare`：正式編輯前準備 group。有來源圖且只展開 `panelGroup: 'prepare'` 的 tool；目前 Crop feature 是唯一的 `prepare` tool。`source`、`prepare` 與 `edit` tool rows 可操作；Preview 顯示 `sourceImageData` 加上 Crop transform，不跑完整 pipeline，也不套用 Resize、Adjust、Palette、Dither；右下角 preview toolbar 只能顯示 `+`、`-`、OK。
-- `edit`：有來源圖且 Crop 收合。Preview / Export 使用正式 pipeline，右下角 preview toolbar 只能顯示 Original、Result。從 Crop 收合或 OK 進入 `edit` 時，應展開目前 enabled dock tools 中明確宣告 `panelGroup: 'edit'` 的 panel group。
+- `edit`：有來源圖且 Crop 收合。Preview / Export 使用正式 pipeline，右下角 preview toolbar 只能顯示 Original、Result、Expand。從 Crop 收合或 OK 進入 `edit` 時，應展開目前 enabled dock tools 中明確宣告 `panelGroup: 'edit'` 的 panel group。
 - `none`：無面板流程歸屬。feature 未宣告 `panelGroup` 時預設屬於 `none`，不顯示在左側 tool dock，也不作為可切換的 editor mode。
 
 轉換規則：
@@ -645,10 +646,10 @@ Groups：
 - `prepare` 中的 Crop setting 變更只能重畫 crop preview，不可排程完整 pipeline。離開 `prepare` 後才依目前 settings 跑正式 preview。
 - `prepare` 中的 setting guard 必須依 feature 的 `panelGroup` 判斷可用 settings group，不可用 `group === 'crop'` 這類固定 id 比對。
 - 沒有來源圖片或目前 mode 不允許的 tool/action event 必須被 controller guard 掉，即使 DOM disabled 被繞過也不可改 settings、reorder effects 或 export。
-- `page.js` 必須只根據 `mode` 決定 preview toolbar 內容：`source` 隱藏所有 button rows，且已有來源圖片時保留空 toolbar 高度；`prepare` 只顯示 Crop 控制列，`edit` 只顯示 Original / Result 切換列。
+- `page.js` 必須只根據 `mode` 決定 preview toolbar 內容：`source` 隱藏所有 button rows，且已有來源圖片時保留空 toolbar 高度；`prepare` 只顯示 Crop 控制列，`edit` 只顯示 Original / Result / Expand 切換列。
 - `page.js` 的 tool button handler 應只呼叫 controller 或 state machine 的語意入口（例如 open source panel、open prepare mode、close prepare mode），並透過 `panelGroup` 判斷流程入口；不應在一般 feature panel event handler 中分散實作模式切換規則。
 - 非目前模式的 preview toolbar row 必須使用 `hidden` 真正移出 layout，不可只做 disabled 或透明處理。
-- `edit` 的 Original / Result buttons 必須共用固定尺寸設定；`prepare` 的 Crop zoom `+` / `-` buttons 使用 compact square size，OK button 使用 primary action size。
+- `edit` 的 Original / Result / Expand buttons 必須共用固定尺寸設定；`prepare` 的 Crop zoom `+` / `-` buttons 使用 compact square size，OK button 使用 primary action size。
 
 `schemaVersion` 必須用於 `settings-store.js` 的 localStorage 資料。讀取儲存資料時：
 
@@ -1556,6 +1557,7 @@ const PREVIEW_TIMING_LABEL_HIDE_DELAY_MS = configuredDelayMs;
 - `prepare` 的 crop frame scale 必須用 crop frame fit preview stage 內的固定內距區域計算，不可用 source image 盲目 fit 整個 stage；`edit` preview canvas 必須使用同一個 fit rule，讓相同比例的 crop frame 與 result image 保持相同顯示位置與尺寸。
 - `prepare` 的 transformed canvas layout 可以在 crop frame 外延伸到完整 preview stage，用於顯示 zoom / pan 的原圖周邊脈絡；延伸 layout 時只能調整 `layout.width` / `layout.height` 與 `layout.frame.x` / `layout.frame.y`，不可改變 crop frame scale。
 - `assets/styles/layout.css` 在 `.preview-stage.is-crop-preview` 中必須讓 canvas 可由 `page.js` 明確定位，避免瀏覽器 grid overflow alignment 影響長條圖 crop preview。
+- `assets/styles/layout.css` 在 `.preview-stage.is-pixel-preview` 中必須讓 preview stage 成為水平與垂直可捲動容器，canvas 不得套用 fit 模式的 `max-width` / `max-height` 限制；捲軸寬度不可使用 thin，避免大圖檢查時難以操作。
 - `viewport/overlay-renderer.js` 的 crop overlay 必須以實際 canvas rect 加上 `layout.frame` offset 定位；不可只用 preview stage 中央公式，否則手機或平板上 canvas 溢出 stage 時，畫面框選與正式 crop output 會產生垂直或水平偏移。
 - `viewport-renderer.renderTransformed()` 必須以 `layout.frame` center 作為 transform origin，而不是 layout canvas center，讓預覽 transform 與正式 crop operation 的裁切框中心一致。
 - `viewport-renderer.js` 必須先把一般 preview 與 crop transformed preview 畫到 buffer canvas，再提交到可見 canvas，避免 resize canvas 時露出清空畫面。
@@ -1566,6 +1568,7 @@ const PREVIEW_TIMING_LABEL_HIDE_DELAY_MS = configuredDelayMs;
 - 使用者調整 slider、select、color、effects order 時，不立即每次重算，先 debounce `PREVIEW_DEBOUNCE_MS`。
 - 正式 preview 使用 working image 的完整尺寸，不使用降低解析度的 `ImageData` 當成使用者可見的最終預覽，避免拖曳中與放開後出現不可信的跳變。
 - Edit Result preview canvas 的 backing `ImageData` 必須保留完整 pipeline output；CSS 縮小顯示時不得套用 `image-rendering: pixelated`，避免 dither 單像素點陣在非整數縮放下產生 alias / moire，導致 preview 和實際 export PNG 觀感不同。
+- Edit Expand preview 必須重用 Result 的正式 `ImageData`，只改 canvas CSS 顯示尺寸為 backing pixel 尺寸；不可為了 Expand 檢視重新 resize source、重新跑 dither，或產生不同於 export 的像素資料。`viewport/overlay-renderer.js` 必須依 canvas 真實尺寸與 preview stage content box 切換 overflow class，並在進入 Expand 或 preview stage 尺寸改變時將 scroll 初始化到圖片中心點，使 Expand 初始視角對準 Result fit preview 的中心；初始中心基準不可使用扣除 scrollbar 後的 `clientWidth` / `clientHeight`。`page.js` 必須讓 Expand preview 在產生捲軸時支援 pointer drag 平移 scroll 位置。
 - controller 必須在正式 preview 排程進入處理時把 `state.previewTimingLabel.phase` 設為 `rendering`，完成正式 preview pipeline 後更新 `state.previewRenderDurationMs` 並把 `state.previewTimingLabel` 設為 `done`；`page.js` 只負責在 `SHOW_PREVIEW_TIMING_LABEL === true` 時依 phase 顯示 Rendering 或格式化耗時文字，並貼齊目前 result canvas 右下角，不應在 DOM 層自行量測 pipeline。
 - `state.previewTimingLabel.phase === 'done'` 後，controller 必須依 `PREVIEW_TIMING_LABEL_HIDE_DELAY_MS` 排程切回 `hidden`，並只更新 timing label DOM，不可觸發整頁 render 或重建 feature panel；載入圖片、preview error、destroy 或重新開始正式 preview 時需清掉舊 hide timer，避免舊 timer 關掉新的 label。
 - export 永遠從工作圖和完整 pipeline 重新計算，不使用暫存 preview 結果。

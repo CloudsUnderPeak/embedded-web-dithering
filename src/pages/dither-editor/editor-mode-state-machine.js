@@ -66,6 +66,10 @@
         });
     }
 
+    function normalizeEditViewMode(viewMode) {
+        return viewMode === 'original' || viewMode === 'pixel' ? viewMode : 'result';
+    }
+
     function closePanelGroup(state, group) {
         panelIdsForGroup(state, group).forEach(function (id) {
             state.openToolPanels[id] = false;
@@ -155,7 +159,7 @@
             state.openToolPanels[id] = id === activeTool;
         });
         state.activeTool = activeTool;
-        state.viewMode = state.viewMode === 'original' ? 'original' : 'result';
+        state.viewMode = normalizeEditViewMode(state.viewMode);
         syncLegacyPanelOpenFlag(state);
         return state.mode;
     }
@@ -166,7 +170,7 @@
         pruneUnavailablePanels(state);
         closePanelGroup(state, MODE_GROUP_PREPARE);
         closePanelGroup(state, MODE_GROUP_SOURCE);
-        state.viewMode = state.viewMode === 'original' ? 'original' : 'result';
+        state.viewMode = normalizeEditViewMode(state.viewMode);
         syncLegacyPanelOpenFlag(state);
         return state.mode;
     }

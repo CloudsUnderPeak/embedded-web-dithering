@@ -276,11 +276,12 @@
         return this.state.preparedImageData;
     };
 
-    // 切換 Original/Result 檢視，不改變 pipeline 結果。
+    // 切換 Original/Result/Expand 檢視，不改變 pipeline 結果。
     DitherEditorController.prototype.setViewMode = function setViewMode(mode) {
         if (this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.groups.EDIT) {
             return;
         }
+        mode = mode === 'original' || mode === 'pixel' ? mode : 'result';
         try {
             if (mode === 'original') {
                 this.updatePreparedPreview();
