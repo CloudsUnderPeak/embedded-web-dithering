@@ -76,6 +76,7 @@
             palette: gl.getUniformLocation(program, 'u_palette'),
             thresholdScale: gl.getUniformLocation(program, 'u_thresholdScale'),
             thresholdStrength: gl.getUniformLocation(program, 'u_thresholdStrength'),
+            thresholdCellScale: gl.getUniformLocation(program, 'u_thresholdCellScale'),
             distanceMode: gl.getUniformLocation(program, 'u_distanceMode'),
             mappingMode: gl.getUniformLocation(program, 'u_mappingMode')
         };
@@ -145,6 +146,7 @@
                 gl.uniform3fv(uniforms.palette, paletteUniform(options.palette));
                 gl.uniform1f(uniforms.thresholdScale, thresholdConfig.thresholdScale / 255);
                 gl.uniform1f(uniforms.thresholdStrength, thresholdConfig.thresholdStrength || 1);
+                gl.uniform1f(uniforms.thresholdCellScale, thresholdConfig.thresholdCellScale || 1);
                 gl.uniform1i(uniforms.distanceMode, distanceMode(options.colorDistance));
                 gl.uniform1i(uniforms.mappingMode, mappingMode(options.paletteMapping));
 
@@ -279,11 +281,12 @@
             'uniform vec3 u_palette[MAX_PALETTE_COLORS];',
             'uniform float u_thresholdScale;',
             'uniform float u_thresholdStrength;',
+            'uniform float u_thresholdCellScale;',
             'uniform int u_distanceMode;',
             'uniform int u_mappingMode;',
             'varying vec2 v_texCoord;',
             'float thresholdAt(vec2 pixel) {',
-            '  vec2 cell = mod(pixel, vec2(u_matrixSize));',
+            '  vec2 cell = mod(floor(pixel * u_thresholdCellScale), vec2(u_matrixSize));',
             '  vec2 uv = (cell + vec2(0.5)) / u_matrixSize;',
             '  vec4 encoded = texture2D(u_thresholdMap, uv);',
             '  float rank = encoded.r * 65280.0 + encoded.g * 255.0;',

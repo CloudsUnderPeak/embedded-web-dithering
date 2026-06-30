@@ -401,6 +401,9 @@
                     options.thresholdScale = (algorithm.thresholdScale || 70) * errorStrength / 100;
                     options.thresholdStrength = errorStrength / 100;
                 }
+                if (algorithm.supportsDotDensity) {
+                    options.dotDensity = errorStrength / 100;
+                }
                 return options;
             }
 

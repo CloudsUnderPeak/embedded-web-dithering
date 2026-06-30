@@ -237,6 +237,13 @@
                 return (algorithm.thresholdScale || 70) * errorStrength / 100;
             }
 
+            function dotDensityFor(algorithm, errorStrength) {
+                if (!algorithm.supportsDotDensity) {
+                    return null;
+                }
+                return errorStrength / 100;
+            }
+
             function render(settings) {
                 var inputPromise = settings.input
                     ? loadInputImageData(settings.input)
@@ -261,6 +268,10 @@
                     if (thresholdScale !== null) {
                         options.thresholdScale = thresholdScale;
                         options.thresholdStrength = settings.errorStrength / 100;
+                    }
+                    var dotDensity = dotDensityFor(algorithm, settings.errorStrength);
+                    if (dotDensity !== null) {
+                        options.dotDensity = dotDensity;
                     }
                     var output = registry.run(imageData, algorithm, options);
                     var thresholdProcessor = window.DitherApp.pages.ditherEditor.thresholdDitherProcessor;

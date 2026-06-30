@@ -16,6 +16,7 @@
         entry.supportsSerpentine = entry.supportsSerpentine === true;
         entry.supportsErrorStrength = entry.supportsErrorStrength === true;
         entry.supportsThresholdStrength = entry.supportsThresholdStrength === true;
+        entry.supportsDotDensity = entry.supportsDotDensity === true;
         return entry;
     }
 
@@ -71,6 +72,11 @@
         supportsThresholdStrength: function supportsThresholdStrength(id) {
             var algorithm = algorithmById[id];
             return Boolean(algorithm && algorithm.supportsThresholdStrength);
+        },
+
+        supportsDotDensity: function supportsDotDensity(id) {
+            var algorithm = algorithmById[id];
+            return Boolean(algorithm && algorithm.supportsDotDensity);
         },
 
         supportsSerpentine: function supportsSerpentine(id) {

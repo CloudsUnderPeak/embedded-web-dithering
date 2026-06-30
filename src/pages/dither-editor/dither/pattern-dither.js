@@ -54,7 +54,23 @@
         return CLUSTERED_DOT_WRAP_MASK === null ? value % size : value & CLUSTERED_DOT_WRAP_MASK;
     }
 
-    function applyCpu(imageData, options) {
+    function normalizeDotDensity(value) {
+        var dotDensity = Number(value);
+        if (!Number.isFinite(dotDensity)) {
+            return 1;
+        }
+        return Math.max(0, Math.min(1.5, dotDensity));
+    }
+
+    function dotDensityScale(dotDensity) {
+        return Math.pow(2, (dotDensity - 1) * 2);
+    }
+
+    function thresholdIndex(position, densityScale, matrixSize) {
+        return wrapIndex(Math.floor(position * densityScale), matrixSize);
+    }
+
+    function applyCpu(imageData, options, thresholdScale, densityScale) {
         var width = imageData.width;
         var height = imageData.height;
         var source = imageData.data;
@@ -67,16 +83,18 @@
 
         for (var y = 0; y < height; y += 1) {
             var rowOffset = y * width * 4;
-            var thresholdRow = wrapIndex(y, matrixSize) * matrixSize;
+            var thresholdRow = thresholdIndex(y, densityScale, matrixSize) * matrixSize;
             for (var x = 0; x < width; x += 1) {
                 var index = rowOffset + x * 4;
-                var threshold = CLUSTERED_DOT_THRESHOLDS[thresholdRow + wrapIndex(x, matrixSize)];
+                var threshold = CLUSTERED_DOT_THRESHOLDS[
+                    thresholdRow + thresholdIndex(x, densityScale, matrixSize)
+                ];
                 var nearest = paletteMapper.mapThresholdColor(
                     source[index],
                     source[index + 1],
                     source[index + 2],
                     threshold,
-                    86
+                    thresholdScale
                 );
                 output[index] = nearest.r;
                 output[index + 1] = nearest.g;
@@ -90,27 +108,32 @@
 
     app.pages.ditherEditor.patternDither = {
         // 執行 clustered-dot halftone，輸出仍會映射到 palette。
-        apply: function apply(imageData, options) {
+        apply: function apply(imageData, options, algorithm) {
+            var thresholdScale = algorithm && algorithm.thresholdScale || 86;
+            var dotDensity = normalizeDotDensity(options.dotDensity);
+            var densityScale = dotDensityScale(dotDensity);
             var gpuProcessor = app.pages.ditherEditor.thresholdDitherProcessor;
             if (gpuProcessor) {
                 return gpuProcessor.apply(imageData, options, {
-                    cacheKey: 'pattern:clustered-dot:86',
+                    cacheKey: 'pattern:clustered-dot:' + thresholdScale + ':' + dotDensity,
                     matrixSize: CLUSTERED_DOT_MATRIX.length,
                     levels: CLUSTERED_DOT_MATRIX.length * CLUSTERED_DOT_MATRIX.length,
                     thresholds: CLUSTERED_DOT_THRESHOLDS,
-                    thresholdScale: 86
+                    thresholdScale: thresholdScale,
+                    thresholdStrength: 1,
+                    thresholdCellScale: densityScale
                 }, function fallback() {
-                    return applyCpu(imageData, options);
+                    return applyCpu(imageData, options, thresholdScale, densityScale);
                 });
             }
-            return applyCpu(imageData, options);
+            return applyCpu(imageData, options, thresholdScale, densityScale);
         }
     };
 
     app.pages.ditherEditor.ditherAlgorithmRegistry.registerProcessor({
         id: 'pattern',
-        apply: function apply(imageData, options) {
-            return app.pages.ditherEditor.patternDither.apply(imageData, options);
+        apply: function apply(imageData, options, algorithm) {
+            return app.pages.ditherEditor.patternDither.apply(imageData, options, algorithm);
         }
     });
 })(window.DitherApp);

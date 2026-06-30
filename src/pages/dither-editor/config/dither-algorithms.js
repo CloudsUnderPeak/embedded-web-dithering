@@ -71,17 +71,21 @@
         labelKey: 'algorithmBlueNoise64',
         processorId: 'ordered',
         matrixId: 'blueNoise64',
-        thresholdScale: 42
+        thresholdScale: 42,
+        supportsThresholdStrength: true
     });
     registry.register({
         id: 'dot-diffusion-simple',
         labelKey: 'algorithmDotDiffusionSimple',
-        processorId: 'dot-diffusion'
+        processorId: 'dot-diffusion',
+        supportsErrorStrength: true
     });
     registry.register({
         id: 'pattern-dots',
         labelKey: 'algorithmPatternDots',
-        processorId: 'pattern'
+        processorId: 'pattern',
+        thresholdScale: 86,
+        supportsDotDensity: true
     });
 
     Object.defineProperty(app.pages.ditherEditor.config, 'ditherAlgorithms', {

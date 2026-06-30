@@ -21,14 +21,18 @@
     }
 
     function strengthLabelKey(id) {
-        return app.pages.ditherEditor.ditherAlgorithmRegistry.supportsThresholdStrength(id)
-            ? 'labelDitherStrength'
-            : 'labelErrorStrength';
+        var registry = app.pages.ditherEditor.ditherAlgorithmRegistry;
+        if (registry.supportsDotDensity(id)) {
+            return 'labelDotDensity';
+        }
+        return registry.supportsThresholdStrength(id) ? 'labelDitherStrength' : 'labelErrorStrength';
     }
 
     function supportsStrength(id) {
         var registry = app.pages.ditherEditor.ditherAlgorithmRegistry;
-        return registry.supportsErrorStrength(id) || registry.supportsThresholdStrength(id);
+        return registry.supportsErrorStrength(id)
+            || registry.supportsThresholdStrength(id)
+            || registry.supportsDotDensity(id);
     }
 
     function normalizeErrorStrength(value) {
@@ -186,6 +190,9 @@
                 if (algorithm.supportsThresholdStrength) {
                     options.thresholdScale = (algorithm.thresholdScale || 70) * strength / 100;
                     options.thresholdStrength = strength / 100;
+                }
+                if (algorithm.supportsDotDensity) {
+                    options.dotDensity = strength / 100;
                 }
                 return registry.run(imageData, algorithm, options);
             }

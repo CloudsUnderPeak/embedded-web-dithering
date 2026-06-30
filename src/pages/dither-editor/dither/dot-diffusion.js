@@ -25,6 +25,14 @@
         return value < 0 ? 0 : (value > 255 ? 255 : value);
     }
 
+    function normalizeErrorStrength(value) {
+        var strength = Number(value);
+        if (!Number.isFinite(strength)) {
+            return 1;
+        }
+        return Math.max(0, Math.min(150, strength)) / 100;
+    }
+
     function classAt(x, y) {
         return CLASS_MATRIX[y & 7][x & 7];
     }
@@ -107,6 +115,7 @@
             var output = new Uint8ClampedArray(source.length);
             var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
             var rowStride = width * 4;
+            var errorStrength = normalizeErrorStrength(options.errorStrength);
             if (!paletteMapper.length) {
                 return imageData;
             }
@@ -121,9 +130,9 @@
                         var oldG = source[index + 1];
                         var oldB = source[index + 2];
                         var nearest = paletteMapper.mapColor(oldR, oldG, oldB);
-                        var errorR = oldR - nearest.r;
-                        var errorG = oldG - nearest.g;
-                        var errorB = oldB - nearest.b;
+                        var errorR = (oldR - nearest.r) * errorStrength;
+                        var errorG = (oldG - nearest.g) * errorStrength;
+                        var errorB = (oldB - nearest.b) * errorStrength;
                         var count = countRecipients(x, y, width, height, offsets);
 
                         output[index] = nearest.r;

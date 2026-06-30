@@ -83,7 +83,7 @@ Backends:
 - `cpu`
 - `gpu`
 
-`--error-strength` uses the same shared strength value as the app: Error Diffusion treats it as error strength, while Bayer algorithms treat it as dither strength for `thresholdScale` and Palette Mapping cutoff spread.
+`--error-strength` uses the same shared strength value as the app: Error Diffusion and Dot Diffusion treat it as error strength, Bayer and Blue Noise treat it as dither strength for `thresholdScale` and Palette Mapping cutoff spread, and Dot Halftone treats it as clustered-dot density.
 
 ## Custom Palette
 
