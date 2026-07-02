@@ -68,10 +68,21 @@
             className: 'dither-range-control',
             children: [valueLabel, input]
         });
+        function setValue(nextValue) {
+            var next = normalizeErrorStrength(nextValue);
+            var range = constants.MAX_DITHER_ERROR_STRENGTH - constants.MIN_DITHER_ERROR_STRENGTH;
+            var progress = range > 0
+                ? (next - constants.MIN_DITHER_ERROR_STRENGTH) / range * 100
+                : 0;
+            input.value = next;
+            input.style.setProperty('--range-progress', Math.max(0, Math.min(100, progress)) + '%');
+            valueLabel.textContent = next + '%';
+        }
         wrapper.setDisabled = function (nextDisabled) {
             input.disabled = Boolean(nextDisabled);
             wrapper.classList.toggle('is-disabled', Boolean(nextDisabled));
         };
+        wrapper.setValue = setValue;
         wrapper.setDisabled(disabled);
         return wrapper;
     }
@@ -139,7 +150,11 @@
             var rows = [
                 ui.row('Algorithm', ui.selectInput(state.settings.dither.algorithm, options, function (value) {
                     updateStrengthControl(value);
-                    controller.updateSetting('dither', 'algorithm', value);
+                    errorStrengthControl.setValue(constants.DEFAULT_DITHER_ERROR_STRENGTH);
+                    controller.updateSettings('dither', {
+                        algorithm: value,
+                        errorStrength: constants.DEFAULT_DITHER_ERROR_STRENGTH
+                    });
                 })),
                 ui.row(ui.t('labelPaletteMapping'), ui.selectInput(
                     state.settings.dither.paletteMapping,

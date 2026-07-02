@@ -35,8 +35,9 @@ Split From: SPEC_INDEX.md
 - 2026-06-28: Resize feature 必須在 render 後同步 width / height controls，確保 Crop ratio 變更後隱藏過的 Resize panel 不顯示舊尺寸。
 - 2026-06-28: Original palette 萃取來源改為 `prepare` group 輸出；Resize、Original palette 與 `preparedImageData` invalidation 必須延後到 prepare commit，不可在 Crop zoom/pan setting 熱路徑即時計算。
 - 2026-06-28: Edit preview 新增 Expand 檢視，內部使用 `pixel` viewMode 與同一份 Result ImageData 以真實 canvas CSS 尺寸顯示；初始 scroll 對準 Result 中心點，並讓 preview stage 可捲動、可拖曳平移。
-- 2026-07-01: Dither `errorStrength` 保持為共用百分比強度；Error Diffusion 將其套用到誤差擴散倍率，Bayer 演算法將其套用到 thresholdScale 並在 UI 顯示為 Dither Strength。
-- 2026-07-01: Blue Noise 64 啟用 `supportsThresholdStrength`，Dot Halftone 啟用 `supportsDotDensity`，Dot Diffusion 8x8 啟用 `supportsErrorStrength`，讓除 None 外的 Dither 演算法都能使用同一個強度百分比。
+- 2026-07-01: Dither `errorStrength` 保持為演算法目前使用的百分比強度；Error Diffusion 將其套用到誤差擴散倍率，Bayer 演算法將其套用到 thresholdScale 並在 UI 顯示為 Dither Strength。
+- 2026-07-01: Blue Noise 64 啟用 `supportsThresholdStrength`，Dot Halftone 啟用 `supportsDotDensity`，Dot Diffusion 8x8 啟用 `supportsErrorStrength`，讓除 None 外的 Dither 演算法都能使用強度百分比。
+- 2026-07-02: Dither algorithm 切換時必須同時把 `settings.dither.errorStrength` 重設為 `DEFAULT_DITHER_ERROR_STRENGTH`，避免 Error Strength、Dither Strength 與 Dot Density 在不同 algorithm 間繼承數值。
 - 2026-06-13: `edit` 的 Original preview 改為使用 `prepare` group operations 產生的 `preparedImageData`，不直接顯示 raw source。
 - 2026-06-13: Palette 預設維持 Original；Dither 預設改為 Floyd-Steinberg error diffusion 且 Serpentine 關閉，Dither 啟用時 Palette 不先量化像素。
 - 2026-06-13: Original palette 萃取改為使用明暗錨點、灰階錨點、高飽和色相分區與加權填補，避免純頻率排序漏掉視覺重要色。
@@ -740,9 +741,9 @@ Dither algorithm 必須透過 `ditherAlgorithmRegistry.register()` 註冊 metada
 
 Dither feature 傳給 processor 的 `serpentine` 必須尊重 algorithm metadata；只有 `supportsSerpentine === true` 的演算法可收到 `serpentine: true`。非 serpentine 演算法即使 UI state 為 true，也必須以標準掃描方向執行。
 
-Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-steinberg`，且 `serpentine` 預設為 `false`。`DEFAULT_PALETTE_MAPPING_ID` 目前為 `nearest-color`。`DEFAULT_DITHER_ERROR_STRENGTH` 目前為 `100`，代表共用強度百分比；Error Diffusion 與 Dot Diffusion 演算法以其作為誤差擴散倍率，Bayer 與 Blue Noise threshold 演算法以其換算 threshold strength，Dot Halftone 以其換算 clustered-dot density。Dither 啟用時 output 必須以目前有效 Palette 作為固定輸出色，不自行產生新的顏色。
+Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-steinberg`，且 `serpentine` 預設為 `false`。`DEFAULT_PALETTE_MAPPING_ID` 目前為 `nearest-color`。`DEFAULT_DITHER_ERROR_STRENGTH` 目前為 `100`，代表目前演算法使用的強度百分比；Error Diffusion 與 Dot Diffusion 演算法以其作為誤差擴散倍率，Bayer 與 Blue Noise threshold 演算法以其換算 threshold strength，Dot Halftone 以其換算 clustered-dot density。Dither 啟用時 output 必須以目前有效 Palette 作為固定輸出色，不自行產生新的顏色。
 
-Dither panel 只能顯示一個強度 slider，並共用 `settings.dither.errorStrength` 作為百分比 state。選到 `supportsErrorStrength === true` 的演算法時，label 顯示 `Error Strength`；選到 `supportsThresholdStrength === true` 的 threshold 類演算法時，label 顯示 `Dither Strength`；選到 `supportsDotDensity === true` 的演算法時，label 顯示 `Dot Density`。切換演算法時不可重設或切換到另一份強度 state，避免使用者看到同一個強度控制在不同演算法間數值不一致。
+Dither panel 只能顯示一個強度 slider，並使用 `settings.dither.errorStrength` 作為目前 algorithm 的百分比 state。選到 `supportsErrorStrength === true` 的演算法時，label 顯示 `Error Strength`；選到 `supportsThresholdStrength === true` 的 threshold 類演算法時，label 顯示 `Dither Strength`；選到 `supportsDotDensity === true` 的演算法時，label 顯示 `Dot Density`。切換 algorithm 時必須使用單次 settings 更新同時寫入新的 `algorithm` 與 `errorStrength: DEFAULT_DITHER_ERROR_STRENGTH`，並同步 slider 顯示為 100%，不可沿用前一個 algorithm 的強度值。
 
 `serpentine` 的 panel control 必須使用 `panelUtils.toggleSwitchInput()`，避免和一般 checkbox 視覺混用。Adjust 與 Dither 的 range input、Toggle Switch checked state 必須使用 `--color-control-accent`，focus 或強調輪廓可沿用 `--color-accent-strong`，不可落回瀏覽器預設藍色或直接吃主 action accent。
 

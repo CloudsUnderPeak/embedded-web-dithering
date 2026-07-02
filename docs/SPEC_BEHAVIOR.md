@@ -74,8 +74,9 @@ Split From: SPEC_INDEX.md
 - 2026-06-28: 重新展開 Crop 並改變裁切比例後，Resize 的鎖定寬高必須同步反映新的 crop output ratio。
 - 2026-06-28: Original palette 改為以 Crop/prepare 後的裁切範圍取樣，但 Resize 與 Original palette 只在 prepare 結束進入 edit 時重新計算，不在 Crop zoom/pan 操作中即時計算。
 - 2026-06-28: Edit preview toolbar 新增 Expand 檢視，讓使用者以真實輸出像素檢查 Result；Expand 初始視角需對準 Result 的圖片中心點，大圖可用較寬捲軸或拖曳查看其他區域。
-- 2026-07-01: Dither 的強度 slider 在 Error Diffusion 演算法下顯示 Error Strength，在 Bayer 演算法下顯示 Dither Strength；切換演算法時百分比數值保持一致。
-- 2026-07-01: Blue Noise 64 使用 Dither Strength，Dot Halftone 使用 Dot Density，Dot Diffusion 8x8 使用 Error Strength；除 None 外的 Dither 演算法都支援同一個強度百分比。
+- 2026-07-01: Dither 的強度 slider 在 Error Diffusion 演算法下顯示 Error Strength，在 Bayer 演算法下顯示 Dither Strength。
+- 2026-07-01: Blue Noise 64 使用 Dither Strength，Dot Halftone 使用 Dot Density，Dot Diffusion 8x8 使用 Error Strength；除 None 外的 Dither 演算法都支援強度百分比。
+- 2026-07-02: 切換 Dither algorithm 時，強度 slider 必須回到預設 100%，不沿用上一個 algorithm 的 Error Strength、Dither Strength 或 Dot Density。
 
 ## 產品目標
 
@@ -256,7 +257,7 @@ Acceptance:
 - The strength slider is shown as `Error Strength` for Error Diffusion and Dot Diffusion algorithms, and applies to error diffusion coefficients.
 - The same strength slider is shown as `Dither Strength` for Bayer and Blue Noise threshold algorithms, and applies to threshold strength across Palette Mapping modes.
 - The same strength slider is shown as `Dot Density` for Dot Halftone, and changes clustered-dot density while keeping `100%` as the default density.
-- Switching between algorithms preserves the current strength percentage.
+- Switching between algorithms resets the strength slider to `100%`.
 - Choosing an algorithm updates the result preview.
 - Choosing a Color Distance updates the result preview.
 - Changing the strength slider updates the result preview when the selected algorithm supports strength adjustment.
@@ -488,7 +489,7 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 - 選擇不套用 Dither。
 - 選擇支援的 Dither algorithm。
 - 選擇 Palette Mapping。
-- 調整 Dither 的共用強度百分比。
+- 調整目前 Dither algorithm 的強度百分比。
 - 配合目前有效 palette 產生處理結果。
 
 行為要求：
@@ -499,8 +500,8 @@ Dither Editor 有三個使用者可見流程 group，另有一個不顯示在工
 - Serpentine 預設為關閉。
 - Serpentine 使用 Toggle Switch 呈現。
 - Color Distance 預設為 Euclidean BT.709，使用者可切換支援的距離公式。
-- 共用強度百分比預設為 100%；Error Diffusion 與 Dot Diffusion 顯示為 Error Strength，Bayer 與 Blue Noise 顯示為 Dither Strength，Dot Halftone 顯示為 Dot Density。
-- 選擇 None 時，共用強度控制仍可見但不可調整。
+- 強度百分比預設為 100%；Error Diffusion 與 Dot Diffusion 顯示為 Error Strength，Bayer 與 Blue Noise 顯示為 Dither Strength，Dot Halftone 顯示為 Dot Density。
+- 選擇 None 時，強度控制仍可見但不可調整。
 - None 不改變圖片。
 - Dither 使用目前有效 Palette 作為固定輸出色。
 - Palette 與 Dither 仍要留在固定 edit effects order 中。
