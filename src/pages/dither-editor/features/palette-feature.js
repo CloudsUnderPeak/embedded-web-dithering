@@ -182,7 +182,7 @@
                     attrs: {
                         type: 'color',
                         value: colorToHex(color),
-                        'aria-label': 'Palette color ' + (index + 1)
+                        'aria-label': ui.t('labelPaletteColor') + ' ' + (index + 1)
                     }
                 });
                 var removeButton = app.utils.dom.el('button', {
@@ -192,7 +192,7 @@
                     ],
                     attrs: {
                         type: 'button',
-                        'aria-label': 'Remove palette color ' + (index + 1)
+                        'aria-label': ui.t('actionRemovePaletteColor') + ' ' + (index + 1)
                     }
                 });
                 colorInput.addEventListener('input', function () {
@@ -217,7 +217,7 @@
                 children: [
                     ui.svgIcon('assets/icons/editor/palette-add.svg', { fallbackText: '+' })
                 ],
-                attrs: { type: 'button', 'aria-label': 'Add palette color' }
+                attrs: { type: 'button', 'aria-label': ui.t('actionAddPaletteColor') }
             });
             addButton.addEventListener('click', function () {
                 setCustomPalette(context, colors.concat([{ r: 0, g: 0, b: 0 }]));
@@ -229,7 +229,7 @@
         return app.utils.dom.el('div', {
             className: 'palette-editor',
             children: [
-                app.utils.dom.el('div', { className: 'palette-editor-label', text: 'Palette' }),
+                app.utils.dom.el('div', { className: 'palette-editor-label', text: ui.t('labelPalette') }),
                 swatches
             ]
         });
@@ -339,7 +339,7 @@
                 paletteContext.renderSwatches();
                 paletteContext.updateOriginalControls();
             });
-            var presetRow = ui.row('Preset', presetInput);
+            var presetRow = ui.row(ui.t('labelPreset'), presetInput);
             paletteContext.presetInput = presetInput;
             paletteContext.updateOriginalControls();
             return ui.section('panelPalette', [

@@ -215,13 +215,13 @@
                 attrs: {
                     type: 'color',
                     value: background.backgroundColor(crop, state.sourceImageData),
-                    'aria-label': 'Crop fill color'
+                    'aria-label': ui.t('labelCropFillColor')
                 }
             });
             var backgroundPresetInput = ui.selectInput(
                 crop.backgroundPreset,
                 background.presets.map(function (preset) {
-                    return { value: preset.id, label: preset.label };
+                    return { value: preset.id, label: ui.t(preset.labelKey) };
                 }),
                 function (value) {
                     var preset = background.presetFor(value);
@@ -255,10 +255,10 @@
                     backgroundColor: background.normalizeHexColor(backgroundColorInput.value)
                 });
             });
-            var rotateLeftButton = cropIconButton('assets/icons/editor/crop-rotate-left.svg', '↺', 'Rotate left 90 degrees');
-            var rotateRightButton = cropIconButton('assets/icons/editor/crop-rotate-right.svg', '↻', 'Rotate right 90 degrees');
-            var flipXButton = cropIconButton('assets/icons/editor/crop-flip-horizontal.svg', '⇄', 'Flip horizontal');
-            var flipYButton = cropIconButton('assets/icons/editor/crop-flip-vertical.svg', '⇅', 'Flip vertical');
+            var rotateLeftButton = cropIconButton('assets/icons/editor/crop-rotate-left.svg', '↺', ui.t('actionRotateLeft'));
+            var rotateRightButton = cropIconButton('assets/icons/editor/crop-rotate-right.svg', '↻', ui.t('actionRotateRight'));
+            var flipXButton = cropIconButton('assets/icons/editor/crop-flip-horizontal.svg', '⇄', ui.t('actionFlipHorizontal'));
+            var flipYButton = cropIconButton('assets/icons/editor/crop-flip-vertical.svg', '⇅', ui.t('actionFlipVertical'));
             flipXButton.setAttribute('aria-pressed', crop.flipX ? 'true' : 'false');
             flipYButton.setAttribute('aria-pressed', crop.flipY ? 'true' : 'false');
             rotateLeftButton.addEventListener('click', function () {
@@ -301,10 +301,10 @@
                 app.utils.dom.el('div', {
                     className: 'crop-quadrant-grid',
                     children: [
-                        cropField('Ratio', aspectRatioInput),
-                        cropField('Zoom', zoomInput),
-                        cropField('Rotate', rotationInput),
-                        cropField('Fill', cropBackgroundControl(backgroundPresetInput, backgroundColorInput)),
+                        cropField(ui.t('labelRatio'), aspectRatioInput),
+                        cropField(ui.t('labelZoom'), zoomInput),
+                        cropField(ui.t('labelRotate'), rotationInput),
+                        cropField(ui.t('labelFill'), cropBackgroundControl(backgroundPresetInput, backgroundColorInput)),
                         app.utils.dom.el('div', {
                             className: 'crop-icon-button-row',
                             children: [rotateLeftButton, rotateRightButton, flipXButton, flipYButton]

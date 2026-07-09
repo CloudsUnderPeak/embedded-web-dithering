@@ -250,9 +250,7 @@
         }
         var stageRect = this.previewStage.getBoundingClientRect();
         var canvasRect = this.canvas.getBoundingClientRect();
-        label.textContent = phase === 'rendering'
-            ? (app.i18n.en.previewRendering || 'Rendering...')
-            : formatPreviewDuration(durationMs);
+        label.textContent = phase === 'rendering' ? app.i18n.t('previewRendering') : formatPreviewDuration(durationMs);
         label.style.right = Math.max(6, stageRect.right - canvasRect.right + 6) + 'px';
         label.style.bottom = Math.max(6, stageRect.bottom - canvasRect.bottom + 6) + 'px';
         label.hidden = false;

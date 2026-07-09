@@ -3,7 +3,7 @@
     // 設定值存在 app-state/settings-store，不放進 Dither Editor workspace。
     // 取得設定頁文字。
     function t(key) {
-        return app.i18n.en[key] || key;
+        return app.i18n.t(key);
     }
 
     function themeIcon(option) {
@@ -41,10 +41,34 @@
         });
     }
 
+    function languageOption(option) {
+        var input = app.utils.dom.el('input', {
+            attrs: {
+                type: 'radio',
+                name: 'web-language',
+                value: option.id
+            }
+        });
+        input.checked = app.app.state.language === option.id;
+        input.addEventListener('change', function () {
+            if (input.checked) {
+                app.app.setLanguage(option.id);
+            }
+        });
+
+        return app.utils.dom.el('label', {
+            className: 'setting-choice',
+            children: [
+                input,
+                app.utils.dom.el('span', { text: t(option.labelKey) })
+            ]
+        });
+    }
+
     app.pages.webSettingPage = {
         id: 'web-setting',
-        title: t('webSettingTitle'),
-        // 建立網站設定頁，目前只提供 theme 選擇。
+        titleKey: 'webSettingTitle',
+        // 建立網站設定頁，提供 theme 與 language 選擇。
         mount: function mount(container) {
             container.appendChild(
                 app.utils.dom.el('section', {
@@ -58,6 +82,16 @@
                                 app.utils.dom.el('div', {
                                     className: 'setting-choice-list',
                                     children: app.app.themeOptions.map(themeOption)
+                                })
+                            ]
+                        }),
+                        app.utils.dom.el('section', {
+                            className: 'setting-section',
+                            children: [
+                                app.utils.dom.el('h2', { text: t('webSettingLanguage') }),
+                                app.utils.dom.el('div', {
+                                    className: 'setting-choice-list',
+                                    children: app.i18n.languageOptions.map(languageOption)
                                 })
                             ]
                         })

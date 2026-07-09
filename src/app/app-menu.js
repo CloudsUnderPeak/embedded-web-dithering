@@ -20,10 +20,10 @@
         var self = this;
         app.utils.dom.clear(this.node);
         [
-            { id: 'dither-editor', label: app.i18n.en.menuDitherEditor },
-            { id: 'web-setting', label: app.i18n.en.menuWebSetting },
-            { id: 'help', label: app.i18n.en.menuHelp },
-            { id: 'about', label: app.i18n.en.menuAbout }
+            { id: 'dither-editor', label: app.i18n.t('menuDitherEditor') },
+            { id: 'web-setting', label: app.i18n.t('menuWebSetting') },
+            { id: 'help', label: app.i18n.t('menuHelp') },
+            { id: 'about', label: app.i18n.t('menuAbout') }
         ].forEach(function (item) {
             var button = app.utils.dom.el('button', { text: item.label, attrs: { type: 'button' } });
             button.addEventListener('click', function () {
@@ -51,6 +51,7 @@
     // 切換選單顯示狀態；render 會在每次打開前更新選項。
     AppMenu.prototype.toggle = function toggle() {
         if (this.node.hidden) {
+            this.render();
             this.node.hidden = false;
             this.button.setAttribute('aria-expanded', 'true');
         } else {

@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-07-01
+Last Updated: 2026-07-09
 Split From: SPEC_INDEX.md
 ```
 
@@ -11,6 +11,7 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-09: Web Setting 新增 Language 選項，提供 Auto、繁中、English；語言偏好會跨重新整理保存，Auto 依瀏覽器語言選擇目前支援語系。
 - 2026-07-07: preview stage 右上角在 loading/processing/exporting 期間顯示忙碌 spinner（不攔截互動），提供觸控裝置可見的處理中提示。Export 進行中，Export PNG 按鈕變為 Cancel；點擊取消後丟棄在途結果、不觸發下載，狀態還原為 ready/preview-ready。
 - 2026-07-07: 全站互動元件（button、link、select、input、可聚焦元素）鍵盤聚焦時必須顯示主題 accent 色焦點環；只在 `:focus-visible` 顯示，滑鼠點擊不出現。toggle switch 的焦點環維持轉嫁到可見 track 的既有行為。
 - 2026-05-16: 定調目前專案版本為 `0.1.0`。
@@ -583,6 +584,7 @@ Edit Expand preview 必須使用和 Result 相同的正式輸出結果，但以�
 MVP 應保存：
 
 - Web Setting theme，重新整理或下次重新打開瀏覽器頁面後仍保留。
+- Web Setting language，提供 Auto、繁中、English，重新整理或下次重新打開瀏覽器頁面後仍保留。
 - 同一次 SPA session 內，從 Dither Editor 切到 Web Setting / Help / About 再返回時所需的 editor state、工作圖片與目前 preview。
 
 MVP 不要求：
@@ -595,7 +597,7 @@ MVP 不要求：
 
 ## UI 文字與語言
 
-MVP UI 文字先以英文為主，並集中管理。使用者可見文字應保持一致，例如：
+MVP UI 文字支援 English 與繁體中文，並集中管理。Web Setting 的 Language 選項提供 Auto、繁中、English；Auto 依瀏覽器語言選擇目前支援語系，未匹配時 fallback 到 English。使用者可見文字應保持一致，例如：
 
 - Dither Editor。
 - Web Setting。
@@ -624,7 +626,7 @@ MVP 驗收重點：
 - resize 輸出尺寸符合設定。
 - 透明像素會以白色背景合成。
 - 超過最大尺寸的圖片會先縮小再進入編輯流程。
-- Web Setting theme 可保存並在重新整理後套用。
+- Web Setting theme / language 可保存並在重新整理後套用。
 - Dither Editor 工作圖片與設定在同一次 SPA 頁面切換返回時保留。
 - localStorage schemaVersion 不符時會 fallback，不會造成 runtime crash。
 - export PNG 可以產生 Blob。
@@ -758,6 +760,6 @@ Reviewer 應確認：
 - Effects order 改變後會重新產生結果。
 - Crop overlay 在桌面與手機版都穩定。
 - Pipeline 失敗時會停止並呈現錯誤。
-- Web Setting theme 與 Dither Editor 頁面切換 session 狀態保存符合預期。
+- Web Setting theme / language 與 Dither Editor 頁面切換 session 狀態保存符合預期。
 - UI 文字集中管理。
 - ESP32 Device Mode 沒有混入 MVP 主要流程。

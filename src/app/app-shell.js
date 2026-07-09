@@ -3,7 +3,7 @@
     // 它只呼叫 page module 的 mount/unmount，不碰任何頁面內部實作。
     // 將 app state 的狀態物件轉成 header 右側的狀態圓點。
     function renderStatus(node, status) {
-        var label = status || app.i18n.en.statusReady;
+        var label = status || app.i18n.t('statusReady');
         var state = statusState(label);
         node.className = 'app-status is-' + state;
         node.textContent = '';
@@ -14,18 +14,27 @@
     // 把錯誤/忙碌/就緒等狀態壓成 CSS class 需要的單一狀態名稱。
     function statusState(status) {
         var value = String(status || '').toLowerCase();
-        if (value.indexOf('error') !== -1) {
+        if (value.indexOf('error') !== -1 || value.indexOf('錯誤') !== -1) {
             return 'error';
         }
         if (
             value.indexOf('processing') !== -1 ||
             value.indexOf('loading') !== -1 ||
             value.indexOf('exporting') !== -1 ||
-            value.indexOf('uploading') !== -1
+            value.indexOf('uploading') !== -1 ||
+            value.indexOf('處理') !== -1 ||
+            value.indexOf('載入') !== -1 ||
+            value.indexOf('正在匯出') !== -1 ||
+            value.indexOf('上傳') !== -1
         ) {
             return 'busy';
         }
-        if (value.indexOf('empty') !== -1 || value.indexOf('begin') !== -1) {
+        if (
+            value.indexOf('empty') !== -1 ||
+            value.indexOf('begin') !== -1 ||
+            value.indexOf('建立') !== -1 ||
+            value.indexOf('開始') !== -1
+        ) {
             return 'idle';
         }
         return 'ready';
@@ -47,7 +56,7 @@
 
     // 頁面切換時更新中央標題。
     AppShell.prototype.setTitle = function setTitle(title) {
-        this.titleNode.textContent = title || app.i18n.en.appTitle;
+        this.titleNode.textContent = title || app.i18n.t('appTitle');
     };
 
     // 讓頁面或 controller 可以更新全站狀態顯示。
@@ -58,21 +67,27 @@
     // 建立選單與 router，並啟動預設頁面。
     AppShell.prototype.start = function start() {
         this.applyShellText();
+        app.app.refreshUi = this.refreshUi.bind(this);
         this.router.start('dither-editor');
     };
 
     // index.html 內的 header 文字只是 JS 啟動前的 placeholder；
     // 這裡統一改用 i18n 蓋章，讓所有使用者可見字串走同一份字典。
     AppShell.prototype.applyShellText = function applyShellText() {
-        var text = app.i18n.en;
-        document.title = text.appTitle;
-        this.titleNode.textContent = text.appTitle;
-        this.menuButton.setAttribute('aria-label', text.menuButtonLabel);
+        document.title = app.i18n.t('appTitle');
+        this.titleNode.textContent = app.i18n.t('appTitle');
+        this.menuButton.setAttribute('aria-label', app.i18n.t('menuButtonLabel'));
         var menuLabel = this.menuButton.querySelector('span:not(.svg-icon)');
         if (menuLabel) {
-            menuLabel.textContent = text.menuButtonLabel;
+            menuLabel.textContent = app.i18n.t('menuButtonLabel');
         }
         renderStatus(this.statusNode, null);
+    };
+
+    AppShell.prototype.refreshUi = function refreshUi() {
+        this.applyShellText();
+        this.menu.render();
+        this.router.refreshCurrentPage();
     };
 
     app.app.AppShell = AppShell;

@@ -5,7 +5,7 @@
     // 它只建立表單元件與 callback，不直接修改 editor state。
     // 取得面板顯示文字。
     function t(key) {
-        return app.i18n.en[key] || key;
+        return app.i18n.t(key);
     }
 
     function svgIcon(icon, options) {

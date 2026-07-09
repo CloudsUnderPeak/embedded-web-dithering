@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-07-01
+Last Updated: 2026-07-09
 Split From: SPEC_INDEX.md
 ```
 
@@ -11,6 +11,7 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-09: i18n 新增 `zh-TW` 字典與 runtime language preference；Web Setting language 提供 `auto`、`zh-TW`、`en`，偏好與 theme 一起保存於 `settings-store.js`，切換語言會重新套用 shell/menu/目前頁面文字。
 - 2026-07-09: 導入 dither Web Worker：擴散類演算法（error diffusion、adaptive error diffusion、dot diffusion）在 HTTP serving 下可於背景執行緒執行；`file://` 或 worker 載入失敗時永久 fallback 同步路徑。preview/export 走 `pipelineRunner.runAsync`，controller 用 run id 丟棄過期 preview 結果並在 destroy 時 terminate worker。
 - 2026-07-09: feature 之間不可直接讀寫 `state.settings.<其他 feature>`；跨 feature 查詢一律透過 `featureRegistry.api(id)` 取得對方宣告的 `api` 物件，api 回 null（feature 停用）時呼叫端必須有明確降級路徑。依賴其他 feature 資料的 operation 必須用 `operation.cacheKey` 把該資料帶進 stage cache key。
 - 2026-07-09: crop feature 拆為三支 script：`crop-geometry.js`（純幾何，零依賴）、`crop-auto-background.js`（背景 preset 與 Auto 取色）、`crop-feature.js`（註冊/panel/operation）。feature manifest entry 支援 `paths` 陣列宣告多支 script，依序載入。
@@ -562,6 +563,8 @@ const defaultDitherOptions = {
 ```html
 <script defer src="src/namespace.js"></script>
 <script defer src="src/i18n/en.js"></script>
+<script defer src="src/i18n/zh-TW.js"></script>
+<script defer src="src/i18n/index.js"></script>
 <script defer src="src/utils/dom.js"></script>
 <script defer src="src/ui/svg-icons.js"></script>
 <script defer src="src/core/canvas/canvas-utils.js"></script>
@@ -969,7 +972,7 @@ Device Mode 中：
 
 ### Web Setting Page
 
-`Web Setting` 是 app shell 層級頁面，不屬於 Dither Editor feature。它負責全站 UI 偏好，例如 light / dark theme。
+`Web Setting` 是 app shell 層級頁面，不屬於 Dither Editor feature。它負責全站 UI 偏好，例如 light / dark theme 與 language。
 
 ```text
 pages/web-setting/
@@ -980,8 +983,10 @@ pages/web-setting/
 規則：
 - Web Setting 頁面只修改 app shell state 和持久化 settings，不保存 Dither Editor 的 canvas、圖片、pipeline 或 feature settings。
 - theme 選項必須由 `app-state.js` 統一提供，例如 `light`、`dark`。
+- language 選項必須由 `i18n/index.js` 統一提供，固定為 `auto`、`zh-TW`、`en`；Auto 依瀏覽器語言解析目前支援語系，未匹配時 fallback 到 `en`。
 - 切換 theme 時，必須立刻更新 `body[data-theme]`，讓 `assets/styles/themes.css` 內的 CSS variables 套用到全站。
-- theme 必須透過 `settings-store.js` 寫入 localStorage；重新整理或下次重新打開瀏覽器頁面後仍保留。
+- theme 與 language 必須透過 `settings-store.js` 寫入 localStorage；重新整理或下次重新打開瀏覽器頁面後仍保留。
+- 切換 language 時，必須重新套用 app shell、menu 與目前頁面文字；Dither Editor 的圖片、pipeline 與 editor state 不應因此寫入 localStorage。
 - 未來若加入後端登入或 session，再另外導入 cookie；現階段 Web Setting 不使用 cookie。
 - 新增 Web Setting 頁面不應要求修改 Dither Editor 的 controller、page 或 feature registry。
 
@@ -1388,13 +1393,14 @@ function runPipeline(sourceImageData, state) {
 - 右上選單。
 - 頁面切換。
 - theme 切換。
+- language 切換。
 - 提供 `page-host` 讓功能頁掛載。
-- 提供共用 `appContext`，例如 theme、目前頁面、全域訊息。
+- 提供共用 `appContext`，例如 theme、language、目前頁面、全域訊息。
 
 `app` 不可直接操作功能頁內部 DOM，也不可保存某個頁面的 canvas reference。頁面切換時，只能呼叫 page module 的 `mount()` / `unmount()`。
 
 `app-state.js` 只保存 app shell 層級狀態，不保存任何 page-specific state。
-theme 屬於 app shell 層級狀態，必須由 `app-state.js` 正規化、套用到 `body[data-theme]`，並透過 `settings-store.js` 持久化到 localStorage。
+theme 與 language 屬於 app shell 層級狀態，必須由 `app-state.js` 正規化，並透過 `settings-store.js` 持久化到 localStorage。theme 需套用到 `body[data-theme]`；language 需套用到 i18n runtime 與 document `lang`。
 
 職責：
 
@@ -1752,7 +1758,7 @@ MVP 只持久化 app shell preference。Dither Editor 工作圖片、pipeline �
 
 儲存方式：
 
-- `localStorage`：保存 Web Setting / app shell preference，目前只有 theme 需要跨重新整理保留。
+- `localStorage`：保存 Web Setting / app shell preference，目前包含 theme 與 language。
 - `cookie`：現階段不使用。未來若加入後端登入、session 或伺服器需要讀取的狀態，再另行導入。
 - `IndexedDB`：MVP 不使用。未來若重新加入 workspace restore，必須先補完整 source image persistence 與 load flow，再更新本 spec。
 
@@ -1771,6 +1777,7 @@ const SETTINGS_STORAGE_KEY = 'dither-app:settings:v1';
 const settingsValue = {
     schemaVersion: 1,
     theme: 'light',
+    language: 'auto',
 };
 ```
 
@@ -1781,11 +1788,12 @@ const settingsValue = {
 - 不保存每一步 operation 的中間結果。
 - 不保存縮小後的工作圖來源。
 - localStorage load 時必須檢查 `schemaVersion`。
-- localStorage 開啟或寫入失敗時，功能仍可繼續編輯，但 theme 可能無法跨重新整理保留。
+- localStorage 開啟或寫入失敗時，功能仍可繼續編輯，但 theme / language 可能無法跨重新整理保留。
 
 需要保存：
 
 - Web Setting theme。
+- Web Setting language。
 - 同一次 SPA 頁面切換返回 Dither Editor 所需的 in-memory editor state、工作圖片與目前 preview。
 
 不需要保存：

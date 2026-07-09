@@ -22,10 +22,10 @@
     };
 
     var BACKGROUND_PRESETS = [
-        { id: BACKGROUND_PRESET_AUTO, label: 'Auto', color: DEFAULT_BACKGROUND_COLOR },
-        { id: BACKGROUND_PRESET_BLACK, label: 'Black', color: '#000000' },
-        { id: BACKGROUND_PRESET_WHITE, label: 'White', color: '#ffffff' },
-        { id: BACKGROUND_PRESET_CUSTOM, label: 'Custom', color: DEFAULT_BACKGROUND_COLOR }
+        { id: BACKGROUND_PRESET_AUTO, labelKey: 'backgroundAuto', color: DEFAULT_BACKGROUND_COLOR },
+        { id: BACKGROUND_PRESET_BLACK, labelKey: 'backgroundBlack', color: '#000000' },
+        { id: BACKGROUND_PRESET_WHITE, labelKey: 'backgroundWhite', color: '#ffffff' },
+        { id: BACKGROUND_PRESET_CUSTOM, labelKey: 'backgroundCustom', color: DEFAULT_BACKGROUND_COLOR }
     ];
 
     function backgroundPresetFor(id) {

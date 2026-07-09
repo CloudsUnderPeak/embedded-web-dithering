@@ -2,15 +2,15 @@
     // Help 是簡單靜態頁面；日後若擴充互動說明，仍只需修改此頁模組。
     app.pages.helpPage = {
         id: 'help',
-        title: app.i18n.en.helpTitle,
+        titleKey: 'helpTitle',
         // 將 Help 內容掛進 page-host。
         mount: function mount(container) {
             container.appendChild(
                 app.utils.dom.el('section', {
                     className: 'simple-page',
                     children: [
-                        app.utils.dom.el('h1', { text: app.i18n.en.helpTitle }),
-                        app.utils.dom.el('p', { text: app.i18n.en.placeholderHelp })
+                        app.utils.dom.el('h1', { text: app.i18n.t('helpTitle') }),
+                        app.utils.dom.el('p', { text: app.i18n.t('placeholderHelp') })
                     ]
                 })
             );

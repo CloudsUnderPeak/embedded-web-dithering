@@ -2,7 +2,7 @@
     // Preview toolbar：edit 模式的檢視切換（Original/Result/Expand）與
     // prepare 模式的 crop zoom/OK 控制列。page.js 只負責掛載與呼叫 render。
     function t(key) {
-        return app.i18n.en[key] || key;
+        return app.i18n.t(key);
     }
 
     function createPreviewToolbar(controller) {

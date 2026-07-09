@@ -10,6 +10,10 @@
         this.onPopState = this.handlePopState.bind(this);
     }
 
+    function pageTitle(page) {
+        return page.titleKey ? app.i18n.t(page.titleKey) : page.title;
+    }
+
     // 啟動時監聽瀏覽器返回/前進，並從 URL hash 還原頁面。
     PageRouter.prototype.start = function start(defaultPageId) {
         this.defaultPageId = defaultPageId || this.defaultPageId;
@@ -37,7 +41,7 @@
         app.utils.dom.clear(this.host);
         this.currentPage = page;
         app.app.state.activePageId = page.id;
-        this.context.setTitle(page.title);
+        this.context.setTitle(pageTitle(page));
         page.mount(this.host, this.context);
         if (!options.fromHistory) {
             this.writeHistory(page.id, options.replace);
@@ -74,6 +78,19 @@
             return;
         }
         window.history.pushState(state, '', hash);
+    };
+
+    PageRouter.prototype.refreshCurrentPage = function refreshCurrentPage() {
+        if (!this.currentPage) {
+            return;
+        }
+        var page = this.currentPage;
+        if (page.unmount) {
+            page.unmount();
+        }
+        app.utils.dom.clear(this.host);
+        this.context.setTitle(pageTitle(page));
+        page.mount(this.host, this.context);
     };
 
     app.app.PageRouter = PageRouter;

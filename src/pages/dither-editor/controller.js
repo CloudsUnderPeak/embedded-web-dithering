@@ -35,10 +35,10 @@
 
     function errorText(error) {
         var key = error && error.code ? ERROR_TEXT_KEYS[error.code] : null;
-        if (key && app.i18n.en[key]) {
-            return app.i18n.en[key];
+        if (key) {
+            return app.i18n.t(key);
         }
-        return (error && error.message) || app.i18n.en.errorGeneric;
+        return (error && error.message) || app.i18n.t('errorGeneric');
     }
 
     // 將 imageLoader 回傳結果寫入 state，並通知 feature 進行 onImageLoaded 初始化。

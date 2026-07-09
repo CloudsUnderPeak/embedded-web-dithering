@@ -181,9 +181,9 @@
                 app.utils.dom.el('div', {
                     className: 'resize-size-row',
                     children: [
-                        sizeField('Width', widthInput),
+                        sizeField(ui.t('labelWidth'), widthInput),
                         linkedSizeIcon(),
-                        sizeField('Height', heightInput)
+                        sizeField(ui.t('labelHeight'), heightInput)
                     ]
                 })
             ], 'resize');

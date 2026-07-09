@@ -13,7 +13,7 @@
 
     // 取得 UI 文字，缺字串時回傳 key 方便除錯。
     function t(key) {
-        return app.i18n.en[key] || key;
+        return app.i18n.t(key);
     }
 
     function ui() {
@@ -350,7 +350,7 @@
         } else if (!holdPendingPreview) {
             renderLivePreview(state);
         }
-        refs.error.textContent = state.status === 'error' ? state.error || app.i18n.en.errorGeneric : '';
+        refs.error.textContent = state.status === 'error' ? state.error || app.i18n.t('errorGeneric') : '';
         if (refs.busyIndicator) {
             // 觸控裝置沒有游標回饋；忙碌狀態用 spinner 提供可見的處理中提示。
             var busy = state.status === 'processing-preview'
@@ -424,7 +424,7 @@
 
     app.pages.ditherEditorPage = {
         id: 'dither-editor',
-        title: app.i18n.en.appTitle,
+        titleKey: 'appTitle',
         // Router mount 時建立整個 Dither Editor DOM，並恢復快取 state。
         mount: function mount(container, appContext) {
             refs = {};
