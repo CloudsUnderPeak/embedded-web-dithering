@@ -122,14 +122,6 @@
         }
     }
 
-    // Palette 變更後同步給 Dither feature，讓 dithering 使用同一組色票。
-    function syncDitherPalette(state) {
-        var palette = currentPalette(state.settings.palette);
-        if (state.settings.dither) {
-            state.settings.dither.palette = palette && palette.length ? copyPalette(palette) : null;
-        }
-    }
-
     // 依目前 preset/custom/original 設定取出實際要顯示或套用的 palette。
     function currentPalette(settings) {
         var presetId = normalizePresetId(settings.presetId);
@@ -146,17 +138,27 @@
         return preset ? copyPalette(preset.colors) : [];
     }
 
-    function ditherIsActive(context) {
-        var state = context && context.state;
-        var dither = state && state.settings && state.settings.dither;
-        var enabled = state && state.pipeline && state.pipeline.enabled;
-        return Boolean(dither && dither.algorithm && dither.algorithm !== 'none'
-            && (!enabled || enabled.dither !== false));
+    // 透過 registry api 查詢 dither 是否啟用；dither feature 停用時視為未啟用。
+    function ditherIsActive(state) {
+        var ditherApi = app.pages.ditherEditor.featureRegistry.api('dither');
+        if (!ditherApi || !state) {
+            return false;
+        }
+        var enabled = state.pipeline && state.pipeline.enabled;
+        return ditherApi.isActive(state) && (!enabled || enabled.dither !== false);
+    }
+
+    // dither 停用或未提供時退回專案預設 color distance。
+    function resolvedColorDistance(state) {
+        var ditherApi = app.pages.ditherEditor.featureRegistry.api('dither');
+        return ditherApi
+            ? ditherApi.getColorDistance(state)
+            : app.core.paletteUtils.normalizeColorDistanceId(null);
     }
 
     // Dither 啟用時由 Dither 依目前 palette 落色；Palette 不先量化，避免抖動前誤差被吃掉。
-    function shouldApplyPalette(settings, context) {
-        return normalizePresetId(settings.presetId) !== ORIGINAL_PRESET_ID && !ditherIsActive(context);
+    function shouldApplyPalette(settings, state) {
+        return normalizePresetId(settings.presetId) !== ORIGINAL_PRESET_ID && !ditherIsActive(state);
     }
 
     function setCustomPalette(context, palette, options) {
@@ -164,7 +166,6 @@
         var colors = copyPalette(palette);
         context.state.settings.palette.palette = colors.length ? colors : null;
         context.state.settings.palette.presetId = colors.length ? CUSTOM_PRESET_ID : ORIGINAL_PRESET_ID;
-        syncDitherPalette(context.state);
         context.presetInput.value = context.state.settings.palette.presetId;
         if (context.updateOriginalControls) {
             context.updateOriginalControls();
@@ -268,7 +269,6 @@
                 settings.presetId = ORIGINAL_PRESET_ID;
                 settings.palette = null;
             }
-            syncDitherPalette(context.state);
         },
         // 只處理 presetId 變更；色票直接編輯由 setCustomPalette 管理。
         onSettingChanged: function onSettingChanged(context) {
@@ -280,7 +280,6 @@
             if (presetId === ORIGINAL_PRESET_ID) {
                 ensureOriginalPalette(context.state);
                 context.state.settings.palette.palette = null;
-                syncDitherPalette(context.state);
                 return;
             }
             if (presetId === CUSTOM_PRESET_ID) {
@@ -288,18 +287,15 @@
                 context.state.settings.palette.palette = existingPalette && existingPalette.length
                     ? currentPalette(context.state.settings.palette)
                     : copyPalette(context.state.settings.palette.originalPalette);
-                syncDitherPalette(context.state);
                 return;
             }
             var preset = findPreset(presetId) || app.pages.ditherEditor.config.palettePresets[0];
             context.state.settings.palette.palette = copyPalette(preset.colors);
-            syncDitherPalette(context.state);
         },
         onPrepareCommitted: function onPrepareCommitted(context) {
             refreshOriginalPalette(context.state);
             if (normalizePresetId(context.state.settings.palette.presetId) === ORIGINAL_PRESET_ID) {
                 context.state.settings.palette.palette = null;
-                syncDitherPalette(context.state);
             }
             syncOriginalPalettePanel(context.state);
         },
@@ -312,7 +308,6 @@
                 state.settings.palette.originalPaletteSize
             );
             ensureOriginalPalette(state);
-            syncDitherPalette(state);
             var options = [
                 { value: ORIGINAL_PRESET_ID, label: ui.t('paletteOriginal') },
                 { value: CUSTOM_PRESET_ID, label: ui.t('paletteCustom') }
@@ -338,7 +333,6 @@
                 function (value) {
                     state.settings.palette.originalPaletteSize = normalizeOriginalPaletteSize(value);
                     refreshOriginalPalette(state);
-                    syncDitherPalette(state);
                     paletteContext.renderSwatches();
                     controller.schedulePreview();
                 }
@@ -364,30 +358,47 @@
                 originalSizeRow
             ], 'palette');
         },
+        // 跨 feature 查詢介面：dither/adjust 只能經由這裡取得 palette 狀態。
+        api: {
+            // 目前生效的 palette（original/custom/preset），無可用色票時回空陣列。
+            getActivePalette: function getActivePalette(state) {
+                var settings = state && state.settings && state.settings.palette;
+                return settings ? currentPalette(settings) : [];
+            },
+            // palette quantization 是否會實際改變像素（dither 啟用時由 dither 落色，不算 active）。
+            isActive: function isActive(state) {
+                var settings = state && state.settings && state.settings.palette;
+                if (!settings) {
+                    return false;
+                }
+                return shouldApplyPalette(settings, state) && currentPalette(settings).length > 0;
+            }
+        },
         operation: {
             pipeline: {
                 draggable: false
             },
             cacheKey: function cacheKey(settings, context) {
                 var state = context && context.state;
-                var enabled = state && state.pipeline && state.pipeline.enabled;
+                // 輸出只受「會不會套用」與 color distance 影響；palette 本身在 settings 序列化內。
+                var applies = shouldApplyPalette(settings, state);
                 return {
-                    ditherEnabled: !enabled || enabled.dither !== false,
-                    ditherSettings: state && state.settings ? state.settings.dither : null
+                    applies: applies,
+                    colorDistance: applies ? resolvedColorDistance(state) : null
                 };
             },
             // Dither 關閉時，Palette operation 會把每個像素替換成 palette 中的最近色。
             run: function run(imageData, settings, context) {
+                var state = context && context.state;
                 var palette = currentPalette(settings);
-                if (!shouldApplyPalette(settings, context) || !palette.length) {
+                if (!shouldApplyPalette(settings, state) || !palette.length) {
                     return imageData;
                 }
                 var data = new Uint8ClampedArray(imageData.data);
-                var ditherSettings = context && context.state && context.state.settings.dither;
-                var colorDistance = app.core.paletteUtils.normalizeColorDistanceId(
-                    ditherSettings && ditherSettings.colorDistance
+                var nearestColor = app.core.paletteUtils.createNearestColorFinder(
+                    palette,
+                    resolvedColorDistance(state)
                 );
-                var nearestColor = app.core.paletteUtils.createNearestColorFinder(palette, colorDistance);
                 for (var i = 0; i < data.length; i += 4) {
                     var nearest = nearestColor({ r: data[i], g: data[i + 1], b: data[i + 2] });
                     data[i] = nearest.r;

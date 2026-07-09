@@ -89,39 +89,21 @@
             if (state.pipeline.enabled[id] === false) {
                 continue;
             }
-            if (isEffectActive(id, state.settings[id])) {
+            if (isEffectActive(id, state)) {
                 return true;
             }
         }
         return false;
     }
 
-    // 針對不同 effect 判斷目前設定是否真的會產生效果。
-    function isEffectActive(id, settings) {
-        if (id === 'palette') {
-            return isPaletteActive(settings);
-        }
-        if (id === 'dither') {
-            return isDitherActive(settings);
+    // 透過 registry api 詢問各 effect 是否會改變像素；
+    // 未提供 isActive 的 effect 一律視為 active（保守：不啟用 CSS live preview 捷徑）。
+    function isEffectActive(id, state) {
+        var featureApi = app.pages.ditherEditor.featureRegistry.api(id);
+        if (featureApi && typeof featureApi.isActive === 'function') {
+            return featureApi.isActive(state);
         }
         return true;
-    }
-
-    // Original/none 不算啟用 palette quantization。
-    function isPaletteActive(settings) {
-        return Boolean(
-            settings &&
-            settings.presetId &&
-            settings.presetId !== 'none' &&
-            settings.presetId !== 'original' &&
-            settings.palette &&
-            settings.palette.length
-        );
-    }
-
-    // Dither algorithm 為 none 時不算啟用。
-    function isDitherActive(settings) {
-        return Boolean(settings && settings.algorithm !== 'none');
     }
 
     // 將 -100 到 100 的 UI 數值轉成 CSS/WebGL 使用的倍率。

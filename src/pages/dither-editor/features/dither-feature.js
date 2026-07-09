@@ -20,6 +20,12 @@
         return app.pages.ditherEditor.ditherAlgorithmRegistry.get(id);
     }
 
+    // Dither 的目標色票由 palette feature 提供；palette 停用時回空陣列（dither no-op）。
+    function activePalette(state) {
+        var paletteApi = app.pages.ditherEditor.featureRegistry.api('palette');
+        return paletteApi && state ? paletteApi.getActivePalette(state) : [];
+    }
+
     function strengthLabelKey(id) {
         var registry = app.pages.ditherEditor.ditherAlgorithmRegistry;
         if (registry.supportsDotDensity(id)) {
@@ -97,14 +103,28 @@
         pipelineOrder: 30,
         // 預設以 Floyd-Steinberg error diffusion 處理；palette 由 palette feature 同步。
         defaultSettings: function defaultSettings() {
+            // palette 不存在 dither settings 內：改由 registry api 向 palette feature 查詢，
+            // stage cache 的失效由 operation.cacheKey 帶入 palette 內容。
             return {
                 algorithm: constants.DEFAULT_DITHER_ALGORITHM_ID,
                 paletteMapping: constants.DEFAULT_PALETTE_MAPPING_ID,
                 serpentine: false,
                 colorDistance: constants.DEFAULT_COLOR_DISTANCE_ID,
-                errorStrength: constants.DEFAULT_DITHER_ERROR_STRENGTH,
-                palette: null
+                errorStrength: constants.DEFAULT_DITHER_ERROR_STRENGTH
             };
+        },
+        // 跨 feature 查詢介面：palette/adjust 只能經由這裡取得 dither 狀態。
+        api: {
+            isActive: function isActive(state) {
+                var settings = state && state.settings && state.settings.dither;
+                return Boolean(settings && settings.algorithm && settings.algorithm !== 'none');
+            },
+            getColorDistance: function getColorDistance(state) {
+                var settings = state && state.settings && state.settings.dither;
+                return app.core.paletteUtils.normalizeColorDistanceId(
+                    settings && settings.colorDistance
+                );
+            }
         },
         // 建立演算法、color distance、serpentine 與 error strength 控制。
         buildPanel: function buildPanel(context) {
@@ -181,15 +201,20 @@
             pipeline: {
                 draggable: false
             },
+            cacheKey: function cacheKey(settings, context) {
+                // palette 來自 palette feature（不在 dither settings 內），
+                // 必須進 cache key，色票變更時 dither stage 才會重算。
+                return { palette: activePalette(context && context.state) };
+            },
             // 依演算法 registry 找到對應 processor；Dither feature 不硬寫 processor 清單。
-            run: function run(imageData, settings) {
+            run: function run(imageData, settings, context) {
                 // none 代表 pipeline 保留此工具但不套用任何 dithering。
                 if (settings.algorithm === 'none') {
                     return imageData;
                 }
                 var registry = app.pages.ditherEditor.ditherAlgorithmRegistry;
                 var algorithm = algorithmById(settings.algorithm) || registry.first();
-                var palette = settings.palette || [];
+                var palette = activePalette(context && context.state);
                 if (!palette.length) {
                     return imageData;
                 }

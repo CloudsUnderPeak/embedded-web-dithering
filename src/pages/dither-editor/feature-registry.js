@@ -37,6 +37,14 @@
         });
     }
 
+    // 跨 feature 查詢的唯一管道：回傳 feature 宣告的 publicApi。
+    // feature 未註冊（停用）時回 null，呼叫端必須有明確的降級路徑；
+    // 禁止 feature 直接讀寫 state.settings.<其他 feature>。
+    function api(id) {
+        var feature = get(id);
+        return feature && feature.api ? feature.api : null;
+    }
+
     // 從 manifest 解析出啟用且依賴順序正確的 script 路徑。
     function featureScripts() {
         return resolveManifest(app.pages.ditherEditor.featureManifest || []).map(function (entry) {
@@ -136,6 +144,9 @@
         if (feature.operation && typeof feature.operation.run !== 'function') {
             throw new Error('Feature operation requires run(): ' + feature.id);
         }
+        if (feature.api && typeof feature.api !== 'object') {
+            throw new Error('Feature api must be an object: ' + feature.id);
+        }
     }
 
     // 取得某個 pipeline stage 的 feature id 順序；沒有使用者順序時用 feature metadata。
@@ -233,6 +244,7 @@
     app.pages.ditherEditor.featureRegistry = {
         register: register,
         get: get,
+        api: api,
         all: function all() {
             return features.slice();
         },

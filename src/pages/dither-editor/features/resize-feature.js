@@ -34,11 +34,13 @@
     }
 
     function cropOutputSize(state, fallback) {
-        var crop = state.settings && state.settings.crop;
-        if (crop && crop.width && crop.height) {
+        // crop 輸出尺寸只能經 registry api 查詢；crop feature 停用時退回 fallback。
+        var cropApi = app.pages.ditherEditor.featureRegistry.api('crop');
+        var size = cropApi ? cropApi.getOutputSize(state) : null;
+        if (size) {
             return {
-                width: clampSize(crop.width),
-                height: clampSize(crop.height)
+                width: clampSize(size.width),
+                height: clampSize(size.height)
             };
         }
         return {

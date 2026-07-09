@@ -488,6 +488,17 @@
         pipelineStage: 'fixedBefore',
         pipelineOrder: 10,
         panelGroup: 'prepare',
+        // 跨 feature 查詢介面：resize 等 feature 只能經由這裡取得 crop 輸出尺寸。
+        api: {
+            // crop 設定的輸出尺寸；尚無有效設定時回 null，呼叫端退回自己的 fallback。
+            getOutputSize: function getOutputSize(state) {
+                var crop = state && state.settings && state.settings.crop;
+                if (crop && crop.width && crop.height) {
+                    return { width: crop.width, height: crop.height };
+                }
+                return null;
+            }
+        },
         // 建立 crop 預設設定，尺寸依目前 display profile。
         defaultSettings: function defaultSettings(context) {
             var state = {
