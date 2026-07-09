@@ -148,7 +148,7 @@
                 errorStrengthControl.setDisabled(!supportsStrength(algorithmId));
             }
             var rows = [
-                ui.row('Algorithm', ui.selectInput(state.settings.dither.algorithm, options, function (value) {
+                ui.row(ui.t('labelAlgorithm'), ui.selectInput(state.settings.dither.algorithm, options, function (value) {
                     updateStrengthControl(value);
                     errorStrengthControl.setValue(constants.DEFAULT_DITHER_ERROR_STRENGTH);
                     controller.updateSettings('dither', {
@@ -170,7 +170,7 @@
                         controller.updateSetting('dither', 'colorDistance', value);
                     }
                 )),
-                ui.row('Serpentine', ui.toggleSwitchInput(state.settings.dither.serpentine, function (value) {
+                ui.row(ui.t('labelSerpentine'), ui.toggleSwitchInput(state.settings.dither.serpentine, function (value) {
                     controller.updateSetting('dither', 'serpentine', value);
                 })),
                 strengthRow

@@ -23,6 +23,24 @@
             : Date.now();
     }
 
+    // core 錯誤只帶 code；顯示文字在這裡對應 i18n，未知錯誤退回原訊息或通用文字。
+    var ERROR_TEXT_KEYS = {
+        'unsupported-format': 'errorUnsupportedFormat',
+        'image-load-failed': 'errorImageLoadFailed',
+        'image-processing-blocked': 'errorImageProcessingBlocked',
+        'demo-load-failed': 'errorDemoLoadFailed',
+        'demo-manifest-missing': 'errorDemoManifestMissing',
+        'demo-data-missing': 'errorDemoDataMissing'
+    };
+
+    function errorText(error) {
+        var key = error && error.code ? ERROR_TEXT_KEYS[error.code] : null;
+        if (key && app.i18n.en[key]) {
+            return app.i18n.en[key];
+        }
+        return (error && error.message) || app.i18n.en.errorGeneric;
+    }
+
     // 將 imageLoader 回傳結果寫入 state，並通知 feature 進行 onImageLoaded 初始化。
     DitherEditorController.prototype.loadResult = function loadResult(result, fileName) {
         // 所有圖片來源（upload/demo/new image）最後都收斂到 loadResult，
@@ -89,7 +107,7 @@
             })
             .catch(function (error) {
                 self.state.status = 'error';
-                self.state.error = error.message;
+                self.state.error = errorText(error);
                 self.render(self.state);
             });
     };
@@ -108,7 +126,7 @@
             })
             .catch(function (error) {
                 self.state.status = 'error';
-                self.state.error = error.message;
+                self.state.error = errorText(error);
                 self.render(self.state);
             });
     };
@@ -289,7 +307,7 @@
             this.state.viewMode = mode;
         } catch (error) {
             this.state.status = 'error';
-            this.state.error = error.message;
+            this.state.error = errorText(error);
         }
         this.render(this.state);
     };
@@ -367,7 +385,7 @@
                 this.updatePreparedPreview();
             } catch (error) {
                 this.state.status = 'error';
-                this.state.error = error.message;
+                this.state.error = errorText(error);
                 this.hidePreviewTimingLabel();
                 this.render(this.state);
                 return;
@@ -406,7 +424,7 @@
             this.schedulePreviewTimingHide();
         } catch (error) {
             this.state.status = 'error';
-            this.state.error = error.message;
+            this.state.error = errorText(error);
             this.state.previewRenderDurationMs = null;
             this.hidePreviewTimingLabel();
         }
@@ -439,7 +457,7 @@
             })
             .catch(function (error) {
                 self.state.status = 'error';
-                self.state.error = error.message;
+                self.state.error = errorText(error);
                 self.render(self.state);
             });
     };

@@ -479,7 +479,7 @@
         } else if (!holdPendingPreview) {
             renderLivePreview(state);
         }
-        refs.error.textContent = state.status === 'error' ? state.error || 'Error' : '';
+        refs.error.textContent = state.status === 'error' ? state.error || app.i18n.en.errorGeneric : '';
         overlayRenderer.renderCropOverlay(state, cropMetrics, cropVisible);
         renderPreviewTimingLabel(state, cropVisible);
         app.pages.ditherEditor.featureRegistry.dispatch('onRender', { state: state, controller: controller });
@@ -586,7 +586,7 @@
 
     app.pages.ditherEditorPage = {
         id: 'dither-editor',
-        title: 'Dither Image Editor',
+        title: app.i18n.en.appTitle,
         // Router mount 時建立整個 Dither Editor DOM，並恢復快取 state。
         mount: function mount(container, appContext) {
             refs = {};

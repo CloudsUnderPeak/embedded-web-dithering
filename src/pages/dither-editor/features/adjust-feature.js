@@ -177,9 +177,9 @@
                 controller.updateSetting('adjust', 'saturation', value);
             }, previewHold);
             return ui.section('panelAdjust', [
-                ui.row('Brightness', brightnessInput),
-                ui.row('Contrast', contrastInput),
-                ui.row('Saturation', saturationInput)
+                ui.row(ui.t('labelBrightness'), brightnessInput),
+                ui.row(ui.t('labelContrast'), contrastInput),
+                ui.row(ui.t('labelSaturation'), saturationInput)
             ], 'adjust');
         },
         operation: {

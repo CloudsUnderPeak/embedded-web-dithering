@@ -2,7 +2,7 @@
     // Help 是簡單靜態頁面；日後若擴充互動說明，仍只需修改此頁模組。
     app.pages.helpPage = {
         id: 'help',
-        title: 'Help',
+        title: app.i18n.en.helpTitle,
         // 將 Help 內容掛進 page-host。
         mount: function mount(container) {
             container.appendChild(

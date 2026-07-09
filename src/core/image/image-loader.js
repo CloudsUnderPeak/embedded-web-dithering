@@ -10,7 +10,13 @@
         'image/webp': true
     };
     var SUPPORTED_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];
-    var UNSUPPORTED_FORMAT_MESSAGE = 'Only PNG, JPEG, and WebP images are supported.';
+
+    // core 不碰 i18n：錯誤帶 code 讓頁面層對應翻譯，message 僅作 fallback。
+    function loaderError(code, message) {
+        var error = new Error(message);
+        error.code = code;
+        return error;
+    }
 
     // 以 HTMLImageElement 載入 URL，保留給本機 demo 或 blob URL fallback 使用。
     function loadImageFromUrl(url) {
@@ -20,7 +26,7 @@
                 resolve(image);
             };
             image.onerror = function () {
-                reject(new Error('Image could not be loaded.'));
+                reject(loaderError('image-load-failed', 'Image could not be loaded.'));
             };
             image.src = url;
         });
@@ -41,7 +47,7 @@
     // 統一產生格式錯誤，讓 controller 顯示一致訊息。
     function rejectUnsupportedImage(file) {
         if (!isSupportedImageFile(file)) {
-            throw new Error(UNSUPPORTED_FORMAT_MESSAGE);
+            throw loaderError('unsupported-format', 'Only PNG, JPEG, and WebP images are supported.');
         }
     }
 
@@ -119,13 +125,13 @@
 
     function loadDemoManifest() {
         if (!app.app || !app.app.scriptLoader || !app.app.scriptLoader.load) {
-            return Promise.reject(new Error('Demo image could not be loaded.'));
+            return Promise.reject(loaderError('demo-load-failed', 'Demo image could not be loaded.'));
         }
         return app.app.scriptLoader.load(DEMO_IMAGE_MANIFEST_SCRIPT)
             .then(function () {
                 var demoImage = app.assets && app.assets.demoImage;
                 if (!demoImage || !demoImage.url || !demoImage.fileName) {
-                    throw new Error('Demo image manifest is missing.');
+                    throw loaderError('demo-manifest-missing', 'Demo image manifest is missing.');
                 }
                 return demoImage;
             });
@@ -134,13 +140,13 @@
     function loadGeneratedDemoImage(demoImage, maxLongEdge) {
         var dataScript = demoImage.dataScript || DEMO_IMAGE_DATA_SCRIPT;
         if (!app.app || !app.app.scriptLoader || !app.app.scriptLoader.load) {
-            return Promise.reject(new Error('Demo image could not be loaded.'));
+            return Promise.reject(loaderError('demo-load-failed', 'Demo image could not be loaded.'));
         }
         return app.app.scriptLoader.load(dataScript)
             .then(function () {
                 var embeddedDemo = app.assets && app.assets.demoImageData;
                 if (!embeddedDemo || !embeddedDemo.dataUrl) {
-                    throw new Error('Demo image data asset is missing.');
+                    throw loaderError('demo-data-missing', 'Demo image data asset is missing.');
                 }
                 return loadDataUrlImage(embeddedDemo.dataUrl, maxLongEdge);
             });
@@ -154,7 +160,7 @@
         return fetch(demoImage.url)
             .then(function (response) {
                 if (!response.ok) {
-                    throw new Error('Demo image could not be loaded.');
+                    throw loaderError('demo-load-failed', 'Demo image could not be loaded.');
                 }
                 return response.blob();
             })

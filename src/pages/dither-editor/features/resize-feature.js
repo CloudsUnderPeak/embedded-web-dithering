@@ -85,8 +85,8 @@
             ],
             attrs: {
                 role: 'img',
-                title: 'Width and height are linked',
-                'aria-label': 'Width and height are linked'
+                title: ui.t('resizeLinkedTitle'),
+                'aria-label': ui.t('resizeLinkedTitle')
             }
         });
     }

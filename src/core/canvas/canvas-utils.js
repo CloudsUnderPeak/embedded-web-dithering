@@ -56,8 +56,10 @@
                 imageData = ctx.getImageData(0, 0, targetWidth, targetHeight);
             } catch (error) {
                 if (error && error.name === 'SecurityError') {
-                    // SVG 或跨來源圖片可能污染 canvas；轉成產品可讀錯誤，避免原生例外直接顯示。
-                    throw new Error('Image could not be processed. Use a local PNG, JPEG, or WebP file without cross-origin content.');
+                    // SVG 或跨來源圖片可能污染 canvas；轉成帶 code 的產品錯誤，頁面層對應 i18n。
+                    var blocked = new Error('Image could not be processed. Use a local PNG, JPEG, or WebP file without cross-origin content.');
+                    blocked.code = 'image-processing-blocked';
+                    throw blocked;
                 }
                 throw error;
             }

@@ -57,7 +57,22 @@
 
     // 建立選單與 router，並啟動預設頁面。
     AppShell.prototype.start = function start() {
+        this.applyShellText();
         this.router.start('dither-editor');
+    };
+
+    // index.html 內的 header 文字只是 JS 啟動前的 placeholder；
+    // 這裡統一改用 i18n 蓋章，讓所有使用者可見字串走同一份字典。
+    AppShell.prototype.applyShellText = function applyShellText() {
+        var text = app.i18n.en;
+        document.title = text.appTitle;
+        this.titleNode.textContent = text.appTitle;
+        this.menuButton.setAttribute('aria-label', text.menuButtonLabel);
+        var menuLabel = this.menuButton.querySelector('span:not(.svg-icon)');
+        if (menuLabel) {
+            menuLabel.textContent = text.menuButtonLabel;
+        }
+        renderStatus(this.statusNode, null);
     };
 
     app.app.AppShell = AppShell;

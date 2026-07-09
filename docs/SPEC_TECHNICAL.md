@@ -11,6 +11,11 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-06: 色彩通道 clamp 統一由 `core/color/color-utils.js` 提供：`clampByte`（round + clamp，最終整數輸出用）與 `clampChannel`（僅 clamp 保留小數，誤差擴散工作緩衝與距離計算用）；dither 模組不可再自定義 clamp。GPU threshold palette uniform 必須與 CPU `normalizedPalette` 相同做 round，維持 CPU/GPU 最近色一致。
+- 2026-07-06: RGB 色距權重的唯一來源是 `core/color/palette-utils.js` 的純量距離函式；`palette-mapping` 透過 `createRgbDistanceContext()` 取得逐像素距離 context，不可另寫距離公式。GPU shader 的 `distanceTo` 是唯一允許的重複實作，修改權重時必須同步。
+- 2026-07-06: `core` 拋出的使用者可見錯誤必須帶 `error.code`（如 `unsupported-format`、`demo-load-failed`），`message` 僅作 fallback；顯示層（controller）以 code 對應 i18n 文字，`core` 不可直接輸出 UI 文案。
+- 2026-07-06: 使用者可見 UI 字串（含 page `title`、header、tooltip、aria-label）必須走 `src/i18n/en.js`；`index.html` 內的 header 文字僅為 JS 啟動前 placeholder，由 `AppShell.applyShellText()` 以 i18n 蓋章。
+- 2026-07-06: 新增 `tools/regression/`：以 dither-benchmark headless harness 產生固定矩陣（algorithm x mapping x palette x distance，CPU backend）的 checksum baseline（`baseline.json` 入 repo）；變更 dither/palette/色彩工具前後必須跑 `python3 tools/regression/run.py`，刻意的輸出變更需人工確認後以 `--update` 更新 baseline。dither-benchmark 支援 `--distance` 參數。
 - 2026-05-16: 定調目前專案版本為 `0.1.0`；此版本號與 localStorage `schemaVersion` 分開管理。
 - 2026-05-16: 新增 `editor-mode-state-machine.js` 與 editor `mode` 狀態，集中管理 `empty`、`crop`、`edit` 轉換；重新載入圖片或 demo 時 controller 必須重建 default editor state，避免沿用上一張圖的演算法設定。
 - 2026-05-16: 明確規範 Crop mode 不執行正式 preview pipeline，非允許工具與 action 必須由 controller guard；preview toolbar 必須由 mode 決定顯示列，未啟用列要真正 hidden，且各模式 toolbar 按鈕尺寸一致。
@@ -1473,6 +1478,10 @@ MVP 至少：
 - 尺寸換算。
 
 `core/canvas` 不可放全域 preview canvas，也不可保存單一 app-wide canvas instance。
+
+`core` 拋出的使用者可見錯誤必須是帶 `code` 屬性的 `Error`（例如 `unsupported-format`、`image-load-failed`、`image-processing-blocked`、`demo-load-failed`、`demo-manifest-missing`、`demo-data-missing`）；英文 `message` 只作為未知 code 的 fallback。顯示層以 code 對應 `i18n` 文字，`core` 本身不可依賴 `i18n`。
+
+色彩通道 clamp 與 RGB 色距權重是 `core/color` 的單一來源：`colorUtils.clampByte`（round）、`colorUtils.clampChannel`（保留小數）、`paletteUtils.createRgbDistanceContext()`。頁面層與 dither processor 不可另寫同語意的 clamp 或距離公式；GPU shader 的距離實作是唯一例外，修改權重時必須同步。
 
 ### ui
 
