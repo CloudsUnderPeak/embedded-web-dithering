@@ -575,10 +575,9 @@ input:focus-visible,
 }
 
 .palette-editor-label {
-    color: var(--color-text);
+    color: var(--color-muted);
     font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
+    font-weight: 650;
 }
 
 .palette-swatches {
