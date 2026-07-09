@@ -9,7 +9,7 @@
             if (options.className) {
                 node.className = options.className;
             }
-            if (options.text) {
+            if (options.text !== undefined && options.text !== null) {
                 node.textContent = options.text;
             }
             if (options.attrs) {
