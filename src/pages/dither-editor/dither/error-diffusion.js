@@ -23,7 +23,6 @@
         var height = imageData.height;
         var data = new Float32Array(imageData.data);
         var output = new Uint8ClampedArray(imageData.data.length);
-        var diffuse = selectDiffuse(strength);
         var factor7 = (7 / 16) * strength;
         var factor3 = (3 / 16) * strength;
         var factor5 = (5 / 16) * strength;
@@ -106,22 +105,10 @@
         return new ImageData(output, width, height);
     }
 
-    function diffuseUnclamped(data, index, er, eg, eb, factor) {
-        // 標準誤差擴散在 Float32 工作緩衝保留溢位誤差；量化由 palette mapper 收斂。
-        data[index] += er * factor;
-        data[index + 1] += eg * factor;
-        data[index + 2] += eb * factor;
-    }
-
-    function diffuseClamped(data, index, er, eg, eb, factor) {
-        // strength > 100% 時擴散權重總和超過 1，逐步 clamp 可避免平坦區誤差發散。
+    function diffuse(data, index, er, eg, eb, factor) {
         data[index] = clampChannel(data[index] + er * factor);
         data[index + 1] = clampChannel(data[index + 1] + eg * factor);
         data[index + 2] = clampChannel(data[index + 2] + eb * factor);
-    }
-
-    function selectDiffuse(strength) {
-        return strength > 1 ? diffuseClamped : diffuseUnclamped;
     }
 
     function luminanceAt(data, index) {
@@ -206,7 +193,6 @@
         var data = new Float32Array(source);
         var output = new Uint8ClampedArray(source.length);
         var strength = normalizeErrorStrength(options.errorStrength);
-        var diffuse = selectDiffuse(strength);
         var factor7 = (7 / 16) * strength;
         var factor3 = (3 / 16) * strength;
         var factor5 = (5 / 16) * strength;
@@ -286,7 +272,6 @@
         var height = imageData.height;
         var data = new Float32Array(imageData.data);
         var output = new Uint8ClampedArray(imageData.data.length);
-        var diffuse = selectDiffuse(strength);
         var matrixOffsets = matrixOffsetCache(matrix, width, strength);
         var matrixLength = matrixOffsets.length;
         var offsetX = matrixOffsets.offsetX;

@@ -86,8 +86,7 @@
         errorR,
         errorG,
         errorB,
-        count,
-        clampBuffer
+        count
     ) {
         var shareR = errorR / count;
         var shareG = errorG / count;
@@ -101,15 +100,9 @@
                 continue;
             }
             var recipientIndex = index + offsetY * rowStride + offsetX * 4;
-            if (clampBuffer) {
-                source[recipientIndex] = clampChannel(source[recipientIndex] + shareR);
-                source[recipientIndex + 1] = clampChannel(source[recipientIndex + 1] + shareG);
-                source[recipientIndex + 2] = clampChannel(source[recipientIndex + 2] + shareB);
-            } else {
-                source[recipientIndex] += shareR;
-                source[recipientIndex + 1] += shareG;
-                source[recipientIndex + 2] += shareB;
-            }
+            source[recipientIndex] = clampChannel(source[recipientIndex] + shareR);
+            source[recipientIndex + 1] = clampChannel(source[recipientIndex + 1] + shareG);
+            source[recipientIndex + 2] = clampChannel(source[recipientIndex + 2] + shareB);
         }
     }
 
@@ -122,7 +115,6 @@
             var paletteMapper = app.pages.ditherEditor.paletteMapping.createMapper(options);
             var rowStride = width * 4;
             var errorStrength = normalizeErrorStrength(options.errorStrength);
-            var clampBuffer = errorStrength > 1;
             if (!paletteMapper.length) {
                 return imageData;
             }
@@ -162,8 +154,7 @@
                             errorR,
                             errorG,
                             errorB,
-                            count,
-                            clampBuffer
+                            count
                         );
                     }
                 }

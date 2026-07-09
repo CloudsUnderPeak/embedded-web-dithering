@@ -11,7 +11,6 @@ Split From: SPEC_INDEX.md
 
 ## History
 
-- 2026-07-09: Error diffusion 與 dot diffusion 的 Float32 工作緩衝在 strength ≤ 100% 時不 clamp，以保留標準誤差擴散的溢位誤差與階調；strength > 100% 時恢復擴散寫回 clamp，避免 over-drive 權重造成平坦區誤差發散。
 - 2026-07-09: 導入 dither Web Worker：擴散類演算法（error diffusion、adaptive error diffusion、dot diffusion）在 HTTP serving 下可於背景執行緒執行；`file://` 或 worker 載入失敗時永久 fallback 同步路徑。preview/export 走 `pipelineRunner.runAsync`，controller 用 run id 丟棄過期 preview 結果並在 destroy 時 terminate worker。
 - 2026-07-09: feature 之間不可直接讀寫 `state.settings.<其他 feature>`；跨 feature 查詢一律透過 `featureRegistry.api(id)` 取得對方宣告的 `api` 物件，api 回 null（feature 停用）時呼叫端必須有明確降級路徑。依賴其他 feature 資料的 operation 必須用 `operation.cacheKey` 把該資料帶進 stage cache key。
 - 2026-07-09: crop feature 拆為三支 script：`crop-geometry.js`（純幾何，零依賴）、`crop-auto-background.js`（背景 preset 與 Auto 取色）、`crop-feature.js`（註冊/panel/operation）。feature manifest entry 支援 `paths` 陣列宣告多支 script，依序載入。
