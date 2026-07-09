@@ -11,6 +11,7 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-07: 全站互動元件（button、link、select、input、可聚焦元素）鍵盤聚焦時必須顯示主題 accent 色焦點環；只在 `:focus-visible` 顯示，滑鼠點擊不出現。toggle switch 的焦點環維持轉嫁到可見 track 的既有行為。
 - 2026-05-16: 定調目前專案版本為 `0.1.0`。
 - 2026-05-16: 定義 Dither Editor 的 Empty / Crop / Edit 使用者模式；首次進入無圖時只開放 Image Input，載入圖片或 demo 後重設設定並進入 Crop，Crop 確認或收合後才進入 Edit。
 - 2026-05-16: 明確限制各模式右下角 preview toolbar：Empty 不顯示按鈕，Crop 只顯示 Zoom In、Zoom Out、OK，Edit 只顯示 Original、Result；所有 preview toolbar 按鈕尺寸必須一致。

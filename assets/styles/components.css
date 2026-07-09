@@ -1,3 +1,14 @@
+/* 全站鍵盤焦點環：統一主題 accent 外觀，只在 :focus-visible 顯示，滑鼠點擊不出現。
+   toggle-switch 的隱藏 input 例外（focus 環轉嫁到 track，見 .toggle-switch 區塊）。 */
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--color-accent-strong);
+    outline-offset: 2px;
+}
+
 .panel-section {
     /* Panel 是工具展開後的設定區；Tool Row 本身另由 .tool-button 控制。 */
     border: 1px solid var(--color-border);
@@ -109,6 +120,11 @@
 
 .toggle-switch input:checked + .toggle-switch-track::after {
     transform: translateX(20px);
+}
+
+.toggle-switch input:focus-visible {
+    /* 隱藏的 1px input 不畫全域焦點環；焦點提示由下方規則轉嫁到可見 track。 */
+    outline: none;
 }
 
 .toggle-switch input:focus-visible + .toggle-switch-track {
