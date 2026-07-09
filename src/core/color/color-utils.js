@@ -5,6 +5,11 @@
         clampByte: function clampByte(value) {
             return Math.min(255, Math.max(0, Math.round(value)));
         },
+        // 將數值限制在 0-255 但保留小數；給誤差擴散工作緩衝與距離計算使用，
+        // 不可與 clampByte 混用：round 時機不同會改變輸出。
+        clampChannel: function clampChannel(value) {
+            return value < 0 ? 0 : (value > 255 ? 255 : value);
+        },
         // 依 Rec. 709 權重計算亮度，給圖案抖色等灰階判斷使用。
         luminance: function luminance(r, g, b) {
             return 0.2126 * r + 0.7152 * g + 0.0722 * b;

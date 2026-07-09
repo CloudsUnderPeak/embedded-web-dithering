@@ -3,10 +3,6 @@
     // Dither processor 只呼叫 mapColor / mapThresholdColor，不應知道具體 mapping id。
     app.pages.ditherEditor = app.pages.ditherEditor || {};
 
-    function clampByte(value) {
-        return value < 0 ? 0 : (value > 255 ? 255 : value);
-    }
-
     function normalizeId(id) {
         if (id === 'pair-mix') {
             return 'pair-mix';
@@ -23,9 +19,9 @@
         var green = new Uint8ClampedArray(source.length);
         var blue = new Uint8ClampedArray(source.length);
         for (var i = 0; i < source.length; i += 1) {
-            red[i] = clampByte(Math.round(Number(source[i] && source[i].r) || 0));
-            green[i] = clampByte(Math.round(Number(source[i] && source[i].g) || 0));
-            blue[i] = clampByte(Math.round(Number(source[i] && source[i].b) || 0));
+            red[i] = app.core.colorUtils.clampByte(Number(source[i] && source[i].r) || 0);
+            green[i] = app.core.colorUtils.clampByte(Number(source[i] && source[i].g) || 0);
+            blue[i] = app.core.colorUtils.clampByte(Number(source[i] && source[i].b) || 0);
         }
         return {
             source: source,
@@ -33,61 +29,6 @@
             green: green,
             blue: blue,
             length: source.length
-        };
-    }
-
-    function createDistanceContext(colorDistanceId) {
-        var mode = app.core.paletteUtils.normalizeColorDistanceId(colorDistanceId);
-        if (mode === 'manhattan-rgb') {
-            return {
-                rgb: function rgb(r1, g1, b1, r2, g2, b2) {
-                    return Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
-                }
-            };
-        }
-        if (mode === 'manhattan-bt709') {
-            return {
-                rgb: function rgb(r1, g1, b1, r2, g2, b2) {
-                    return 0.2126 * Math.abs(r1 - r2)
-                        + 0.7152 * Math.abs(g1 - g2)
-                        + 0.0722 * Math.abs(b1 - b2);
-                }
-            };
-        }
-        if (mode === 'euclidean-rgb') {
-            return {
-                rgb: function rgb(r1, g1, b1, r2, g2, b2) {
-                    var dr = r1 - r2;
-                    var dg = g1 - g2;
-                    var db = b1 - b2;
-                    return dr * dr + dg * dg + db * db;
-                }
-            };
-        }
-        if (mode === 'euclidean-bt709') {
-            return {
-                rgb: function rgb(r1, g1, b1, r2, g2, b2) {
-                    var dr = r1 - r2;
-                    var dg = g1 - g2;
-                    var db = b1 - b2;
-                    return 0.2126 * dr * dr + 0.7152 * dg * dg + 0.0722 * db * db;
-                }
-            };
-        }
-
-        var measure = app.core.paletteUtils.createColorDistanceMeasurer(mode);
-        var a = { r: 0, g: 0, b: 0 };
-        var b = { r: 0, g: 0, b: 0 };
-        return {
-            rgb: function rgb(r1, g1, b1, r2, g2, b2) {
-                a.r = r1;
-                a.g = g1;
-                a.b = b1;
-                b.r = r2;
-                b.g = g2;
-                b.b = b2;
-                return measure(a, b);
-            }
         };
     }
 
@@ -389,7 +330,7 @@
         normalizeId: normalizeId,
         createMapper: function createMapper(options) {
             var palette = normalizedPalette(options && options.palette);
-            var distance = createDistanceContext(options && options.colorDistance);
+            var distance = app.core.paletteUtils.createRgbDistanceContext(options && options.colorDistance);
             var id = normalizeId(options && options.paletteMapping);
             var thresholdStrength = Number(options && options.thresholdStrength);
             if (id === 'pair-mix' && palette.length >= 2) {

@@ -3,6 +3,9 @@
     // 這類演算法較慢，但能產生比單純 threshold 更自然的階調。
     app.pages.ditherEditor = app.pages.ditherEditor || {};
 
+    // clamp 保留小數：工作緩衝是 Float32Array，過早 round 會改變誤差累積。
+    var clampChannel = app.core.colorUtils.clampChannel;
+
     function normalizeErrorStrength(value) {
         var percent = Number(value);
         if (!Number.isFinite(percent)) {
@@ -103,13 +106,9 @@
     }
 
     function diffuse(data, index, er, eg, eb, factor) {
-        data[index] = clampByte(data[index] + er * factor);
-        data[index + 1] = clampByte(data[index + 1] + eg * factor);
-        data[index + 2] = clampByte(data[index + 2] + eb * factor);
-    }
-
-    function clampByte(value) {
-        return value < 0 ? 0 : (value > 255 ? 255 : value);
+        data[index] = clampChannel(data[index] + er * factor);
+        data[index + 1] = clampChannel(data[index + 1] + eg * factor);
+        data[index + 2] = clampChannel(data[index + 2] + eb * factor);
     }
 
     function luminanceAt(data, index) {
@@ -217,9 +216,9 @@
                 var bias = (128 - localMean) * adaptiveBiasScale;
                 var mapped = mappedColor(
                     paletteMapper,
-                    clampByte(r + bias),
-                    clampByte(g + bias),
-                    clampByte(b + bias)
+                    clampChannel(r + bias),
+                    clampChannel(g + bias),
+                    clampChannel(b + bias)
                 );
                 var nr = mapped.r;
                 var ng = mapped.g;

@@ -18,9 +18,9 @@
         );
     }
 
-    // 將色彩通道限制成 0-255 整數。
+    // 將色彩通道限制成 0-255 整數；round 語意統一由 core 提供。
     function clampByte(value) {
-        return Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
+        return app.core.colorUtils.clampByte(Number(value) || 0);
     }
 
     // 複製單一 RGB 色彩並正規化通道。

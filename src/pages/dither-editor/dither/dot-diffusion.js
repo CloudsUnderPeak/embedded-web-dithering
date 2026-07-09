@@ -21,9 +21,8 @@
     }
     var RECIPIENT_OFFSETS = buildRecipientOffsets();
 
-    function clampByte(value) {
-        return value < 0 ? 0 : (value > 255 ? 255 : value);
-    }
+    // clamp 保留小數：工作緩衝是 Float32Array，過早 round 會改變誤差累積。
+    var clampChannel = app.core.colorUtils.clampChannel;
 
     function normalizeErrorStrength(value) {
         var strength = Number(value);
@@ -101,9 +100,9 @@
                 continue;
             }
             var recipientIndex = index + offsetY * rowStride + offsetX * 4;
-            source[recipientIndex] = clampByte(source[recipientIndex] + shareR);
-            source[recipientIndex + 1] = clampByte(source[recipientIndex + 1] + shareG);
-            source[recipientIndex + 2] = clampByte(source[recipientIndex + 2] + shareB);
+            source[recipientIndex] = clampChannel(source[recipientIndex] + shareR);
+            source[recipientIndex + 1] = clampChannel(source[recipientIndex + 1] + shareG);
+            source[recipientIndex + 2] = clampChannel(source[recipientIndex + 2] + shareB);
         }
     }
 

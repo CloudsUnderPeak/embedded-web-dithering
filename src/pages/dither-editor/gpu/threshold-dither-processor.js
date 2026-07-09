@@ -192,18 +192,20 @@
         var values = new Float32Array(MAX_PALETTE_COLORS * 3);
         for (var i = 0; i < palette.length && i < MAX_PALETTE_COLORS; i += 1) {
             var offset = i * 3;
-            values[offset] = clampByte(Number(palette[i].r)) / 255;
-            values[offset + 1] = clampByte(Number(palette[i].g)) / 255;
-            values[offset + 2] = clampByte(Number(palette[i].b)) / 255;
+            values[offset] = paletteChannel(palette[i].r);
+            values[offset + 1] = paletteChannel(palette[i].g);
+            values[offset + 2] = paletteChannel(palette[i].b);
         }
         return values;
     }
 
-    function clampByte(value) {
-        if (!Number.isFinite(value)) {
+    // 與 CPU normalizedPalette 相同的 round + clamp，確保 GPU 最近色判斷一致。
+    function paletteChannel(value) {
+        var number = Number(value);
+        if (!Number.isFinite(number)) {
             return 0;
         }
-        return value < 0 ? 0 : (value > 255 ? 255 : value);
+        return app.core.colorUtils.clampByte(number) / 255;
     }
 
     function distanceMode(id) {

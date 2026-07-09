@@ -2,37 +2,54 @@
     // Palette 共用計算工具。
     // 預設使用 RgbQuant-style Euclidean distance，也就是 BT.709 weighted RGB。
     var DEFAULT_COLOR_DISTANCE_ID = 'euclidean-bt709';
+    // 依賴 core/color/color-utils.js 先載入（index.html 與 tools 的 script 順序保證）。
+    var clampChannel = app.core.colorUtils.clampChannel;
 
-    function clampByte(value) {
-        return Math.max(0, Math.min(255, Number(value) || 0));
-    }
-
-    function euclideanRgbDistance(a, b) {
-        var dr = a.r - b.r;
-        var dg = a.g - b.g;
-        var db = a.b - b.b;
+    // 純量版距離函式是唯一的權重來源；物件版與 mapper 的逐像素熱路徑都委派到這裡。
+    // GPU shader（threshold-dither-processor.js 的 distanceTo）無法共用程式碼，
+    // 修改權重時必須同步更新該 shader。
+    function euclideanRgbDistanceRgb(r1, g1, b1, r2, g2, b2) {
+        var dr = r1 - r2;
+        var dg = g1 - g2;
+        var db = b1 - b2;
         return dr * dr + dg * dg + db * db;
     }
 
-    function manhattanRgbDistance(a, b) {
-        return Math.abs(a.r - b.r) + Math.abs(a.g - b.g) + Math.abs(a.b - b.b);
+    function manhattanRgbDistanceRgb(r1, g1, b1, r2, g2, b2) {
+        return Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
     }
 
-    function euclideanBt709Distance(a, b) {
-        var dr = a.r - b.r;
-        var dg = a.g - b.g;
-        var db = a.b - b.b;
+    function euclideanBt709DistanceRgb(r1, g1, b1, r2, g2, b2) {
+        var dr = r1 - r2;
+        var dg = g1 - g2;
+        var db = b1 - b2;
         return 0.2126 * dr * dr + 0.7152 * dg * dg + 0.0722 * db * db;
     }
 
+    function manhattanBt709DistanceRgb(r1, g1, b1, r2, g2, b2) {
+        return 0.2126 * Math.abs(r1 - r2)
+            + 0.7152 * Math.abs(g1 - g2)
+            + 0.0722 * Math.abs(b1 - b2);
+    }
+
+    function euclideanRgbDistance(a, b) {
+        return euclideanRgbDistanceRgb(a.r, a.g, a.b, b.r, b.g, b.b);
+    }
+
+    function manhattanRgbDistance(a, b) {
+        return manhattanRgbDistanceRgb(a.r, a.g, a.b, b.r, b.g, b.b);
+    }
+
+    function euclideanBt709Distance(a, b) {
+        return euclideanBt709DistanceRgb(a.r, a.g, a.b, b.r, b.g, b.b);
+    }
+
     function manhattanBt709Distance(a, b) {
-        return 0.2126 * Math.abs(a.r - b.r)
-            + 0.7152 * Math.abs(a.g - b.g)
-            + 0.0722 * Math.abs(a.b - b.b);
+        return manhattanBt709DistanceRgb(a.r, a.g, a.b, b.r, b.g, b.b);
     }
 
     function srgbToLinear(value) {
-        var channel = clampByte(value) / 255;
+        var channel = clampChannel(Number(value) || 0) / 255;
         return channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
     }
 
@@ -216,9 +233,43 @@
         };
     }
 
+    // 建立純量 (r,g,b) 距離 context，逐像素熱路徑用它避免物件配置。
+    // ciede2000 等非 RGB 度量退回物件版 measurer，用共用 scratch 物件橋接。
+    function createRgbDistanceContext(colorDistanceId) {
+        var mode = normalizeColorDistanceId(colorDistanceId);
+        if (mode === 'manhattan-rgb') {
+            return { rgb: manhattanRgbDistanceRgb };
+        }
+        if (mode === 'manhattan-bt709') {
+            return { rgb: manhattanBt709DistanceRgb };
+        }
+        if (mode === 'euclidean-rgb') {
+            return { rgb: euclideanRgbDistanceRgb };
+        }
+        if (mode === 'euclidean-bt709') {
+            return { rgb: euclideanBt709DistanceRgb };
+        }
+
+        var measure = createColorDistanceMeasurer(mode);
+        var scratchA = { r: 0, g: 0, b: 0 };
+        var scratchB = { r: 0, g: 0, b: 0 };
+        return {
+            rgb: function rgb(r1, g1, b1, r2, g2, b2) {
+                scratchA.r = r1;
+                scratchA.g = g1;
+                scratchA.b = b1;
+                scratchB.r = r2;
+                scratchB.g = g2;
+                scratchB.b = b2;
+                return measure(scratchA, scratchB);
+            }
+        };
+    }
+
     app.core.paletteUtils = {
         createNearestColorFinder: createNearestColorFinder,
         createColorDistanceMeasurer: createColorDistanceMeasurer,
+        createRgbDistanceContext: createRgbDistanceContext,
         normalizeColorDistanceId: normalizeColorDistanceId,
         // 從 palette 中找出和目標色最接近的顏色。
         nearestColor: function nearestColor(color, palette, colorDistanceId) {
