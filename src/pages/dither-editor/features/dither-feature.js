@@ -209,6 +209,21 @@
                 if (algorithm.supportsDotDensity) {
                     options.dotDensity = strength / 100;
                 }
+                // 擴散類演算法是 CPU 重路徑，優先丟給 worker 避免凍結 UI；
+                // ordered/pattern 留主執行緒（GPU 加速或單趟 CPU 已夠快）。
+                // worker 不可用或失敗時 fallback 同步計算，輸出與 worker 一致。
+                var isDiffusion = algorithm.processorId === 'error-diffusion'
+                    || algorithm.processorId === 'adaptive-error-diffusion'
+                    || algorithm.processorId === 'dot-diffusion';
+                var workerClient = app.pages.ditherEditor.ditherWorkerClient;
+                if (isDiffusion && workerClient) {
+                    var workerRun = workerClient.run(imageData, algorithm, options);
+                    if (workerRun) {
+                        return workerRun.catch(function () {
+                            return registry.run(imageData, algorithm, options);
+                        });
+                    }
+                }
                 return registry.run(imageData, algorithm, options);
             }
         }

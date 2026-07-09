@@ -181,6 +181,60 @@
         return current;
     }
 
+    // 非同步版執行器：operation.run 可回傳 ImageData 或 Promise<ImageData>（worker 路徑）。
+    // cache 邏輯與同步版一致；同步版保留給 prepare group 等保證同步的路徑。
+    function runOperationIdsAsync(inputImageData, state, order, options) {
+        var stageCache = normalizeStageCache(options && options.stageCache);
+        var current = inputImageData;
+        var inputKey = stageCache ? imageDataKey(current) : '';
+        var index = 0;
+
+        function step() {
+            if (index >= order.length) {
+                return Promise.resolve(current);
+            }
+            var id = order[index];
+            index += 1;
+            var operation = app.pages.ditherEditor.operationRegistry.get(id);
+            if (!operation) {
+                return Promise.reject(new Error('Missing operation: ' + id));
+            }
+            var cacheKey = null;
+            if (stageCache && operation.cacheable !== false) {
+                cacheKey = stageCacheKey(operation, id, inputKey, current, state);
+                var cached = getStageCacheEntry(stageCache, cacheKey);
+                if (cached) {
+                    current = cached.imageData;
+                    inputKey = cached.outputKey;
+                    return step();
+                }
+            }
+            var previous = current;
+            return Promise.resolve(operation.run(previous, state.settings[id] || {}, {
+                id: id,
+                state: state,
+                stageCache: stageCache
+            })).then(function (result) {
+                current = result;
+                if (stageCache && operation.cacheable !== false) {
+                    var outputKey = current === previous
+                        ? inputKey
+                        : 'stage:' + id + ':' + cacheKey;
+                    setStageCacheEntry(stageCache, cacheKey, {
+                        imageData: current,
+                        outputKey: outputKey
+                    });
+                    inputKey = outputKey;
+                } else if (stageCache) {
+                    inputKey = imageDataKey(current);
+                }
+                return step();
+            });
+        }
+
+        return step();
+    }
+
     app.pages.ditherEditor = app.pages.ditherEditor || {};
     app.pages.ditherEditor.pipelineRunner = {
         createStageCache: createStageCache,
@@ -188,6 +242,10 @@
         // 依 state.pipeline 順序執行 operation，並把每步結果傳給下一步。
         run: function run(inputImageData, state, options) {
             return runOperationIds(inputImageData, state, orderedOperationIds(state), options);
+        },
+        // 非同步版：preview/export 走這裡，容許 dither 等 stage 回傳 Promise（worker）。
+        runAsync: function runAsync(inputImageData, state, options) {
+            return runOperationIdsAsync(inputImageData, state, orderedOperationIds(state), options);
         },
         // 執行指定 panel group 對應的 pipeline operation，用於取得 prepare 後的 edit original。
         runPanelGroup: function runPanelGroup(inputImageData, state, group, options) {

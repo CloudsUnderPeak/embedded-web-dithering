@@ -30,6 +30,7 @@
     ];
 
     var pageScripts = [
+        'src/pages/dither-editor/worker/dither-worker-client.js',
         'src/pages/dither-editor/operations/pipeline-runner.js',
         'src/pages/dither-editor/editor-mode-state-machine.js',
         'src/pages/dither-editor/state.js',

@@ -76,6 +76,7 @@
         state.uiRevision = revision;
         this.previewPending = false;
         this.previewHoldDepth = 0;
+        this.previewRunId = (this.previewRunId || 0) + 1;
         this.hidePreviewTimingLabel();
         app.pages.ditherEditor.pipelineRunner.clearStageCache(this.stageCache);
         clearTimeout(this.previewTimer);
@@ -400,39 +401,56 @@
     };
 
     // 實際執行 pipeline 並把 resultImageData 寫回 state。
+    // pipeline 可能包含 worker stage，因此回傳 Promise；previewRunId 會丟棄較舊結果。
     DitherEditorController.prototype.runPreview = function runPreview() {
+        var self = this;
         if (!this.state.sourceImageData) {
             this.state.status = 'empty';
             this.hidePreviewTimingLabel();
             this.render(this.state);
-            return;
+            return Promise.resolve();
         }
-        try {
-            this.runFeatureHook('onBeforePreview', {});
-            var startMs = nowMs();
-            // Preview 永遠從 sourceImageData 跑完整 pipeline，避免連續套用造成畫質累積劣化。
-            this.state.previewImageData = app.pages.ditherEditor.pipelineRunner.run(
-                this.state.sourceImageData,
-                this.state,
-                { stageCache: this.stageCache }
-            );
-            this.state.previewRenderDurationMs = nowMs() - startMs;
-            this.setPreviewTimingPhase('done', this.state.previewRenderDurationMs);
-            this.state.outputImageData = this.state.previewImageData;
-            this.state.status = 'preview-ready';
-            this.runFeatureHook('onAfterPreview', {});
-            this.schedulePreviewTimingHide();
-        } catch (error) {
-            this.state.status = 'error';
-            this.state.error = errorText(error);
-            this.state.previewRenderDurationMs = null;
-            this.hidePreviewTimingLabel();
-        }
-        this.state.livePreview = null;
-        this.render(this.state);
+        this.previewRunId = (this.previewRunId || 0) + 1;
+        var runId = this.previewRunId;
+        var startMs = nowMs();
+        return Promise.resolve()
+            .then(function () {
+                self.runFeatureHook('onBeforePreview', {});
+                // Preview 永遠從 sourceImageData 跑完整 pipeline，避免連續套用造成畫質累積劣化。
+                return app.pages.ditherEditor.pipelineRunner.runAsync(
+                    self.state.sourceImageData,
+                    self.state,
+                    { stageCache: self.stageCache }
+                );
+            })
+            .then(function (imageData) {
+                if (runId !== self.previewRunId) {
+                    return;
+                }
+                self.state.previewImageData = imageData;
+                self.state.previewRenderDurationMs = nowMs() - startMs;
+                self.setPreviewTimingPhase('done', self.state.previewRenderDurationMs);
+                self.state.outputImageData = self.state.previewImageData;
+                self.state.status = 'preview-ready';
+                self.runFeatureHook('onAfterPreview', {});
+                self.schedulePreviewTimingHide();
+                self.state.livePreview = null;
+                self.render(self.state);
+            })
+            .catch(function (error) {
+                if (runId !== self.previewRunId) {
+                    return;
+                }
+                self.state.status = 'error';
+                self.state.error = errorText(error);
+                self.state.previewRenderDurationMs = null;
+                self.hidePreviewTimingLabel();
+                self.state.livePreview = null;
+                self.render(self.state);
+            });
     };
 
-    // 匯出目前結果；若尚未有 result，會先同步跑一次 preview。
+    // 匯出目前結果；若尚未有 result，會先跑一次正式 pipeline。
     DitherEditorController.prototype.exportPng = function exportPng() {
         var self = this;
         if (!this.state.sourceImageData || this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.groups.EDIT) {
@@ -444,7 +462,7 @@
             .then(function () {
                 self.runFeatureHook('onBeforeExport', {});
                 // Export 不使用暫存 preview；重新跑正式 pipeline，確保輸出和最新 settings 一致。
-                return app.pages.ditherEditor.pipelineRunner.run(self.state.sourceImageData, self.state);
+                return app.pages.ditherEditor.pipelineRunner.runAsync(self.state.sourceImageData, self.state);
             })
             .then(function (imageData) {
                 self.state.outputImageData = imageData;
@@ -462,8 +480,12 @@
             });
     };
 
-    // 頁面卸載時清掉 timer/frame，避免背景頁面繼續更新。
+    // 頁面卸載時清掉 timer/frame 與 worker，避免背景頁面繼續更新。
     DitherEditorController.prototype.destroy = function destroy() {
+        this.previewRunId = (this.previewRunId || 0) + 1;
+        if (app.pages.ditherEditor.ditherWorkerClient) {
+            app.pages.ditherEditor.ditherWorkerClient.terminate();
+        }
         clearTimeout(this.previewTimer);
         clearTimeout(this.previewTimingHideTimer);
         this.previewTimingHideTimer = null;
