@@ -37,6 +37,8 @@
         'src/pages/dither-editor/viewport/viewport-renderer.js',
         'src/pages/dither-editor/viewport/overlay-renderer.js',
         'src/pages/dither-editor/viewport/pointer-mapper.js',
+        'src/pages/dither-editor/viewport/pixel-preview-drag.js',
+        'src/pages/dither-editor/preview-toolbar.js',
         'src/pages/dither-editor/controller.js',
         'src/pages/dither-editor/page.js'
     ];

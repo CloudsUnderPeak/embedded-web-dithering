@@ -11,7 +11,9 @@
         this.canvas = options.canvas;
         this.cropOverlay = options.cropOverlay;
         this.cropOverlayLabel = options.cropOverlayLabel;
+        this.timingLabel = options.timingLabel;
         this.prepareMode = options.prepareMode;
+        this.editMode = options.editMode;
         this.pixelPreviewKey = '';
     }
 
@@ -221,6 +223,50 @@
             Math.round(crop.rotation || 0) + 'deg'
         ].join(' | ');
     };
+
+    // Preview timing label：定位貼齊 canvas 右下角（相對 stage），顯示 Rendering... 或耗時。
+    ViewportOverlayRenderer.prototype.renderPreviewTimingLabel = function renderPreviewTimingLabel(state, cropVisible) {
+        var label = this.timingLabel;
+        if (!label || !this.canvas) {
+            return;
+        }
+        var labelState = state.previewTimingLabel || {};
+        var phase = labelState.phase;
+        var durationMs = labelState.durationMs;
+        var hasText = phase === 'rendering'
+            || (phase === 'done' && Number.isFinite(durationMs));
+        var visible = Boolean(
+            app.pages.ditherEditor.constants.SHOW_PREVIEW_TIMING_LABEL === true
+            && state.mode === this.editMode
+            && state.viewMode === 'result'
+            && !cropVisible
+            && state.sourceImageData
+            && !this.canvas.hidden
+            && hasText
+        );
+        if (!visible) {
+            label.hidden = true;
+            return;
+        }
+        var stageRect = this.previewStage.getBoundingClientRect();
+        var canvasRect = this.canvas.getBoundingClientRect();
+        label.textContent = phase === 'rendering'
+            ? (app.i18n.en.previewRendering || 'Rendering...')
+            : formatPreviewDuration(durationMs);
+        label.style.right = Math.max(6, stageRect.right - canvasRect.right + 6) + 'px';
+        label.style.bottom = Math.max(6, stageRect.bottom - canvasRect.bottom + 6) + 'px';
+        label.hidden = false;
+    };
+
+    function formatPreviewDuration(durationMs) {
+        if (durationMs < 1) {
+            return '<1 ms';
+        }
+        if (durationMs < 1000) {
+            return Math.round(durationMs) + ' ms';
+        }
+        return (durationMs / 1000).toFixed(1) + ' s';
+    }
 
     // 將 crop 的 aspectRatioId 轉成使用者看得懂的比例文字。
     function cropRatioLabel(crop) {

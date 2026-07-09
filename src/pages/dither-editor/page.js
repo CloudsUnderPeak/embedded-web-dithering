@@ -9,6 +9,7 @@
     var refs = {};
     var cachedState = null;
     var pixelPreviewDrag = null;
+    var previewToolbar = null;
 
     // 取得 UI 文字，缺字串時回傳 key 方便除錯。
     function t(key) {
@@ -273,71 +274,14 @@
         });
     }
 
-    function renderPreviewToolbar(state) {
-        if (!refs.previewToggleRow || !refs.cropControlRow) {
-            return;
-        }
-        var isPrepareMode = state.mode === modeMachine().groups.PREPARE;
-        var isEditMode = state.mode === modeMachine().groups.EDIT;
-        var shouldReserveToolbar = Boolean(state.sourceImageData && !isPrepareMode && !isEditMode);
-        refs.previewToolbar.hidden = !isPrepareMode && !isEditMode && !shouldReserveToolbar;
-        refs.previewToolbar.classList.toggle('is-reserved', shouldReserveToolbar);
-        refs.previewToolbar.setAttribute('aria-hidden', shouldReserveToolbar ? 'true' : 'false');
-        refs.cropControlRow.hidden = !isPrepareMode;
-        refs.previewToggleRow.hidden = !isEditMode;
-        refs.cropZoomInButton.disabled = !isPrepareMode;
-        refs.cropZoomOutButton.disabled = !isPrepareMode;
-        refs.cropOkButton.disabled = !isPrepareMode;
-        refs.originalInput.checked = state.viewMode === 'original';
-        refs.resultInput.checked = state.viewMode === 'result';
-        refs.pixelInput.checked = state.viewMode === 'pixel';
-        refs.originalInput.disabled = !isEditMode;
-        refs.resultInput.disabled = !isEditMode;
-        refs.pixelInput.disabled = !isEditMode;
-    }
-
-    function loadEmptyUploadFile(file) {
-        if (!file || !controller || !modeMachine().canUseSource(controller.state)) {
-            return;
-        }
-        controller.loadFile(file);
-    }
-
-    function bindEmptyUploadDropzone() {
-        if (!refs.emptyUpload || !refs.emptyFileInput || !refs.emptyBrowseButton) {
-            return;
-        }
-        refs.emptyBrowseButton.addEventListener("click", function () {
-            refs.emptyFileInput.click();
-        });
-        refs.emptyFileInput.addEventListener("change", function () {
-            var selected = refs.emptyFileInput.files[0];
-            refs.emptyFileInput.value = "";
-            loadEmptyUploadFile(selected);
-        });
-        refs.emptyUpload.addEventListener("dragover", function (event) {
-            event.preventDefault();
-            refs.emptyUpload.classList.add("is-over");
-        });
-        refs.emptyUpload.addEventListener("dragleave", function (event) {
-            if (!refs.emptyUpload.contains(event.relatedTarget)) {
-                refs.emptyUpload.classList.remove("is-over");
-            }
-        });
-        refs.emptyUpload.addEventListener("drop", function (event) {
-            event.preventDefault();
-            refs.emptyUpload.classList.remove("is-over");
-            var dropped = event.dataTransfer && event.dataTransfer.files[0];
-            loadEmptyUploadFile(dropped);
-        });
-    }
-
     function renderEmptyUpload(state) {
-        if (!refs.emptyUpload || !refs.previewStage || !refs.canvas) {
+        if (!refs.previewStage || !refs.canvas) {
             return;
         }
         var isEmptyMode = !state.sourceImageData;
-        refs.emptyUpload.hidden = !isEmptyMode;
+        if (refs.emptyUpload) {
+            refs.emptyUpload.hidden = !isEmptyMode;
+        }
         refs.canvas.hidden = isEmptyMode;
         refs.canvas.style.display = isEmptyMode ? "none" : "";
         refs.previewStage.classList.toggle("is-empty-upload", isEmptyMode);
@@ -348,13 +292,6 @@
                 refs.panelSectionsByTool[id].classList.toggle("is-empty-upload-panel", isEmptyMode);
             }
         });
-    }
-
-    function adjustCropZoom(delta) {
-        if (!controller || controller.state.mode !== modeMachine().groups.PREPARE) {
-            return;
-        }
-        controller.updateSetting('crop', 'zoom', Number(controller.state.settings.crop.zoom || 1) + delta);
     }
 
     function shouldHoldPendingPreview(state, cropVisible) {
@@ -384,59 +321,6 @@
         window.addEventListener('resize', refs.handleResize);
     }
 
-    function pixelPreviewCanDrag() {
-        return Boolean(
-            refs.previewStage
-            && refs.previewStage.classList.contains('is-pixel-preview')
-            && (
-                refs.previewStage.scrollWidth > refs.previewStage.clientWidth
-                || refs.previewStage.scrollHeight > refs.previewStage.clientHeight
-            )
-        );
-    }
-
-    function bindPixelPreviewDrag() {
-        refs.previewStage.addEventListener('pointerdown', function (event) {
-            if (event.button !== 0 || !pixelPreviewCanDrag()) {
-                return;
-            }
-            pixelPreviewDrag = {
-                pointerId: event.pointerId,
-                x: event.clientX,
-                y: event.clientY,
-                scrollLeft: refs.previewStage.scrollLeft,
-                scrollTop: refs.previewStage.scrollTop
-            };
-            refs.previewStage.classList.add('is-pixel-dragging');
-            if (refs.previewStage.setPointerCapture) {
-                refs.previewStage.setPointerCapture(event.pointerId);
-            }
-            event.preventDefault();
-        });
-        refs.previewStage.addEventListener('pointermove', function (event) {
-            if (!pixelPreviewDrag || pixelPreviewDrag.pointerId !== event.pointerId) {
-                return;
-            }
-            if (!pixelPreviewCanDrag()) {
-                pixelPreviewDrag = null;
-                refs.previewStage.classList.remove('is-pixel-dragging');
-                return;
-            }
-            refs.previewStage.scrollLeft = pixelPreviewDrag.scrollLeft - (event.clientX - pixelPreviewDrag.x);
-            refs.previewStage.scrollTop = pixelPreviewDrag.scrollTop - (event.clientY - pixelPreviewDrag.y);
-            event.preventDefault();
-        });
-        ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (name) {
-            refs.previewStage.addEventListener(name, function (event) {
-                if (!pixelPreviewDrag || pixelPreviewDrag.pointerId !== event.pointerId) {
-                    return;
-                }
-                pixelPreviewDrag = null;
-                refs.previewStage.classList.remove('is-pixel-dragging');
-            });
-        });
-    }
-
     // Page 主渲染入口：決定要畫 original/result/crop preview，並同步 UI 狀態。
     function render(state) {
         modeMachine().normalize(state);
@@ -444,7 +328,9 @@
         renderActiveTool(state);
         renderEmptyUpload(state);
         renderFeatureActions(state);
-        renderPreviewToolbar(state);
+        if (previewToolbar) {
+            previewToolbar.render(state);
+        }
         var cropVisible = overlayRenderer.shouldShowCropOverlay(state);
         var image = cropVisible
             ? state.sourceImageData
@@ -488,56 +374,16 @@
             refs.busyIndicator.hidden = !busy;
         }
         overlayRenderer.renderCropOverlay(state, cropMetrics, cropVisible);
-        renderPreviewTimingLabel(state, cropVisible);
+        overlayRenderer.renderPreviewTimingLabel(state, cropVisible);
         app.pages.ditherEditor.featureRegistry.dispatch('onRender', { state: state, controller: controller });
         if (refs.status) {
             app.app.renderStatus(refs.status, statusText(state));
         }
     }
 
-    function formatPreviewDuration(durationMs) {
-        if (durationMs < 1) {
-            return '<1 ms';
-        }
-        if (durationMs < 1000) {
-            return Math.round(durationMs) + ' ms';
-        }
-        return (durationMs / 1000).toFixed(1) + ' s';
-    }
-
-    function renderPreviewTimingLabel(state, cropVisible) {
-        var labelState = state.previewTimingLabel || {};
-        var phase = labelState.phase;
-        var durationMs = labelState.durationMs;
-        var hasText = phase === 'rendering'
-            || (phase === 'done' && Number.isFinite(durationMs));
-        var visible = Boolean(
-            refs.previewTimingLabel
-            && refs.canvas
-            && app.pages.ditherEditor.constants.SHOW_PREVIEW_TIMING_LABEL === true
-            && state.mode === modeMachine().groups.EDIT
-            && state.viewMode === 'result'
-            && !cropVisible
-            && state.sourceImageData
-            && !refs.canvas.hidden
-            && hasText
-        );
-        if (!visible) {
-            refs.previewTimingLabel.hidden = true;
-            return;
-        }
-        var stageRect = refs.previewStage.getBoundingClientRect();
-        var canvasRect = refs.canvas.getBoundingClientRect();
-        refs.previewTimingLabel.textContent = phase === 'rendering'
-            ? t('previewRendering')
-            : formatPreviewDuration(durationMs);
-        refs.previewTimingLabel.style.right = Math.max(6, stageRect.right - canvasRect.right + 6) + 'px';
-        refs.previewTimingLabel.style.bottom = Math.max(6, stageRect.bottom - canvasRect.bottom + 6) + 'px';
-        refs.previewTimingLabel.hidden = false;
-    }
-
+    // timing label 的可見性與定位由 overlay renderer 管理；page 只保留 controller 需要的入口。
     function renderPreviewTimingLabelOnly(state) {
-        renderPreviewTimingLabel(state, overlayRenderer.shouldShowCropOverlay(state));
+        overlayRenderer.renderPreviewTimingLabel(state, overlayRenderer.shouldShowCropOverlay(state));
     }
 
     // Adjust 拖曳中用 livePreview base + CSS filter 顯示即時結果。
@@ -549,7 +395,7 @@
             renderer.render(state.previewImageData);
         }
         renderer.setFilter(filter);
-        renderPreviewTimingLabel(state, false);
+        overlayRenderer.renderPreviewTimingLabel(state, false);
     }
 
     // 將 editor status 轉成 header 狀態文字。
@@ -624,51 +470,30 @@
                 attrs: { hidden: 'hidden' },
                 children: [refs.cropOverlayLabel]
             });
-            refs.emptyFileInput = app.utils.dom.el("input", {
-                className: "preview-upload-file-input",
-                attrs: {
-                    type: "file",
-                    accept: app.core.imageLoader.acceptedImageTypes,
-                    tabindex: "-1"
-                }
+            // Empty 畫布 dropzone 由 input feature 提供；input 停用時 empty 模式沒有 dropzone。
+            var emptyUploadProvider = app.pages.ditherEditor.featureRegistry.all().find(function (feature) {
+                return typeof feature.buildEmptyUpload === 'function';
             });
-            refs.emptyBrowseButton = app.utils.dom.el("button", {
-                className: "secondary-button preview-upload-button",
-                text: t("actionBrowseFile"),
-                attrs: { type: "button" }
-            });
-            refs.emptyUpload = app.utils.dom.el("div", {
-                className: "preview-upload-dropzone",
-                attrs: { hidden: "hidden" },
-                children: [
-                    refs.emptyFileInput,
-                    app.utils.dom.el("span", {
-                        className: "preview-upload-icon",
-                        attrs: { "aria-hidden": "true" },
-                        children: [
-                            ui().svgIcon('assets/icons/editor/upload-share.svg', { fallbackText: "↑" })
-                        ]
-                    }),
-                    app.utils.dom.el("div", { className: "preview-upload-title", text: t("uploadDropTitle") }),
-                    app.utils.dom.el("div", { className: "preview-upload-separator", text: t("uploadDropSeparator") }),
-                    refs.emptyBrowseButton
-                ]
-            });
+            refs.emptyUpload = emptyUploadProvider
+                ? emptyUploadProvider.buildEmptyUpload({ controller: controller })
+                : null;
             refs.busyIndicator = app.utils.dom.el('span', {
                 className: 'preview-busy-indicator',
                 attrs: { hidden: 'hidden', 'aria-hidden': 'true' }
             });
             refs.previewStage = app.utils.dom.el('div', {
                 className: 'preview-stage',
-                children: [refs.canvas, refs.cropOverlay, refs.previewTimingLabel, refs.emptyUpload, refs.busyIndicator]
+                children: [refs.canvas, refs.cropOverlay, refs.previewTimingLabel, refs.busyIndicator]
+                    .concat(refs.emptyUpload ? [refs.emptyUpload] : [])
             });
-            bindEmptyUploadDropzone();
             overlayRenderer = new app.pages.ditherEditor.ViewportOverlayRenderer({
                 previewStage: refs.previewStage,
                 canvas: refs.canvas,
                 cropOverlay: refs.cropOverlay,
                 cropOverlayLabel: refs.cropOverlayLabel,
-                prepareMode: modeMachine().groups.PREPARE
+                timingLabel: refs.previewTimingLabel,
+                prepareMode: modeMachine().groups.PREPARE,
+                editMode: modeMachine().groups.EDIT
             });
             pointerMapper = new app.pages.ditherEditor.CropPointerMapper({
                 cropOverlay: refs.cropOverlay,
@@ -677,7 +502,8 @@
                 prepareMode: modeMachine().groups.PREPARE
             });
             bindViewportResize();
-            bindPixelPreviewDrag();
+            pixelPreviewDrag = app.pages.ditherEditor.createPixelPreviewDrag(refs.previewStage);
+            previewToolbar = app.pages.ditherEditor.createPreviewToolbar(controller);
 
             renderer = new app.pages.ditherEditor.ViewportRenderer(refs.canvas);
             var state = controller.state;
@@ -685,109 +511,8 @@
             app.pages.ditherEditor.featureRegistry.dispatch('onMount', { state: state, controller: controller });
             rebuildControls(state);
 
-            var originalInput = app.utils.dom.el('input', {
-                attrs: {
-                    type: 'radio',
-                    name: 'preview-view-mode',
-                    value: 'original'
-                }
-            });
-            originalInput.addEventListener('change', function () {
-                if (originalInput.checked) {
-                    controller.setViewMode('original');
-                }
-            });
-            var resultInput = app.utils.dom.el('input', {
-                attrs: {
-                    type: 'radio',
-                    name: 'preview-view-mode',
-                    value: 'result'
-                }
-            });
-            resultInput.addEventListener('change', function () {
-                if (resultInput.checked) {
-                    controller.setViewMode('result');
-                }
-            });
-            var pixelInput = app.utils.dom.el('input', {
-                attrs: {
-                    type: 'radio',
-                    name: 'preview-view-mode',
-                    value: 'pixel'
-                }
-            });
-            pixelInput.addEventListener('change', function () {
-                if (pixelInput.checked) {
-                    controller.setViewMode('pixel');
-                }
-            });
-            var originalButton = app.utils.dom.el('label', {
-                className: 'setting-choice preview-view-choice',
-                children: [
-                    originalInput,
-                    app.utils.dom.el('span', { text: t('previewOriginal') })
-                ]
-            });
-            var resultButton = app.utils.dom.el('label', {
-                className: 'setting-choice preview-view-choice',
-                children: [
-                    resultInput,
-                    app.utils.dom.el('span', { text: t('previewResult') })
-                ]
-            });
-            var pixelButton = app.utils.dom.el('label', {
-                className: 'setting-choice preview-view-choice',
-                children: [
-                    pixelInput,
-                    app.utils.dom.el('span', { text: t('previewExpand') })
-                ]
-            });
-            var cropZoomInButton = app.utils.dom.el('button', {
-                className: 'secondary-button crop-zoom-button',
-                attrs: { type: 'button', title: t('actionCropZoomIn'), 'aria-label': t('actionCropZoomIn') },
-                children: [ui().svgIcon('assets/icons/editor/zoom-in.svg', { fallbackText: '+' })]
-            });
-            cropZoomInButton.addEventListener('click', function () {
-                adjustCropZoom(0.1);
-            });
-            var cropZoomOutButton = app.utils.dom.el('button', {
-                className: 'secondary-button crop-zoom-button',
-                attrs: { type: 'button', title: t('actionCropZoomOut'), 'aria-label': t('actionCropZoomOut') },
-                children: [ui().svgIcon('assets/icons/editor/zoom-out.svg', { fallbackText: '-' })]
-            });
-            cropZoomOutButton.addEventListener('click', function () {
-                adjustCropZoom(-0.1);
-            });
-            var cropOkButton = app.utils.dom.el('button', {
-                className: 'primary-button crop-ok-button',
-                text: t('actionCropOk'),
-                attrs: { type: 'button' }
-            });
-            cropOkButton.addEventListener('click', function () {
-                controller.closePrepareMode();
-            });
-            refs.originalInput = originalInput;
-            refs.resultInput = resultInput;
-            refs.pixelInput = pixelInput;
-            refs.cropZoomInButton = cropZoomInButton;
-            refs.cropZoomOutButton = cropZoomOutButton;
-            refs.cropOkButton = cropOkButton;
-            refs.cropControlRow = app.utils.dom.el('div', {
-                className: 'button-row',
-                children: [cropZoomInButton, cropZoomOutButton, cropOkButton]
-            });
-            refs.previewToggleRow = app.utils.dom.el('div', {
-                className: 'setting-choice-list preview-view-choice-list',
-                children: [originalButton, resultButton, pixelButton]
-            });
-
             preview.appendChild(refs.previewStage);
-            preview.appendChild(
-                refs.previewToolbar = app.utils.dom.el('div', {
-                    className: 'preview-toolbar',
-                    children: [refs.previewToggleRow, refs.cropControlRow]
-                })
-            );
+            preview.appendChild(previewToolbar.element);
             preview.appendChild(refs.error);
 
             page.appendChild(preview);
@@ -824,6 +549,9 @@
             if (pointerMapper) {
                 pointerMapper.destroy();
             }
+            if (pixelPreviewDrag) {
+                pixelPreviewDrag.destroy();
+            }
             if (controller) {
                 app.pages.ditherEditor.featureRegistry.dispatch('dispose', { state: controller.state, controller: controller });
                 controller.destroy();
@@ -834,6 +562,7 @@
             controller = null;
             renderer = null;
             pixelPreviewDrag = null;
+            previewToolbar = null;
             refs = {};
         }
     };
