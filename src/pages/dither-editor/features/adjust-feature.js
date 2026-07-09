@@ -111,18 +111,19 @@
         return Math.max(0.01, 1 + value / 100);
     }
 
-    function valueRangeInput(value, min, max, step, onChange, options) {
-        var valueLabel = app.utils.dom.el('span', {
-            className: 'adjust-range-value',
-            text: String(Number(value) || 0)
-        });
-        var input = ui.rangeInput(value, min, max, step, function (nextValue) {
-            valueLabel.textContent = String(nextValue);
-            onChange(nextValue);
-        }, options);
-        return app.utils.dom.el('div', {
+    // 亮度/對比/飽和度共用的滑桿：統一走 panelUtils.labeledRange 樣板。
+    function valueRangeInput(controller, key, value, interaction) {
+        return ui.labeledRange({
+            value: value,
+            min: -100,
+            max: 100,
+            step: 1,
             className: 'adjust-range-control',
-            children: [valueLabel, input]
+            valueClassName: 'adjust-range-value',
+            interaction: interaction,
+            onChange: function (nextValue) {
+                controller.updateSetting('adjust', key, nextValue);
+            }
         });
     }
 
@@ -141,23 +142,10 @@
         buildPanel: function buildPanel(context) {
             var state = context.state;
             var controller = context.controller;
-            var previewHold = {
-                onInteractionStart: function () {
-                    controller.beginPreviewHold('adjust');
-                },
-                onInteractionEnd: function () {
-                    controller.endPreviewHold();
-                }
-            };
-            var brightnessInput = valueRangeInput(state.settings.adjust.brightness, -100, 100, 1, function (value) {
-                controller.updateSetting('adjust', 'brightness', value);
-            }, previewHold);
-            var contrastInput = valueRangeInput(state.settings.adjust.contrast, -100, 100, 1, function (value) {
-                controller.updateSetting('adjust', 'contrast', value);
-            }, previewHold);
-            var saturationInput = valueRangeInput(state.settings.adjust.saturation, -100, 100, 1, function (value) {
-                controller.updateSetting('adjust', 'saturation', value);
-            }, previewHold);
+            var previewHold = ui.previewHoldHandlers(controller, 'adjust');
+            var brightnessInput = valueRangeInput(controller, 'brightness', state.settings.adjust.brightness, previewHold);
+            var contrastInput = valueRangeInput(controller, 'contrast', state.settings.adjust.contrast, previewHold);
+            var saturationInput = valueRangeInput(controller, 'saturation', state.settings.adjust.saturation, previewHold);
             return ui.section('panelAdjust', [
                 ui.row(ui.t('labelBrightness'), brightnessInput),
                 ui.row(ui.t('labelContrast'), contrastInput),

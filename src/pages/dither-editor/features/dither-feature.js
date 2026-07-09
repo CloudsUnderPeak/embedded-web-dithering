@@ -52,47 +52,6 @@
         );
     }
 
-    function errorStrengthInput(value, onChange, disabled, options) {
-        var normalized = normalizeErrorStrength(value);
-        var valueLabel = app.utils.dom.el('span', {
-            className: 'dither-range-value',
-            text: normalized + '%'
-        });
-        var input = ui.rangeInput(
-            normalized,
-            constants.MIN_DITHER_ERROR_STRENGTH,
-            constants.MAX_DITHER_ERROR_STRENGTH,
-            constants.DITHER_ERROR_STRENGTH_STEP,
-            function (nextValue) {
-                var next = normalizeErrorStrength(nextValue);
-                valueLabel.textContent = next + '%';
-                onChange(next);
-            },
-            options
-        );
-        var wrapper = app.utils.dom.el('div', {
-            className: 'dither-range-control',
-            children: [valueLabel, input]
-        });
-        function setValue(nextValue) {
-            var next = normalizeErrorStrength(nextValue);
-            var range = constants.MAX_DITHER_ERROR_STRENGTH - constants.MIN_DITHER_ERROR_STRENGTH;
-            var progress = range > 0
-                ? (next - constants.MIN_DITHER_ERROR_STRENGTH) / range * 100
-                : 0;
-            input.value = next;
-            input.style.setProperty('--range-progress', Math.max(0, Math.min(100, progress)) + '%');
-            valueLabel.textContent = next + '%';
-        }
-        wrapper.setDisabled = function (nextDisabled) {
-            input.disabled = Boolean(nextDisabled);
-            wrapper.classList.toggle('is-disabled', Boolean(nextDisabled));
-        };
-        wrapper.setValue = setValue;
-        wrapper.setDisabled(disabled);
-        return wrapper;
-    }
-
     app.pages.ditherEditor.featureRegistry.register({
         id: 'dither',
         icon: '..',
@@ -142,22 +101,23 @@
                     return { value: algorithm.id, label: ui.t(algorithm.labelKey) };
                 })
             );
-            var previewHold = {
-                onInteractionStart: function () {
-                    controller.beginPreviewHold('dither');
+            var errorStrengthControl = ui.labeledRange({
+                value: state.settings.dither.errorStrength,
+                min: constants.MIN_DITHER_ERROR_STRENGTH,
+                max: constants.MAX_DITHER_ERROR_STRENGTH,
+                step: constants.DITHER_ERROR_STRENGTH_STEP,
+                normalize: normalizeErrorStrength,
+                format: function (value) {
+                    return value + '%';
                 },
-                onInteractionEnd: function () {
-                    controller.endPreviewHold();
-                }
-            };
-            var errorStrengthControl = errorStrengthInput(
-                state.settings.dither.errorStrength,
-                function (value) {
+                className: 'dither-range-control',
+                valueClassName: 'dither-range-value',
+                interaction: ui.previewHoldHandlers(controller, 'dither'),
+                onChange: function (value) {
                     controller.updateSetting('dither', 'errorStrength', value);
-                },
-                !supportsStrength(state.settings.dither.algorithm),
-                previewHold
-            );
+                }
+            });
+            errorStrengthControl.setDisabled(!supportsStrength(state.settings.dither.algorithm));
             var strengthRow = ui.row(
                 ui.t(strengthLabelKey(state.settings.dither.algorithm)),
                 errorStrengthControl

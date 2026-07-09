@@ -49,23 +49,13 @@
         });
     }
 
-    // 將 RGB 轉成 color input 需要的 hex 字串。
+    // hex 與 RGB 互轉統一走 core.colorUtils，feature 不自寫轉換。
     function colorToHex(color) {
-        color = copyColor(color);
-        return '#' + [color.r, color.g, color.b].map(function (value) {
-            return ('0' + value.toString(16)).slice(-2);
-        }).join('');
+        return app.core.colorUtils.rgbToHex(color);
     }
 
-    // 將 color input 的 hex 字串轉回 RGB。
     function hexToColor(value) {
-        var match = /^#?([0-9a-f]{6})$/i.exec(value || '');
-        var hex = match ? match[1] : '000000';
-        return {
-            r: parseInt(hex.slice(0, 2), 16),
-            g: parseInt(hex.slice(2, 4), 16),
-            b: parseInt(hex.slice(4, 6), 16)
-        };
+        return app.core.colorUtils.hexToRgb(value);
     }
 
     function extractOriginalPalette(imageData, paletteSize) {

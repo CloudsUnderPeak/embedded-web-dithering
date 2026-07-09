@@ -14,21 +14,23 @@
         luminance: function luminance(r, g, b) {
             return 0.2126 * r + 0.7152 * g + 0.0722 * b;
         },
-        // 將 #rrggbb 轉成 RGB 物件，給色票 input 使用。
+        // 將 #rrggbb 轉成 RGB 物件；非法輸入回黑色，給色票 input 使用。
         hexToRgb: function hexToRgb(hex) {
-            var normalized = String(hex || '#000000').replace('#', '');
+            var match = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+            var normalized = match ? match[1] : '000000';
             return {
                 r: parseInt(normalized.slice(0, 2), 16),
                 g: parseInt(normalized.slice(2, 4), 16),
                 b: parseInt(normalized.slice(4, 6), 16)
             };
         },
-        // 將 RGB 物件轉成 #rrggbb 字串。
+        // 將 RGB 物件轉成 #rrggbb 字串；通道經 clampByte round 到整數。
         rgbToHex: function rgbToHex(color) {
+            var clampByte = app.core.colorUtils.clampByte;
             function part(value) {
-                return Math.min(255, Math.max(0, value)).toString(16).padStart(2, '0');
+                return clampByte(Number(value) || 0).toString(16).padStart(2, '0');
             }
-            return '#' + part(color.r) + part(color.g) + part(color.b);
+            return '#' + part(color && color.r) + part(color && color.g) + part(color && color.b);
         }
     };
 })(window.DitherApp);

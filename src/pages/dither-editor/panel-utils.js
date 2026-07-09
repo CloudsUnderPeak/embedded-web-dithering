@@ -230,6 +230,56 @@
         return input;
     }
 
+    // 帶數值標籤的 range 控制：數值標籤 + slider，並提供 setValue / setDisabled。
+    // normalize 統一數值域（clamp/round），format 決定標籤文字（例如加 % 後綴）。
+    // 這是 feature 面板滑桿的唯一樣板；feature 不應再自寫 label+range 組合。
+    function labeledRange(config) {
+        config = config || {};
+        var normalize = config.normalize || Number;
+        var format = config.format || String;
+        var min = Number(config.min);
+        var max = Number(config.max);
+        var initial = normalize(config.value);
+        var valueLabel = app.utils.dom.el('span', {
+            className: config.valueClassName || 'range-value',
+            text: format(initial)
+        });
+        var input = rangeInput(initial, min, max, config.step, function (nextValue) {
+            var next = normalize(nextValue);
+            valueLabel.textContent = format(next);
+            config.onChange(next);
+        }, config.interaction);
+        var wrapper = app.utils.dom.el('div', {
+            className: config.className || 'range-control',
+            children: [valueLabel, input]
+        });
+        wrapper.setValue = function setValue(nextValue) {
+            var next = normalize(nextValue);
+            var range = max - min;
+            var progress = range > 0 ? (next - min) / range * 100 : 0;
+            input.value = next;
+            input.style.setProperty('--range-progress', Math.max(0, Math.min(100, progress)) + '%');
+            valueLabel.textContent = format(next);
+        };
+        wrapper.setDisabled = function setDisabled(nextDisabled) {
+            input.disabled = Boolean(nextDisabled);
+            wrapper.classList.toggle('is-disabled', Boolean(nextDisabled));
+        };
+        return wrapper;
+    }
+
+    // 滑桿拖曳期間的 live preview hold 樣板：start/end 成對通知 controller。
+    function previewHoldHandlers(controller, id) {
+        return {
+            onInteractionStart: function () {
+                controller.beginPreviewHold(id);
+            },
+            onInteractionEnd: function () {
+                controller.endPreviewHold();
+            }
+        };
+    }
+
     // 建立下拉選單，options 使用 { value, label }。
     function selectInput(value, options, onChange) {
         var select = app.utils.dom.el('select');
@@ -263,6 +313,8 @@
         toggleSwitchInput: toggleSwitchInput,
         unitNumberInput: unitNumberInput,
         rangeInput: rangeInput,
+        labeledRange: labeledRange,
+        previewHoldHandlers: previewHoldHandlers,
         selectInput: selectInput,
         checkboxInput: checkboxInput
     };
