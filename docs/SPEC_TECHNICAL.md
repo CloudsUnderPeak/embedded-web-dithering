@@ -11,6 +11,7 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-09: Error diffusion 與 dot diffusion 的 Float32 工作緩衝在 strength ≤ 100% 時不 clamp，以保留標準誤差擴散的溢位誤差與階調；strength > 100% 時恢復擴散寫回 clamp，避免 over-drive 權重造成平坦區誤差發散。
 - 2026-07-07: 全域 `:focus-visible` 焦點環由 `components.css` 統一提供（`--color-accent-strong`）；toggle switch 隱藏 input 為唯一允許 `outline: none` 的例外，其焦點環轉嫁到可見 track。
 - 2026-07-06: 色彩通道 clamp 統一由 `core/color/color-utils.js` 提供：`clampByte`（round + clamp，最終整數輸出用）與 `clampChannel`（僅 clamp 保留小數，誤差擴散工作緩衝與距離計算用）；dither 模組不可再自定義 clamp。GPU threshold palette uniform 必須與 CPU `normalizedPalette` 相同做 round，維持 CPU/GPU 最近色一致。
 - 2026-07-06: RGB 色距權重的唯一來源是 `core/color/palette-utils.js` 的純量距離函式；`palette-mapping` 透過 `createRgbDistanceContext()` 取得逐像素距離 context，不可另寫距離公式。GPU shader 的 `distanceTo` 是唯一允許的重複實作，修改權重時必須同步。
