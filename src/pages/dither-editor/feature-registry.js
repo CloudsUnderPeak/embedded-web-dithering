@@ -46,10 +46,11 @@
     }
 
     // 從 manifest 解析出啟用且依賴順序正確的 script 路徑。
+    // entry 可用 paths 宣告多支 script（依序載入），feature 本體放最後一支。
     function featureScripts() {
-        return resolveManifest(app.pages.ditherEditor.featureManifest || []).map(function (entry) {
-            return entry.path;
-        });
+        return resolveManifest(app.pages.ditherEditor.featureManifest || []).reduce(function (paths, entry) {
+            return paths.concat(entry.paths || [entry.path]);
+        }, []);
     }
 
     // 檢查 manifest 宣告啟用的 feature 是否真的完成 register。
@@ -113,8 +114,8 @@
 
     // 驗證 manifest item 的基本欄位與 dependsOn 目標。
     function validateManifestEntry(entry, byId) {
-        if (!entry || !entry.id || !entry.path) {
-            throw new Error('Feature manifest entries require id and path.');
+        if (!entry || !entry.id || (!entry.path && !(entry.paths && entry.paths.length))) {
+            throw new Error('Feature manifest entries require id and path (or paths).');
         }
         if (byId[entry.id]) {
             throw new Error('Duplicate feature manifest id: ' + entry.id);

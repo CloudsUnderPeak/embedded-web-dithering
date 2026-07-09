@@ -12,7 +12,12 @@
         {
             id: 'crop',
             enabled: true,
-            path: 'src/pages/dither-editor/features/crop-feature.js',
+            // crop 由三支 script 組成：純幾何 → 背景取色 → feature 本體（依序載入）。
+            paths: [
+                'src/pages/dither-editor/features/crop-geometry.js',
+                'src/pages/dither-editor/features/crop-auto-background.js',
+                'src/pages/dither-editor/features/crop-feature.js'
+            ],
             loadOrder: 20
         },
         {
