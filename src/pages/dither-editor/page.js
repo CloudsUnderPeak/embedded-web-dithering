@@ -480,6 +480,13 @@
             renderLivePreview(state);
         }
         refs.error.textContent = state.status === 'error' ? state.error || app.i18n.en.errorGeneric : '';
+        if (refs.busyIndicator) {
+            // 觸控裝置沒有游標回饋；忙碌狀態用 spinner 提供可見的處理中提示。
+            var busy = state.status === 'processing-preview'
+                || state.status === 'exporting'
+                || state.status === 'loading-image';
+            refs.busyIndicator.hidden = !busy;
+        }
         overlayRenderer.renderCropOverlay(state, cropMetrics, cropVisible);
         renderPreviewTimingLabel(state, cropVisible);
         app.pages.ditherEditor.featureRegistry.dispatch('onRender', { state: state, controller: controller });
@@ -647,9 +654,13 @@
                     refs.emptyBrowseButton
                 ]
             });
+            refs.busyIndicator = app.utils.dom.el('span', {
+                className: 'preview-busy-indicator',
+                attrs: { hidden: 'hidden', 'aria-hidden': 'true' }
+            });
             refs.previewStage = app.utils.dom.el('div', {
                 className: 'preview-stage',
-                children: [refs.canvas, refs.cropOverlay, refs.previewTimingLabel, refs.emptyUpload]
+                children: [refs.canvas, refs.cropOverlay, refs.previewTimingLabel, refs.emptyUpload, refs.busyIndicator]
             });
             bindEmptyUploadDropzone();
             overlayRenderer = new app.pages.ditherEditor.ViewportOverlayRenderer({

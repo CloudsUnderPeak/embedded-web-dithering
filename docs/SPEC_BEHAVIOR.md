@@ -11,6 +11,7 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-07: preview stage 右上角在 loading/processing/exporting 期間顯示忙碌 spinner（不攔截互動），提供觸控裝置可見的處理中提示。Export 進行中，Export PNG 按鈕變為 Cancel；點擊取消後丟棄在途結果、不觸發下載，狀態還原為 ready/preview-ready。
 - 2026-07-07: 全站互動元件（button、link、select、input、可聚焦元素）鍵盤聚焦時必須顯示主題 accent 色焦點環；只在 `:focus-visible` 顯示，滑鼠點擊不出現。toggle switch 的焦點環維持轉嫁到可見 track 的既有行為。
 - 2026-05-16: 定調目前專案版本為 `0.1.0`。
 - 2026-05-16: 定義 Dither Editor 的 Empty / Crop / Edit 使用者模式；首次進入無圖時只開放 Image Input，載入圖片或 demo 後重設設定並進入 Crop，Crop 確認或收合後才進入 Edit。

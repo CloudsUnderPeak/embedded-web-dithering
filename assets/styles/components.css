@@ -9,6 +9,32 @@ input:focus-visible,
     outline-offset: 2px;
 }
 
+.preview-busy-indicator {
+    /* 忙碌 spinner：疊在 preview stage 右上角，僅提示處理中，不攔截互動。 */
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--color-border-strong);
+    border-top-color: var(--color-accent);
+    pointer-events: none;
+    animation: preview-busy-spin 0.9s linear infinite;
+}
+
+@keyframes preview-busy-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.export-button.is-exporting {
+    background: var(--color-surface-muted);
+    border-color: var(--color-border-strong);
+    color: var(--color-text);
+}
+
 .panel-section {
     /* Panel 是工具展開後的設定區；Tool Row 本身另由 .tool-button 控制。 */
     border: 1px solid var(--color-border);

@@ -2,6 +2,7 @@
     // Export feature 是 action，不是可拖曳的 pipeline tool。
     // 它使用目前 preview/result ImageData 直接輸出 PNG，不在面板中折疊。
     var ui = app.pages.ditherEditor.panelUtils;
+    var actionRefs = null;
 
     app.pages.ditherEditor.featureRegistry.register({
         id: 'export',
@@ -15,23 +16,41 @@
         defaultSettings: function defaultSettings() {
             return { format: 'png' };
         },
-        // 建立外露的 Export PNG 按鈕，不放進可折疊 Tool Row。
+        // 建立外露的 Export PNG 按鈕；export 進行中同一顆按鈕變成取消。
         buildAction: function buildAction(context) {
+            var label = app.utils.dom.el('span', { text: ui.t('actionExport') });
             var exportButton = app.utils.dom.el('button', {
                 className: 'primary-button export-button button-with-icon',
                 attrs: { type: 'button' },
                 children: [
                     ui.svgIcon('assets/icons/editor/export-download.svg'),
-                    app.utils.dom.el('span', { text: ui.t('actionExport') })
+                    label
                 ]
             });
             exportButton.addEventListener('click', function () {
-                context.controller.exportPng();
+                if (context.controller.state.status === 'exporting') {
+                    context.controller.cancelExport();
+                } else {
+                    context.controller.exportPng();
+                }
             });
+            actionRefs = { button: exportButton, label: label };
             return app.utils.dom.el('div', {
                 className: 'export-action',
                 children: [exportButton]
             });
+        },
+        // 依 status 同步按鈕文字與外觀：exporting 期間顯示 Cancel。
+        onRender: function onRender(context) {
+            if (!actionRefs) {
+                return;
+            }
+            var exporting = context.state.status === 'exporting';
+            actionRefs.label.textContent = exporting ? ui.t('actionCancelExport') : ui.t('actionExport');
+            actionRefs.button.classList.toggle('is-exporting', exporting);
+        },
+        dispose: function dispose() {
+            actionRefs = null;
         }
     });
 })(window.DitherApp);

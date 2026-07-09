@@ -450,12 +450,17 @@
             });
     };
 
-    // 匯出目前結果；若尚未有 result，會先跑一次正式 pipeline。
+    // 匯出目前結果；pipeline 可能走 worker，exportRunId 支援取消後丟棄在途結果。
     DitherEditorController.prototype.exportPng = function exportPng() {
         var self = this;
         if (!this.state.sourceImageData || this.state.mode !== app.pages.ditherEditor.editorModeStateMachine.groups.EDIT) {
             return Promise.resolve();
         }
+        if (this.state.status === 'exporting') {
+            return Promise.resolve();
+        }
+        this.exportRunId = (this.exportRunId || 0) + 1;
+        var runId = this.exportRunId;
         this.state.status = 'exporting';
         this.render(this.state);
         return Promise.resolve()
@@ -465,24 +470,43 @@
                 return app.pages.ditherEditor.pipelineRunner.runAsync(self.state.sourceImageData, self.state);
             })
             .then(function (imageData) {
+                if (runId !== self.exportRunId) {
+                    return null;
+                }
                 self.state.outputImageData = imageData;
                 return app.core.imageExporter.exportPng(imageData, 'dither-output.png');
             })
             .then(function () {
+                if (runId !== self.exportRunId) {
+                    return;
+                }
                 self.state.status = 'exported';
                 self.runFeatureHook('onAfterExport', {});
                 self.render(self.state);
             })
             .catch(function (error) {
+                if (runId !== self.exportRunId) {
+                    return;
+                }
                 self.state.status = 'error';
                 self.state.error = errorText(error);
                 self.render(self.state);
             });
     };
 
+    DitherEditorController.prototype.cancelExport = function cancelExport() {
+        if (this.state.status !== 'exporting') {
+            return;
+        }
+        this.exportRunId = (this.exportRunId || 0) + 1;
+        this.state.status = this.state.previewImageData ? 'preview-ready' : 'ready';
+        this.render(this.state);
+    };
+
     // 頁面卸載時清掉 timer/frame 與 worker，避免背景頁面繼續更新。
     DitherEditorController.prototype.destroy = function destroy() {
         this.previewRunId = (this.previewRunId || 0) + 1;
+        this.exportRunId = (this.exportRunId || 0) + 1;
         if (app.pages.ditherEditor.ditherWorkerClient) {
             app.pages.ditherEditor.ditherWorkerClient.terminate();
         }

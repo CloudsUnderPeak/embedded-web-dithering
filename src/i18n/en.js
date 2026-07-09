@@ -24,6 +24,7 @@
         panelDither: 'Dither',
         actionNewImage: 'New Image',
         actionExport: 'Export PNG',
+        actionCancelExport: 'Cancel',
         actionLoadDemo: 'Load Demo',
         actionBrowseFile: 'Browse File',
         actionCropZoomIn: 'Zoom In',
