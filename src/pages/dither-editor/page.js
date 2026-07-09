@@ -20,19 +20,9 @@
         return app.pages.ditherEditor.panelUtils;
     }
 
-    // 判斷指定工具面板是否展開，並兼容早期單面板狀態欄位。
+    // 判斷指定工具面板是否展開；openToolPanels 是唯一的面板開關狀態來源。
     function isToolOpen(state, id) {
-        if (state.openToolPanels) {
-            return Boolean(state.openToolPanels[id]);
-        }
-        return state.settingsPanelOpen && state.activeTool === id;
-    }
-
-    // 將新版多面板狀態同步回舊欄位，避免其他流程讀到過期布林值。
-    function syncLegacyPanelOpenFlag(state) {
-        state.settingsPanelOpen = Object.keys(state.openToolPanels || {}).some(function (id) {
-            return state.openToolPanels[id];
-        });
+        return Boolean(state.openToolPanels && state.openToolPanels[id]);
     }
 
     function modeMachine() {
@@ -131,8 +121,6 @@
                         }
                         if (isToolOpen(controller.state, tool.id)) {
                             controller.state.openToolPanels[tool.id] = false;
-                            controller.state.activeTool = null;
-                            syncLegacyPanelOpenFlag(controller.state);
                             render(controller.state);
                         } else {
                             controller.openSourcePanel(tool.id);
@@ -154,8 +142,6 @@
                     }
                     controller.state.openToolPanels = controller.state.openToolPanels || {};
                     controller.state.openToolPanels[tool.id] = !isToolOpen(controller.state, tool.id);
-                    controller.state.activeTool = tool.id;
-                    syncLegacyPanelOpenFlag(controller.state);
                     render(controller.state);
                 });
                 refs.toolButtons[tool.id] = button;
@@ -237,7 +223,6 @@
 
     // 依 state 更新 tool row active 狀態與各 panel 顯示位置。
     function renderActiveTool(state) {
-        syncLegacyPanelOpenFlag(state);
         Object.keys(refs.toolButtons || {}).forEach(function (id) {
             var isOpen = isToolOpen(state, id);
             var disabled = !modeMachine().canUseTool(state, id);

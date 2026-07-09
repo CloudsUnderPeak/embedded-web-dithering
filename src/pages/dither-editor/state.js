@@ -53,8 +53,6 @@
             },
             outputImageData: null,
             livePreview: null,
-            activeTool: initialTool,
-            settingsPanelOpen: Boolean(initialTool),
             openToolPanels: openToolPanels,
             viewMode: 'result',
             originalSize: { width: 0, height: 0 },

@@ -8,19 +8,11 @@
         return Boolean(state && state.sourceImageData);
     }
 
-    function syncLegacyPanelOpenFlag(state) {
-        state.settingsPanelOpen = Object.keys(state.openToolPanels || {}).some(function (id) {
-            return state.openToolPanels[id];
-        });
-    }
-
-    function openPanels(state, ids, activeTool) {
+    function openPanels(state, ids) {
         state.openToolPanels = {};
         ids.forEach(function (id) {
             state.openToolPanels[id] = true;
         });
-        state.activeTool = activeTool || ids[0] || null;
-        syncLegacyPanelOpenFlag(state);
     }
 
     function availablePanelIds(state) {
@@ -76,10 +68,9 @@
         });
     }
 
-    function openPanelGroup(state, group, activeTool) {
+    function openPanelGroup(state, group) {
         var ids = panelIdsForGroup(state, group);
-        var activeId = ids.indexOf(activeTool) !== -1 ? activeTool : ids[0];
-        openPanels(state, ids, activeId);
+        openPanels(state, ids);
         return ids;
     }
 
@@ -104,9 +95,9 @@
         return state.mode;
     }
 
-    function enterSource(state, activeTool) {
+    function enterSource(state) {
         state.mode = MODE_GROUP_SOURCE;
-        openPanelGroup(state, MODE_GROUP_SOURCE, activeTool);
+        openPanelGroup(state, MODE_GROUP_SOURCE);
         state.viewMode = hasImage(state) && state.viewMode === 'original' ? 'original' : 'result';
         return state.mode;
     }
@@ -117,7 +108,6 @@
         pruneUnavailablePanels(state);
         closePanelGroup(state, MODE_GROUP_PREPARE);
         state.viewMode = hasImage(state) && state.viewMode === 'original' ? 'original' : 'result';
-        syncLegacyPanelOpenFlag(state);
         return state.mode;
     }
 
@@ -158,9 +148,7 @@
         panelIdsForGroup(state, MODE_GROUP_EDIT).forEach(function (id) {
             state.openToolPanels[id] = id === activeTool;
         });
-        state.activeTool = activeTool;
         state.viewMode = normalizeEditViewMode(state.viewMode);
-        syncLegacyPanelOpenFlag(state);
         return state.mode;
     }
 
@@ -171,12 +159,11 @@
         closePanelGroup(state, MODE_GROUP_PREPARE);
         closePanelGroup(state, MODE_GROUP_SOURCE);
         state.viewMode = normalizeEditViewMode(state.viewMode);
-        syncLegacyPanelOpenFlag(state);
         return state.mode;
     }
 
-    function openSourcePanel(state, activeTool) {
-        return enterSource(state, activeTool);
+    function openSourcePanel(state) {
+        return enterSource(state);
     }
 
     function canUseTool(state, id) {
