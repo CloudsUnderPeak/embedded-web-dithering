@@ -11,6 +11,7 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-09: Crop Fill、Adjust 亮度/對比/飽和度、Palette 色票、Dither 演算法/映射/色彩距離/蛇行/強度控制新增 info tip；tip 應作為短名詞解釋。
 - 2026-07-09: Web Setting 新增 Language 選項，提供 Auto、繁中、English；語言偏好會跨重新整理保存，Auto 依瀏覽器語言選擇目前支援語系。
 - 2026-07-07: preview stage 右上角在 loading/processing/exporting 期間顯示忙碌 spinner（不攔截互動），提供觸控裝置可見的處理中提示。Export 進行中，Export PNG 按鈕變為 Cancel；點擊取消後丟棄在途結果、不觸發下載，狀態還原為 ready/preview-ready。
 - 2026-07-07: 全站互動元件（button、link、select、input、可聚焦元素）鍵盤聚焦時必須顯示主題 accent 色焦點環；只在 `:focus-visible` 顯示，滑鼠點擊不出現。toggle switch 的焦點環維持轉嫁到可見 track 的既有行為。
@@ -613,6 +614,7 @@ MVP UI 文字支援 English 與繁體中文，並集中管理。Web Setting 的 
 
 - 按鈕、狀態、錯誤訊息、選單與設定 label 應有清楚文字。
 - Tool icon 若不易理解，應提供 title 或 aria-label。
+- 對輸出結果影響較不直覺的設定 label 應在文字後提供 info tip，包括 Fill、Brightness、Contrast、Saturation、Palette、Algorithm、Palette Mapping、Color Distance、Serpentine、Error Strength、Dither Strength 與 Dot Density；tip 只做短名詞解釋，不描述操作流程。
 - UI 文字不應分散硬寫在各處，避免後續維護困難。
 
 ## 驗收與測試重點

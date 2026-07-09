@@ -34,6 +34,14 @@
         return registry.supportsThresholdStrength(id) ? 'labelDitherStrength' : 'labelErrorStrength';
     }
 
+    function strengthTipKey(id) {
+        var registry = app.pages.ditherEditor.ditherAlgorithmRegistry;
+        if (registry.supportsDotDensity(id)) {
+            return 'tipDotDensity';
+        }
+        return registry.supportsThresholdStrength(id) ? 'tipDitherStrength' : 'tipErrorStrength';
+    }
+
     function supportsStrength(id) {
         var registry = app.pages.ditherEditor.ditherAlgorithmRegistry;
         return registry.supportsErrorStrength(id)
@@ -118,13 +126,15 @@
                 }
             });
             errorStrengthControl.setDisabled(!supportsStrength(state.settings.dither.algorithm));
-            var strengthRow = ui.row(
+            var strengthLabel = app.utils.dom.el('label');
+            ui.setLabelContent(
+                strengthLabel,
                 ui.t(strengthLabelKey(state.settings.dither.algorithm)),
-                errorStrengthControl
+                strengthTipKey(state.settings.dither.algorithm)
             );
-            var strengthLabel = strengthRow.querySelector('label');
+            var strengthRow = ui.row(strengthLabel, errorStrengthControl);
             function updateStrengthControl(algorithmId) {
-                strengthLabel.textContent = ui.t(strengthLabelKey(algorithmId));
+                ui.setLabelContent(strengthLabel, ui.t(strengthLabelKey(algorithmId)), strengthTipKey(algorithmId));
                 errorStrengthControl.setDisabled(!supportsStrength(algorithmId));
             }
             var rows = [
@@ -135,24 +145,24 @@
                         algorithm: value,
                         errorStrength: constants.DEFAULT_DITHER_ERROR_STRENGTH
                     });
-                })),
+                }), 'tipAlgorithm'),
                 ui.row(ui.t('labelPaletteMapping'), ui.selectInput(
                     state.settings.dither.paletteMapping,
                     paletteMappingOptions(),
                     function (value) {
                         controller.updateSetting('dither', 'paletteMapping', value);
                     }
-                )),
+                ), 'tipPaletteMapping'),
                 ui.row(ui.t('labelColorDistance'), ui.selectInput(
                     state.settings.dither.colorDistance,
                     colorDistanceOptions(),
                     function (value) {
                         controller.updateSetting('dither', 'colorDistance', value);
                     }
-                )),
+                ), 'tipColorDistance'),
                 ui.row(ui.t('labelSerpentine'), ui.toggleSwitchInput(state.settings.dither.serpentine, function (value) {
                     controller.updateSetting('dither', 'serpentine', value);
-                })),
+                }), 'tipSerpentine'),
                 strengthRow
             ];
             return ui.section('panelDither', rows, 'dither');

@@ -100,14 +100,14 @@
         return targetCtx.getImageData(0, 0, width, height);
     }
 
-    function cropLabel(text) {
-        return app.utils.dom.el('label', { text: text });
+    function cropLabel(text, tipKey) {
+        return app.utils.dom.el('label', { children: [ui.labelContent(text, tipKey)] });
     }
 
-    function cropField(label, input) {
+    function cropField(label, input, tipKey) {
         return app.utils.dom.el('div', {
             className: 'crop-field',
-            children: [cropLabel(label), input]
+            children: [cropLabel(label, tipKey), input]
         });
     }
 
@@ -304,7 +304,7 @@
                         cropField(ui.t('labelRatio'), aspectRatioInput),
                         cropField(ui.t('labelZoom'), zoomInput),
                         cropField(ui.t('labelRotate'), rotationInput),
-                        cropField(ui.t('labelFill'), cropBackgroundControl(backgroundPresetInput, backgroundColorInput)),
+                        cropField(ui.t('labelFill'), cropBackgroundControl(backgroundPresetInput, backgroundColorInput), 'tipFill'),
                         app.utils.dom.el('div', {
                             className: 'crop-icon-button-row',
                             children: [rotateLeftButton, rotateRightButton, flipXButton, flipYButton]

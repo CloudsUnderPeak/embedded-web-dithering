@@ -147,9 +147,9 @@
             var contrastInput = valueRangeInput(controller, 'contrast', state.settings.adjust.contrast, previewHold);
             var saturationInput = valueRangeInput(controller, 'saturation', state.settings.adjust.saturation, previewHold);
             return ui.section('panelAdjust', [
-                ui.row(ui.t('labelBrightness'), brightnessInput),
-                ui.row(ui.t('labelContrast'), contrastInput),
-                ui.row(ui.t('labelSaturation'), saturationInput)
+                ui.row(ui.t('labelBrightness'), brightnessInput, 'tipBrightness'),
+                ui.row(ui.t('labelContrast'), contrastInput, 'tipContrast'),
+                ui.row(ui.t('labelSaturation'), saturationInput, 'tipSaturation')
             ], 'adjust');
         },
         operation: {
