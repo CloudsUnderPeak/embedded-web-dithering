@@ -16,6 +16,7 @@
         'src/pages/dither-editor/dither/rgbquant-adapter.js',
         'src/pages/dither-editor/dither/dither-matrices.js',
         'src/pages/dither-editor/dither/palette-mapping.js',
+        'src/pages/dither-editor/gpu/gl-helpers.js',
         'src/pages/dither-editor/gpu/threshold-dither-processor.js',
         'src/pages/dither-editor/dither/error-diffusion.js',
         'src/pages/dither-editor/dither/ordered-dither.js',

@@ -18,6 +18,7 @@ Split From: SPEC_INDEX.md
 - 2026-07-09: `page.js` 職責收斂：Expand 拖曳平移移至 `viewport/pixel-preview-drag.js`，preview toolbar 移至 `preview-toolbar.js`，preview timing label 可見性與定位由 `viewport/overlay-renderer.js` 管理，Empty 畫布 dropzone 改由 input feature 提供。
 - 2026-07-09: 移除 legacy 單面板狀態欄位 `settingsPanelOpen` 與 `activeTool`；`openToolPanels` 是 tool panel 開關狀態的唯一來源。
 - 2026-07-09: 面板滑桿統一走 `panelUtils.labeledRange`（數值標籤 + range + setValue/setDisabled + --range-progress），live preview hold 樣板統一走 `panelUtils.previewHoldHandlers(controller, id)`；hex 與 RGB 互轉統一由 `core.colorUtils.hexToRgb/rgbToHex` 提供。
+- 2026-07-09: GPU processor 的 WebGL 樣板（context 建立、shader 編譯、全屏 quad、texture、drawQuad、readPixels 翻轉讀回）統一由 `gpu/gl-helpers.js` 提供；adjust 與 threshold processor 只保留各自 fragment shader 與 uniform 邏輯。
 - 2026-07-07: 全域 `:focus-visible` 焦點環由 `components.css` 統一提供（`--color-accent-strong`）；toggle switch 隱藏 input 為唯一允許 `outline: none` 的例外，其焦點環轉嫁到可見 track。
 - 2026-07-06: 色彩通道 clamp 統一由 `core/color/color-utils.js` 提供：`clampByte`（round + clamp，最終整數輸出用）與 `clampChannel`（僅 clamp 保留小數，誤差擴散工作緩衝與距離計算用）；dither 模組不可再自定義 clamp。GPU threshold palette uniform 必須與 CPU `normalizedPalette` 相同做 round，維持 CPU/GPU 最近色一致。
 - 2026-07-06: RGB 色距權重的唯一來源是 `core/color/palette-utils.js` 的純量距離函式；`palette-mapping` 透過 `createRgbDistanceContext()` 取得逐像素距離 context，不可另寫距離公式。GPU shader 的 `distanceTo` 是唯一允許的重複實作，修改權重時必須同步。

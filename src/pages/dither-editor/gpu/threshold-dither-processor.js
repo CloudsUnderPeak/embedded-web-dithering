@@ -53,17 +53,16 @@
     }
 
     function createProcessor() {
-        if (typeof document === 'undefined') {
+        // WebGL 樣板（context/shader/quad/texture/讀回）共用 gpu/gl-helpers.js。
+        var glHelpers = app.pages.ditherEditor.glHelpers;
+        var context = glHelpers.createContext();
+        if (!context) {
             return null;
         }
-        var canvas = document.createElement('canvas');
-        var gl = canvas.getContext('webgl', { antialias: false, preserveDrawingBuffer: true }) ||
-            canvas.getContext('experimental-webgl', { antialias: false, preserveDrawingBuffer: true });
-        if (!gl) {
-            return null;
-        }
+        var canvas = context.canvas;
+        var gl = context.gl;
 
-        var program = createProgram(gl, vertexShaderSource(), fragmentShaderSource());
+        var program = glHelpers.createProgram(gl, glHelpers.fullscreenVertexShader(), fragmentShaderSource());
         var positionLocation = gl.getAttribLocation(program, 'a_position');
         var texCoordLocation = gl.getAttribLocation(program, 'a_texCoord');
         var uniforms = {
@@ -81,24 +80,9 @@
             mappingMode: gl.getUniformLocation(program, 'u_mappingMode')
         };
 
-        var positionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        gl.bufferData(
-            gl.ARRAY_BUFFER,
-            new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
-            gl.STATIC_DRAW
-        );
-
-        var texCoordBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-        gl.bufferData(
-            gl.ARRAY_BUFFER,
-            new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]),
-            gl.STATIC_DRAW
-        );
-
-        var imageTexture = createTexture(gl);
-        var thresholdTexture = createTexture(gl);
+        var buffers = glHelpers.createQuadBuffers(gl);
+        var imageTexture = glHelpers.createTexture(gl);
+        var thresholdTexture = glHelpers.createTexture(gl);
         var thresholdCacheKey = null;
 
         return {
@@ -150,29 +134,10 @@
                 gl.uniform1i(uniforms.distanceMode, distanceMode(options.colorDistance));
                 gl.uniform1i(uniforms.mappingMode, mappingMode(options.paletteMapping));
 
-                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-                gl.enableVertexAttribArray(positionLocation);
-                gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-                gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-                gl.enableVertexAttribArray(texCoordLocation);
-                gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 0, 0);
-                gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-                var pixels = new Uint8Array(width * height * 4);
-                gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-                return new ImageData(flipRows(pixels, width, height), width, height);
+                glHelpers.drawQuad(gl, buffers, positionLocation, texCoordLocation);
+                return glHelpers.readImageData(gl, width, height);
             }
         };
-    }
-
-    function createTexture(gl) {
-        var texture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        return texture;
     }
 
     function encodeThresholdRanks(thresholds, levels) {
@@ -225,50 +190,9 @@
         return -1;
     }
 
-    function flipRows(pixels, width, height) {
-        var rowSize = width * 4;
-        var output = new Uint8ClampedArray(pixels.length);
-        for (var y = 0; y < height; y += 1) {
-            var sourceStart = (height - y - 1) * rowSize;
-            output.set(pixels.subarray(sourceStart, sourceStart + rowSize), y * rowSize);
-        }
-        return output;
-    }
 
-    function createProgram(gl, vertexSource, fragmentSource) {
-        var vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexSource);
-        var fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
-        var program = gl.createProgram();
-        gl.attachShader(program, vertexShader);
-        gl.attachShader(program, fragmentShader);
-        gl.linkProgram(program);
-        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-            throw new Error(gl.getProgramInfoLog(program));
-        }
-        return program;
-    }
 
-    function createShader(gl, type, source) {
-        var shader = gl.createShader(type);
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            throw new Error(gl.getShaderInfoLog(shader));
-        }
-        return shader;
-    }
 
-    function vertexShaderSource() {
-        return [
-            'attribute vec2 a_position;',
-            'attribute vec2 a_texCoord;',
-            'varying vec2 v_texCoord;',
-            'void main() {',
-            '  gl_Position = vec4(a_position, 0.0, 1.0);',
-            '  v_texCoord = a_texCoord;',
-            '}'
-        ].join('\n');
-    }
 
     function fragmentShaderSource() {
         return [
