@@ -241,9 +241,10 @@
         Object.keys(refs.panelSectionsByTool || {}).forEach(function (id) {
             var panel = refs.panelSectionsByTool[id];
             var isOpen = isToolOpen(state, id);
+            var panelHost = refs.toolPanelHosts[id];
             panel.hidden = !isOpen;
-            if (isOpen) {
-                refs.toolPanelHosts[id].appendChild(panel);
+            if (isOpen && panel.parentNode !== panelHost) {
+                panelHost.appendChild(panel);
             }
         });
     }
@@ -351,13 +352,6 @@
             renderLivePreview(state);
         }
         refs.error.textContent = state.status === 'error' ? state.error || app.i18n.t('errorGeneric') : '';
-        if (refs.busyIndicator) {
-            // 觸控裝置沒有游標回饋；忙碌狀態用 spinner 提供可見的處理中提示。
-            var busy = state.status === 'processing-preview'
-                || state.status === 'exporting'
-                || state.status === 'loading-image';
-            refs.busyIndicator.hidden = !busy;
-        }
         overlayRenderer.renderCropOverlay(state, cropMetrics, cropVisible);
         overlayRenderer.renderPreviewTimingLabel(state, cropVisible);
         app.pages.ditherEditor.featureRegistry.dispatch('onRender', { state: state, controller: controller });
@@ -462,13 +456,9 @@
             refs.emptyUpload = emptyUploadProvider
                 ? emptyUploadProvider.buildEmptyUpload({ controller: controller })
                 : null;
-            refs.busyIndicator = app.utils.dom.el('span', {
-                className: 'preview-busy-indicator',
-                attrs: { hidden: 'hidden', 'aria-hidden': 'true' }
-            });
             refs.previewStage = app.utils.dom.el('div', {
                 className: 'preview-stage',
-                children: [refs.canvas, refs.cropOverlay, refs.previewTimingLabel, refs.busyIndicator]
+                children: [refs.canvas, refs.cropOverlay, refs.previewTimingLabel]
                     .concat(refs.emptyUpload ? [refs.emptyUpload] : [])
             });
             overlayRenderer = new app.pages.ditherEditor.ViewportOverlayRenderer({

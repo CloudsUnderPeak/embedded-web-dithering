@@ -1,6 +1,6 @@
 (function (app) {
     app.i18n['zh-TW'] = {
-        appTitle: 'Dither Image Editor',
+        appTitle: '抖色編輯器',
         statusReady: '就緒',
         statusEmpty: '建立或載入圖片以開始。',
         statusCropMode: '裁切圖片後按下 OK。',
@@ -38,7 +38,7 @@
         previewResult: '結果',
         previewExpand: '展開',
         previewRendering: 'Rendering...',
-        optionNone: '無',
+        optionNone: 'None',
         paletteOriginal: '原始',
         paletteCustom: '自訂',
         paletteMonochrome: '黑白',
@@ -71,6 +71,7 @@
         actionAddPaletteColor: '新增調色盤顏色',
         actionRemovePaletteColor: '移除調色盤顏色',
         labelPaletteColor: '調色盤顏色',
+        tipSerpentine: '每一列交替改變掃描方向，用來減少單方向條紋。',
         resizeLinkedTitle: '寬度與高度已連動',
         labelNumberOfColors: '色彩數',
         labelPaletteMapping: '調色盤映射',

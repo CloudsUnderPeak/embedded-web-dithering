@@ -73,6 +73,7 @@
         actionAddPaletteColor: 'Add palette color',
         actionRemovePaletteColor: 'Remove palette color',
         labelPaletteColor: 'Palette color',
+        tipSerpentine: 'Alternates scan direction on each row to reduce one-way streaks.',
         resizeLinkedTitle: 'Width and height are linked',
         labelNumberOfColors: 'Colors',
         labelPaletteMapping: 'Palette Mapping',

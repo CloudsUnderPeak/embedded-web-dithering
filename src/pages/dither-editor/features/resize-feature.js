@@ -161,7 +161,7 @@
             var heightInput = null;
             widthInput = ui.unitNumberInput(resize.width, MIN_RESIZE_SIZE, maxWidth, 1, 'px', function (value) {
                 var next = resizeFromWidth(state.settings.resize, value);
-                widthInput.setValue(next.width, true);
+                widthInput.setValue(next.width);
                 if (heightInput) {
                     heightInput.setValue(next.height, true);
                 }
@@ -170,7 +170,7 @@
             heightInput = ui.unitNumberInput(resize.height, MIN_RESIZE_SIZE, maxHeight, 1, 'px', function (value) {
                 var next = resizeFromHeight(state.settings.resize, value);
                 widthInput.setValue(next.width, true);
-                heightInput.setValue(next.height, true);
+                heightInput.setValue(next.height);
                 controller.updateSettings('resize', next);
             });
             panelRefs = {

@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-07-09
+Last Updated: 2026-07-10
 Split From: SPEC_INDEX.md
 ```
 
@@ -11,6 +11,10 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-10: Dither 的 Serpentine label 恢復 info tip，說明逐列交替掃描方向及其減少單方向條紋的用途。
+- 2026-07-10: 手動輸入 Crop、Resize 或 Palette 的 unit number control 時，每次按鍵觸發預覽重繪後仍須保持焦點、輸入內容與游標位置；Resize 等比連動的另一欄仍須即時更新。
+- 2026-07-10: unit number input 聚焦時，焦點環必須完整顯示於複合欄位外框，不可在數字區右側留下被裁切的黑邊。
+- 2026-07-10: preview stage 移除右上角忙碌 spinner；loading、processing 與 exporting 期間不再於預覽區顯示旋轉指示器。
 - 2026-07-09: Web Setting 新增 Language 選項，提供 Auto、繁中、English；語言偏好會跨重新整理保存，Auto 依瀏覽器語言選擇目前支援語系。
 - 2026-07-07: preview stage 右上角在 loading/processing/exporting 期間顯示忙碌 spinner（不攔截互動），提供觸控裝置可見的處理中提示。Export 進行中，Export PNG 按鈕變為 Cancel；點擊取消後丟棄在途結果、不觸發下載，狀態還原為 ready/preview-ready。
 - 2026-07-07: 全站互動元件（button、link、select、input、可聚焦元素）鍵盤聚焦時必須顯示主題 accent 色焦點環；只在 `:focus-visible` 顯示，滑鼠點擊不出現。toggle switch 的焦點環維持轉嫁到可見 track 的既有行為。
@@ -613,6 +617,7 @@ MVP UI 文字支援 English 與繁體中文，並集中管理。Web Setting 的 
 
 - 按鈕、狀態、錯誤訊息、選單與設定 label 應有清楚文字。
 - Tool icon 若不易理解，應提供 title 或 aria-label。
+- Dither 的 Serpentine label 後方應提供 info tip，簡要說明蛇行掃描的名詞與用途。
 - UI 文字不應分散硬寫在各處，避免後續維護困難。
 
 ## 驗收與測試重點

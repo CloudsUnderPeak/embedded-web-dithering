@@ -127,6 +127,35 @@
                 strengthLabel.textContent = ui.t(strengthLabelKey(algorithmId));
                 errorStrengthControl.setDisabled(!supportsStrength(algorithmId));
             }
+            var serpentineTip = ui.t('tipSerpentine');
+            var serpentineLabel = app.utils.dom.el('label', {
+                children: [
+                    app.utils.dom.el('span', {
+                        className: 'control-label-content has-tip',
+                        children: [
+                            app.utils.dom.el('span', {
+                                className: 'control-label-text',
+                                text: ui.t('labelSerpentine')
+                            }),
+                            app.utils.dom.el('span', {
+                                className: 'control-tip-icon',
+                                attrs: {
+                                    role: 'img',
+                                    tabindex: '0',
+                                    'data-tooltip': serpentineTip,
+                                    'aria-label': serpentineTip
+                                },
+                                children: [
+                                    ui.svgIcon('assets/icons/editor/info-circle.svg')
+                                ]
+                            })
+                        ]
+                    })
+                ]
+            });
+            var serpentineControl = ui.toggleSwitchInput(state.settings.dither.serpentine, function (value) {
+                controller.updateSetting('dither', 'serpentine', value);
+            });
             var rows = [
                 ui.row(ui.t('labelAlgorithm'), ui.selectInput(state.settings.dither.algorithm, options, function (value) {
                     updateStrengthControl(value);
@@ -150,9 +179,10 @@
                         controller.updateSetting('dither', 'colorDistance', value);
                     }
                 )),
-                ui.row(ui.t('labelSerpentine'), ui.toggleSwitchInput(state.settings.dither.serpentine, function (value) {
-                    controller.updateSetting('dither', 'serpentine', value);
-                })),
+                app.utils.dom.el('div', {
+                    className: 'control-row',
+                    children: [serpentineLabel, serpentineControl]
+                }),
                 strengthRow
             ];
             return ui.section('panelDither', rows, 'dither');

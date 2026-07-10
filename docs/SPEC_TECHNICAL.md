@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-07-09
+Last Updated: 2026-07-10
 Split From: SPEC_INDEX.md
 ```
 
@@ -11,6 +11,9 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-10: Serpentine label 直接建立單一 info tip；圖示使用 `assets/icons/editor/info-circle.svg`，tip 文案走 i18n，自訂 tooltip 使用實心 theme surface 與 accent 邊線。
+- 2026-07-10: `renderActiveTool` 不得在每次 render 重新 append 已位於正確 host 的 panel，避免使 panel 內控制失焦；Resize unit number callback 只強制同步等比連動的另一欄，目前輸入欄位透過 active-element guard 保留 DOM value 與游標位置。
+- 2026-07-10: `.unit-number-input` 不直接繪製會被複合欄位裁切的 outline；其 `:focus-visible` 焦點環必須轉嫁到 `.unit-number-field` 外框。
 - 2026-07-09: i18n 新增 `zh-TW` 字典與 runtime language preference；Web Setting language 提供 `auto`、`zh-TW`、`en`，偏好與 theme 一起保存於 `settings-store.js`，切換語言會重新套用 shell/menu/目前頁面文字。
 - 2026-07-09: 導入 dither Web Worker：擴散類演算法（error diffusion、adaptive error diffusion、dot diffusion）在 HTTP serving 下可於背景執行緒執行；`file://` 或 worker 載入失敗時永久 fallback 同步路徑。preview/export 走 `pipelineRunner.runAsync`，controller 用 run id 丟棄過期 preview 結果並在 destroy 時 terminate worker。
 - 2026-07-09: feature 之間不可直接讀寫 `state.settings.<其他 feature>`；跨 feature 查詢一律透過 `featureRegistry.api(id)` 取得對方宣告的 `api` 物件，api 回 null（feature 停用）時呼叫端必須有明確降級路徑。依賴其他 feature 資料的 operation 必須用 `operation.cacheKey` 把該資料帶進 stage cache key。
@@ -19,7 +22,7 @@ Split From: SPEC_INDEX.md
 - 2026-07-09: 移除 legacy 單面板狀態欄位 `settingsPanelOpen` 與 `activeTool`；`openToolPanels` 是 tool panel 開關狀態的唯一來源。
 - 2026-07-09: 面板滑桿統一走 `panelUtils.labeledRange`（數值標籤 + range + setValue/setDisabled + --range-progress），live preview hold 樣板統一走 `panelUtils.previewHoldHandlers(controller, id)`；hex 與 RGB 互轉統一由 `core.colorUtils.hexToRgb/rgbToHex` 提供。
 - 2026-07-09: GPU processor 的 WebGL 樣板（context 建立、shader 編譯、全屏 quad、texture、drawQuad、readPixels 翻轉讀回）統一由 `gpu/gl-helpers.js` 提供；adjust 與 threshold processor 只保留各自 fragment shader 與 uniform 邏輯。
-- 2026-07-07: 全域 `:focus-visible` 焦點環由 `components.css` 統一提供（`--color-accent-strong`）；toggle switch 隱藏 input 為唯一允許 `outline: none` 的例外，其焦點環轉嫁到可見 track。
+- 2026-07-07: 全域 `:focus-visible` 焦點環由 `components.css` 統一提供（`--color-accent-strong`）；隱藏或位於複合控制內的 input 可使用 `outline: none`，但焦點環必須轉嫁到可見控制外框。
 - 2026-07-06: 色彩通道 clamp 統一由 `core/color/color-utils.js` 提供：`clampByte`（round + clamp，最終整數輸出用）與 `clampChannel`（僅 clamp 保留小數，誤差擴散工作緩衝與距離計算用）；dither 模組不可再自定義 clamp。GPU threshold palette uniform 必須與 CPU `normalizedPalette` 相同做 round，維持 CPU/GPU 最近色一致。
 - 2026-07-06: RGB 色距權重的唯一來源是 `core/color/palette-utils.js` 的純量距離函式；`palette-mapping` 透過 `createRgbDistanceContext()` 取得逐像素距離 context，不可另寫距離公式。GPU shader 的 `distanceTo` 是唯一允許的重複實作，修改權重時必須同步。
 - 2026-07-06: `core` 拋出的使用者可見錯誤必須帶 `error.code`（如 `unsupported-format`、`demo-load-failed`），`message` 僅作 fallback；顯示層（controller）以 code 對應 i18n 文字，`core` 不可直接輸出 UI 文案。
@@ -761,7 +764,7 @@ Dither feature 預設使用 `DEFAULT_DITHER_ALGORITHM_ID`，目前為 `floyd-ste
 
 Dither panel 只能顯示一個強度 slider，並使用 `settings.dither.errorStrength` 作為目前 algorithm 的百分比 state。選到 `supportsErrorStrength === true` 的演算法時，label 顯示 `Error Strength`；選到 `supportsThresholdStrength === true` 的 threshold 類演算法時，label 顯示 `Dither Strength`；選到 `supportsDotDensity === true` 的演算法時，label 顯示 `Dot Density`。切換 algorithm 時必須使用單次 settings 更新同時寫入新的 `algorithm` 與 `errorStrength: DEFAULT_DITHER_ERROR_STRENGTH`，並同步 slider 顯示為 100%，不可沿用前一個 algorithm 的強度值。
 
-`serpentine` 的 panel control 必須使用 `panelUtils.toggleSwitchInput()`，避免和一般 checkbox 視覺混用。Adjust 與 Dither 的 range input、Toggle Switch checked state 必須使用 `--color-control-accent`，focus 或強調輪廓可沿用 `--color-accent-strong`，不可落回瀏覽器預設藍色或直接吃主 action accent。
+`serpentine` 的 panel control 必須使用 `panelUtils.toggleSwitchInput()`，避免和一般 checkbox 視覺混用。Serpentine label 後方必須顯示 `info-circle.svg`，tooltip 文案走 i18n，背景使用實心 `--color-surface`，邊線使用 `--color-accent`。Adjust 與 Dither 的 range input、Toggle Switch checked state 必須使用 `--color-control-accent`，focus 或強調輪廓可沿用 `--color-accent-strong`，不可落回瀏覽器預設藍色或直接吃主 action accent。
 
 `palette-mapping-modes.js` 宣告使用者可選的 Palette Mapping。`nearest-color` 直接選目前 palette 中距離最近的單一色；`pair-mix` 先找最能近似輸入 RGB 的兩個 palette 色與混合比例，再由目前 Dither Algorithm 的掃描、誤差擴散或 threshold mask 決定輸出其中一色；`tri-mix` 先找最能近似輸入 RGB 的三個 palette 色與混合比例，再由目前 Dither Algorithm 決定輸出其中一色。Pair Mix 與 Tri Mix 不是獨立 Algorithm，不應用 `Palette Dot Halftone`、`Mix Ordered` 或 `Tri Mix Ordered` 這類組合項擴增 Algorithm 選單。
 
@@ -1314,9 +1317,11 @@ Resize feature 固定維持等比 resize，不提供 Fit / Stretch / Contain / C
 - 使用者調整 `height` 時，`width` 必須立即依 `aspectRatio` 更新。
 - Resize width / height controls 必須使用 `panelUtils.unitNumberInput(..., 'px', ...)`，以和 Crop zoom / rotation 共用數字輸入樣式與長按 stepper 行為。
 - `panelUtils.unitNumberInput` 必須提供可由 feature 更新的 value 與 range，讓不重建 panel 的 render cycle 仍可同步最新 constraints。
+- 手動輸入 Resize width / height 時，目前聚焦的欄位不可被 callback 強制重寫；只強制同步等比連動的另一欄，避免輸入游標或選取位置在每次按鍵後跳動。
 - 等比換算若會讓另一邊超過 `MAX_RESIZE_OUTPUT_SIZE`，正在調整的尺寸也必須 clamp 到可維持比例的最大值。
 - Crop ratio 改變後，Resize 應在 prepare commit 時以目前 resize width 為錨點更新 `aspectRatio` 與對應 height，避免 pipeline 把 crop 結果拉伸成不同輸出比例；Crop zoom/pan 熱路徑不可即時觸發 Resize 重算。
 - Resize feature 必須在 `onRender` 將最新 `settings.resize.width` / `height` 與 ratio 對應的合法範圍同步回既有 DOM controls，避免 panel 被隱藏後重新打開時顯示舊值。
+- Page render 同步 panel 開關狀態時，若 panel 已在對應的 tool panel host 內，不可再次呼叫 `appendChild`；重掛既有 panel 會讓其中的 active control blur，破壞 unit number input 的連續輸入。
 
 ### Adjust Controls
 
