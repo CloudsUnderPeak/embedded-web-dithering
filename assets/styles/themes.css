@@ -14,6 +14,7 @@ body[data-theme="light"] {
     --color-surface-hover: #edf2f3;
     --color-panel-subtle: rgba(22, 32, 36, 0.06);
     --color-header-bg: rgba(247, 248, 250, 0.92);
+    --color-loading-overlay: rgba(247, 248, 250, 0.68);
     --color-border: rgba(22, 32, 36, 0.13);
     --color-border-faint: rgba(22, 32, 36, 0.08);
     --color-border-strong: rgba(22, 32, 36, 0.22);
@@ -50,6 +51,7 @@ body[data-theme="dark"] {
     --color-surface-hover: #263033;
     --color-panel-subtle: rgba(238, 244, 242, 0.08);
     --color-header-bg: rgba(18, 24, 26, 0.92);
+    --color-loading-overlay: rgba(14, 18, 21, 0.68);
     --color-border: rgba(213, 226, 223, 0.15);
     --color-border-faint: rgba(213, 226, 223, 0.1);
     --color-border-strong: rgba(213, 226, 223, 0.24);

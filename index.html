@@ -9,14 +9,136 @@
     <link rel="stylesheet" href="assets/styles/layout.css">
     <link rel="stylesheet" href="assets/styles/components.css">
     <link rel="stylesheet" href="assets/styles/themes.css">
+    <script>
+        (function (app) {
+            var state = 'loading';
+            var copy = {
+                loading: 'Loading...',
+                error: 'App could not be loaded.',
+                reload: 'Reload'
+            };
+            var timeoutId = window.setTimeout(function () {
+                fail();
+            }, 60000);
+
+            function elements() {
+                return {
+                    overlay: document.getElementById('app-loading'),
+                    appNode: document.getElementById('app'),
+                    message: document.getElementById('app-loading-message'),
+                    reload: document.getElementById('app-loading-reload')
+                };
+            }
+
+            function bindReload(button) {
+                if (!button || button.getAttribute('data-bound') === 'true') {
+                    return;
+                }
+                button.setAttribute('data-bound', 'true');
+                button.addEventListener('click', function () {
+                    window.location.reload();
+                });
+            }
+
+            function render() {
+                var refs = elements();
+                if (!refs.overlay || !refs.appNode) {
+                    return;
+                }
+                bindReload(refs.reload);
+                if (state === 'ready') {
+                    refs.overlay.hidden = true;
+                    refs.overlay.setAttribute('data-state', 'ready');
+                    refs.overlay.setAttribute('aria-busy', 'false');
+                    refs.appNode.removeAttribute('inert');
+                    refs.appNode.removeAttribute('aria-hidden');
+                    document.body.classList.remove('is-app-loading');
+                    return;
+                }
+                document.body.classList.add('is-app-loading');
+                refs.appNode.setAttribute('inert', '');
+                refs.appNode.setAttribute('aria-hidden', 'true');
+                refs.overlay.hidden = false;
+                refs.overlay.setAttribute('data-state', state);
+                refs.overlay.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
+                refs.overlay.setAttribute('role', state === 'error' ? 'alert' : 'status');
+                refs.message.textContent = state === 'error' ? copy.error : copy.loading;
+                refs.reload.textContent = copy.reload;
+                refs.reload.hidden = state !== 'error';
+                if (state === 'error') {
+                    refs.reload.focus();
+                }
+            }
+
+            function setCopy(nextCopy) {
+                copy = Object.assign(copy, nextCopy || {});
+                render();
+            }
+
+            function fail() {
+                if (state !== 'loading') {
+                    return;
+                }
+                state = 'error';
+                window.clearTimeout(timeoutId);
+                render();
+            }
+
+            function complete() {
+                if (state !== 'loading') {
+                    return;
+                }
+                state = 'ready';
+                window.clearTimeout(timeoutId);
+                render();
+            }
+
+            app.startupGate = {
+                complete: complete,
+                fail: fail,
+                setCopy: setCopy,
+                state: function currentState() {
+                    return state;
+                }
+            };
+
+            window.addEventListener('error', function (event) {
+                var target = event.target;
+                if (
+                    !target
+                    || target === window
+                    || target.tagName === 'SCRIPT'
+                    || (target.tagName === 'LINK' && target.rel === 'stylesheet')
+                ) {
+                    fail();
+                }
+            }, true);
+            window.addEventListener('unhandledrejection', fail);
+            document.addEventListener('DOMContentLoaded', render, { once: true });
+        })(window.DitherApp = window.DitherApp || {});
+    </script>
 </head>
-<body>
-    <div id="app" class="app-shell">
+<body class="is-app-loading">
+    <div
+        id="app-loading"
+        class="app-loading-overlay"
+        data-state="loading"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+    >
+        <div class="app-loading-content">
+            <span class="app-loading-spinner" aria-hidden="true"></span>
+            <div id="app-loading-message" class="app-loading-message">Loading...</div>
+            <button id="app-loading-reload" class="secondary-button" type="button" hidden>Reload</button>
+        </div>
+    </div>
+    <div id="app" class="app-shell" inert aria-hidden="true">
         <!-- app-shell 只提供 SPA 外殼；各頁內容會由 JavaScript 掛到 #page-host。 -->
         <header class="app-header">
             <div class="app-title">Dither Image Editor</div>
             <div class="app-header-actions">
-                <div id="app-status" class="app-status is-ready" title="Ready" aria-label="Ready"></div>
+                <div id="app-status" class="app-status is-busy" title="Loading..." aria-label="Loading..."></div>
                 <button id="app-menu-button" class="icon-button app-menu-button button-with-icon" type="button" aria-label="Menu">
                     <span class="svg-icon app-menu-button-icon" data-svg-icon="assets/icons/editor/menu.svg"></span>
                     <span>Menu</span>

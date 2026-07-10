@@ -1,6 +1,9 @@
 (function (app) {
     app.i18n['zh-TW'] = {
         appTitle: '抖色編輯器',
+        startupLoading: '載入中...',
+        startupLoadFailed: '無法載入應用程式。',
+        startupReload: '重新整理',
         statusReady: '就緒',
         statusEmpty: '建立或載入圖片以開始。',
         statusCropMode: '裁切圖片後按下 OK。',

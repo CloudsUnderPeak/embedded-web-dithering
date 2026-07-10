@@ -9,6 +9,73 @@ input:focus-visible,
     outline-offset: 2px;
 }
 
+body.is-app-loading {
+    overflow: hidden;
+}
+
+body.is-app-loading #app {
+    pointer-events: none;
+    user-select: none;
+}
+
+.app-loading-overlay {
+    position: fixed;
+    inset: 64px 0 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    color: var(--color-text);
+    background: var(--color-loading-overlay);
+}
+
+.app-loading-overlay[hidden] {
+    display: none;
+}
+
+.app-loading-content {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    max-width: min(320px, 100%);
+    text-align: center;
+}
+
+.app-loading-spinner {
+    width: 34px;
+    height: 34px;
+    border: 3px solid var(--color-border-strong);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    animation: app-loading-spin 0.85s linear infinite;
+}
+
+.app-loading-message {
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.4;
+}
+
+.app-loading-overlay[data-state="error"] .app-loading-spinner {
+    display: none;
+}
+
+.app-loading-overlay[data-state="error"] .app-loading-message {
+    color: var(--color-danger);
+}
+
+@keyframes app-loading-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-loading-spinner {
+        animation-duration: 1.7s;
+    }
+}
+
 .export-button.is-exporting {
     background: var(--color-surface-muted);
     border-color: var(--color-border-strong);

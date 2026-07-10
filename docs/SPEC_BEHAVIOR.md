@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-07-10
+Last Updated: 2026-07-11
 Split From: SPEC_INDEX.md
 ```
 
@@ -11,6 +11,8 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-11: App 啟動 loading 改為半透明內容區遮罩，保留 64px header 與 App 標題可見，讓新使用者在等待時仍能辨識網站用途。
+- 2026-07-10: App 啟動時顯示全畫面 loading spinner 並鎖定所有操作；頁面 scripts、初始 UI 與圖示載入完成後解除，失敗時顯示重新整理入口。
 - 2026-07-10: Dither 的 Serpentine label 恢復 info tip，說明逐列交替掃描方向及其減少單方向條紋的用途。
 - 2026-07-10: 手動輸入 Crop、Resize 或 Palette 的 unit number control 時，每次按鍵觸發預覽重繪後仍須保持焦點、輸入內容與游標位置；Resize 等比連動的另一欄仍須即時更新。
 - 2026-07-10: unit number input 聚焦時，焦點環必須完整顯示於複合欄位外框，不可在數字區右側留下被裁切的黑邊。
@@ -598,6 +600,14 @@ MVP 不要求：
 - 跨 browser session 保存 pipeline effects order 或 operation enabled 狀態。
 - 完整 undo / redo history。
 - 每一次 preview 的歷史版本。
+
+## App 啟動載入
+
+- HTML 顯示後立即在 64px header 下方出現半透明 loading 遮罩與 spinner；App 標題必須保持可見，已顯示的 App 內容可透過遮罩辨識，但在啟動完成前不可接受滑鼠、觸控或鍵盤操作。
+- loading 必須持續到所有 page entry scripts 完成、預設 Dither Editor 掛載、初始頁面的 SVG images settled，且掛載內容完成一次畫面繪製。
+- 初始 SVG image 單獨載入失敗不應讓 App 永久停在 loading；Demo 圖、Web Worker 與使用者操作後才需要的資源不屬於啟動等待範圍。
+- 啟動成功後移除 loading 畫面並一次解除操作鎖定，不設定額外最低顯示時間。
+- 啟動 script、stylesheet 或初始化流程失敗時，停止 spinner、保持 App 鎖定，並顯示可重新整理頁面的錯誤狀態。
 
 ## UI 文字與語言
 

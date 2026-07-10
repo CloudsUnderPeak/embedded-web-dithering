@@ -3,7 +3,7 @@
 ```text
 Version: 0.1.0
 Status: Draft
-Last Updated: 2026-07-10
+Last Updated: 2026-07-11
 Split From: SPEC_INDEX.md
 ```
 
@@ -11,6 +11,8 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-11: Startup overlay 改用 theme-specific 半透明 `--color-loading-overlay`，固定從 64px header 下方開始，避免遮住 App title；`inert` 與 pointer fallback 維持全 App 鎖定。
+- 2026-07-10: `index.html` 新增 startup gate 與初始 `inert`；`main.js` 在 page entries、AppShell mount、initial image settle 與 paint 完成後解鎖，fatal load error 則保留 gate 並提供 reload。
 - 2026-07-10: Serpentine label 直接建立單一 info tip；圖示使用 `assets/icons/editor/info-circle.svg`，tip 文案走 i18n，自訂 tooltip 使用實心 theme surface 與 accent 邊線。
 - 2026-07-10: `renderActiveTool` 不得在每次 render 重新 append 已位於正確 host 的 panel，避免使 panel 內控制失焦；Resize unit number callback 只強制同步等比連動的另一欄，目前輸入欄位透過 active-element guard 保留 DOM value 與游標位置。
 - 2026-07-10: `.unit-number-input` 不直接繪製會被複合欄位裁切的 outline；其 `:focus-visible` 焦點環必須轉嫁到 `.unit-number-field` 外框。
@@ -582,6 +584,12 @@ const defaultDitherOptions = {
 ```
 
 `entry.js` 可以透過動態插入 classic `<script>` 的方式載入該頁檔案；同批 scripts 可一次插入以便瀏覽器並行下載，但每支 script 必須設為 `async = false`，維持 classic script 依插入順序執行。Dither Editor 應先載入可解析 feature manifest 的 bootstrap scripts，再把 feature scripts 與後續 page scripts 併入同一批載入，避免 GitHub Pages 上出現不必要的序列化網路波次。不得使用 ES Modules `import` / `export`，也不得用會被 `file://` CORS 擋住的 template/script `fetch()` 作為唯一載入方式。
+
+`index.html` 必須在外部 scripts 執行前建立 `DitherApp.startupGate`、loading overlay，並讓 `#app` 帶有 `inert` 與 `aria-hidden="true"`。Overlay 使用 `inset: 64px 0 0` 保留 header 與 App title，Light / Dark theme 分別由 `--color-loading-overlay` 提供半透明背景，讓已建立 UI 可辨識但不可操作。startup gate 同時以 `body.is-app-loading #app { pointer-events: none; }` 作為 pointer fallback；ready 前不可只靠 overlay 遮擋視覺而讓鍵盤仍能聚焦下層 controls。
+
+`main.js` 的 startup ready 順序固定為：`whenPageEntriesReady()` resolve → `AppShell.start()` 完成預設頁 mount → `#app` 內當下所有 `<img>` load/decode settled → 兩次 `requestAnimationFrame` → `startupGate.complete()`。Image decode failure 必須視為 settled，避免單一 icon 404 永久鎖住 App；Demo source、worker 與互動後才建立的資源不可加入 startup wait。
+
+Startup 期間的 direct script、stylesheet、unhandled runtime error 或 60 秒 timeout 必須呼叫 `startupGate.fail()`。Error state 保留 `#app` inert、停止 spinner、以 i18n 顯示通用載入失敗文字與 Reload button；startup ready 後的 runtime error 不可重新開啟 gate。
 
 每個檔案使用 IIFE 或清楚的 namespace assignment：
 
