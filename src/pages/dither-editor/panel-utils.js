@@ -12,40 +12,6 @@
         return app.ui.svgIcons.create(icon, options);
     }
 
-    function tipIcon(tipKey) {
-        var tip = t(tipKey);
-        return app.utils.dom.el('span', {
-            className: 'control-tip-icon',
-            attrs: {
-                role: 'img',
-                tabindex: '0',
-                'data-tooltip': tip,
-                'aria-label': tip
-            },
-            children: [
-                svgIcon('assets/icons/editor/info-circle.svg', { className: 'control-tip-svg' })
-            ]
-        });
-    }
-
-    function labelContent(label, tipKey) {
-        var children = [
-            app.utils.dom.el('span', { className: 'control-label-text', text: label })
-        ];
-        if (tipKey) {
-            children.push(tipIcon(tipKey));
-        }
-        return app.utils.dom.el('span', {
-            className: tipKey ? 'control-label-content has-tip' : 'control-label-content',
-            children: children
-        });
-    }
-
-    function setLabelContent(labelNode, label, tipKey) {
-        app.utils.dom.clear(labelNode);
-        labelNode.appendChild(labelContent(label, tipKey));
-    }
-
     // 建立一個工具面板 section，並可加上 data-tool-panel 方便 page 掛載。
     function section(titleKey, children, toolId) {
         return app.utils.dom.el('section', {
@@ -59,13 +25,10 @@
     }
 
     // 建立標籤 + 控制元件的標準列。
-    function row(label, input, tipKey) {
-        var labelNode = label && label.nodeType
-            ? label
-            : app.utils.dom.el('label', { children: [labelContent(label, tipKey)] });
+    function row(label, input) {
         return app.utils.dom.el('div', {
             className: 'control-row',
-            children: [labelNode, input]
+            children: [app.utils.dom.el('label', { text: label }), input]
         });
     }
 
@@ -345,8 +308,6 @@
         t: t,
         section: section,
         row: row,
-        labelContent: labelContent,
-        setLabelContent: setLabelContent,
         svgIcon: svgIcon,
         numberInput: numberInput,
         toggleSwitchInput: toggleSwitchInput,

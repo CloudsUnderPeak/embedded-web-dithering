@@ -229,10 +229,7 @@
         return app.utils.dom.el('div', {
             className: 'palette-editor',
             children: [
-                app.utils.dom.el('div', {
-                    className: 'palette-editor-label',
-                    children: [ui.labelContent(ui.t('labelPalette'), 'tipPalette')]
-                }),
+                app.utils.dom.el('div', { className: 'palette-editor-label', text: ui.t('labelPalette') }),
                 swatches
             ]
         });

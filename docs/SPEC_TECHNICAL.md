@@ -11,7 +11,6 @@ Split From: SPEC_INDEX.md
 
 ## History
 
-- 2026-07-09: `panel-utils.js` 新增 label tip helper；設定 label 後方 info icon 使用 `assets/icons/editor/info-circle.svg`，tip 文案走 i18n 與自訂 CSS tooltip，並透過 `aria-label` 提供輔助說明。
 - 2026-07-09: i18n 新增 `zh-TW` 字典與 runtime language preference；Web Setting language 提供 `auto`、`zh-TW`、`en`，偏好與 theme 一起保存於 `settings-store.js`，切換語言會重新套用 shell/menu/目前頁面文字。
 - 2026-07-09: 導入 dither Web Worker：擴散類演算法（error diffusion、adaptive error diffusion、dot diffusion）在 HTTP serving 下可於背景執行緒執行；`file://` 或 worker 載入失敗時永久 fallback 同步路徑。preview/export 走 `pipelineRunner.runAsync`，controller 用 run id 丟棄過期 preview 結果並在 destroy 時 terminate worker。
 - 2026-07-09: feature 之間不可直接讀寫 `state.settings.<其他 feature>`；跨 feature 查詢一律透過 `featureRegistry.api(id)` 取得對方宣告的 `api` 物件，api 回 null（feature 停用）時呼叫端必須有明確降級路徑。依賴其他 feature 資料的 operation 必須用 `operation.cacheKey` 把該資料帶進 stage cache key。
