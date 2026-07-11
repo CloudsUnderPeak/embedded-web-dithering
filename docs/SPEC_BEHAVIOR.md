@@ -11,6 +11,9 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-11: Startup loading 套用 i18n 時同步更新 header App 標題與 Menu placeholder，避免延遲載入期間同時出現兩種語言。
+- 2026-07-11: App 啟動 loading 放大 spinner、百分比文字與進度條，提升載入期間的視覺辨識度。
+- 2026-07-11: App 啟動 loading 新增階段式百分比與進度條，spinner 加大以提高辨識度；百分比依 script、mount、image settle 與 paint 階段單調前進。
 - 2026-07-11: App 啟動 loading 改為半透明內容區遮罩，保留 64px header 與 App 標題可見，讓新使用者在等待時仍能辨識網站用途。
 - 2026-07-10: App 啟動時顯示全畫面 loading spinner 並鎖定所有操作；頁面 scripts、初始 UI 與圖示載入完成後解除，失敗時顯示重新整理入口。
 - 2026-07-10: Dither 的 Serpentine label 恢復 info tip，說明逐列交替掃描方向及其減少單方向條紋的用途。
@@ -603,11 +606,13 @@ MVP 不要求：
 
 ## App 啟動載入
 
-- HTML 顯示後立即在 64px header 下方出現半透明 loading 遮罩與 spinner；App 標題必須保持可見，已顯示的 App 內容可透過遮罩辨識，但在啟動完成前不可接受滑鼠、觸控或鍵盤操作。
+- HTML 顯示後立即在 64px header 下方出現半透明 loading 遮罩、64px spinner、18px 百分比文字與加寬進度條；App 標題必須保持可見，已顯示的 App 內容可透過遮罩辨識，但在啟動完成前不可接受滑鼠、觸控或鍵盤操作。
+- 百分比依動態 scripts、預設頁 mount、初始 images settle 與 paint 等已完成階段單調前進，不得倒退，也不宣稱代表精確下載 bytes；成功完成時到達 100%。
+- i18n 可用並本地化 loading 文案時，header 的 App 標題與 Menu placeholder 必須同步切換語言，不得等待預設頁 mount 才更新。
 - loading 必須持續到所有 page entry scripts 完成、預設 Dither Editor 掛載、初始頁面的 SVG images settled，且掛載內容完成一次畫面繪製。
 - 初始 SVG image 單獨載入失敗不應讓 App 永久停在 loading；Demo 圖、Web Worker 與使用者操作後才需要的資源不屬於啟動等待範圍。
 - 啟動成功後移除 loading 畫面並一次解除操作鎖定，不設定額外最低顯示時間。
-- 啟動 script、stylesheet 或初始化流程失敗時，停止 spinner、保持 App 鎖定，並顯示可重新整理頁面的錯誤狀態。
+- 啟動 script、stylesheet 或初始化流程失敗時，停止 spinner、隱藏進度條、保持 App 鎖定，並顯示可重新整理頁面的錯誤狀態。
 
 ## UI 文字與語言
 

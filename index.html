@@ -12,6 +12,9 @@
     <script>
         (function (app) {
             var state = 'loading';
+            var progress = 5;
+            var resourceTotal = 0;
+            var resourceSettled = 0;
             var copy = {
                 loading: 'Loading...',
                 error: 'App could not be loaded.',
@@ -26,6 +29,8 @@
                     overlay: document.getElementById('app-loading'),
                     appNode: document.getElementById('app'),
                     message: document.getElementById('app-loading-message'),
+                    progress: document.getElementById('app-loading-progress'),
+                    progressBar: document.getElementById('app-loading-progress-bar'),
                     reload: document.getElementById('app-loading-reload')
                 };
             }
@@ -62,7 +67,12 @@
                 refs.overlay.setAttribute('data-state', state);
                 refs.overlay.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
                 refs.overlay.setAttribute('role', state === 'error' ? 'alert' : 'status');
-                refs.message.textContent = state === 'error' ? copy.error : copy.loading;
+                refs.message.textContent = state === 'error'
+                    ? copy.error
+                    : copy.loading + ' ' + progress + '%';
+                refs.progress.hidden = state !== 'loading';
+                refs.progressBar.style.width = progress + '%';
+                refs.progress.setAttribute('aria-valuenow', String(progress));
                 refs.reload.textContent = copy.reload;
                 refs.reload.hidden = state !== 'error';
                 if (state === 'error') {
@@ -73,6 +83,24 @@
             function setCopy(nextCopy) {
                 copy = Object.assign(copy, nextCopy || {});
                 render();
+            }
+
+            function setProgress(nextProgress) {
+                if (state !== 'loading') {
+                    return;
+                }
+                progress = Math.max(progress, Math.min(100, Math.round(nextProgress)));
+                render();
+            }
+
+            function registerResource() {
+                resourceTotal += 1;
+                setProgress(10);
+            }
+
+            function settleResource() {
+                resourceSettled = Math.min(resourceSettled + 1, resourceTotal);
+                setProgress(10 + Math.min(50, resourceSettled));
             }
 
             function fail() {
@@ -88,6 +116,7 @@
                 if (state !== 'loading') {
                     return;
                 }
+                setProgress(100);
                 state = 'ready';
                 window.clearTimeout(timeoutId);
                 render();
@@ -96,7 +125,10 @@
             app.startupGate = {
                 complete: complete,
                 fail: fail,
+                registerResource: registerResource,
+                settleResource: settleResource,
                 setCopy: setCopy,
+                setProgress: setProgress,
                 state: function currentState() {
                     return state;
                 }
@@ -129,7 +161,18 @@
     >
         <div class="app-loading-content">
             <span class="app-loading-spinner" aria-hidden="true"></span>
-            <div id="app-loading-message" class="app-loading-message">Loading...</div>
+            <div id="app-loading-message" class="app-loading-message">Loading... 5%</div>
+            <div
+                id="app-loading-progress"
+                class="app-loading-progress"
+                role="progressbar"
+                aria-labelledby="app-loading-message"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="5"
+            >
+                <span id="app-loading-progress-bar" class="app-loading-progress-bar" style="width: 5%"></span>
+            </div>
             <button id="app-loading-reload" class="secondary-button" type="button" hidden>Reload</button>
         </div>
     </div>

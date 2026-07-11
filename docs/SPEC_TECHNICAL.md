@@ -11,6 +11,8 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-11: `main.js` 本地化 startup gate 時透過 `applyShellCopy()` 同步 header placeholder；AppShell mount 後仍重套 shell 文案與 status。
+- 2026-07-11: Startup gate 新增單調遞增的 `setProgress()` 與動態 script resource 計數，`main.js` 依 mount、initial image settle 與 paint 更新階段進度。
 - 2026-07-11: Startup overlay 改用 theme-specific 半透明 `--color-loading-overlay`，固定從 64px header 下方開始，避免遮住 App title；`inert` 與 pointer fallback 維持全 App 鎖定。
 - 2026-07-10: `index.html` 新增 startup gate 與初始 `inert`；`main.js` 在 page entries、AppShell mount、initial image settle 與 paint 完成後解鎖，fatal load error 則保留 gate 並提供 reload。
 - 2026-07-10: Serpentine label 直接建立單一 info tip；圖示使用 `assets/icons/editor/info-circle.svg`，tip 文案走 i18n，自訂 tooltip 使用實心 theme surface 與 accent 邊線。
@@ -587,9 +589,11 @@ const defaultDitherOptions = {
 
 `index.html` 必須在外部 scripts 執行前建立 `DitherApp.startupGate`、loading overlay，並讓 `#app` 帶有 `inert` 與 `aria-hidden="true"`。Overlay 使用 `inset: 64px 0 0` 保留 header 與 App title，Light / Dark theme 分別由 `--color-loading-overlay` 提供半透明背景，讓已建立 UI 可辨識但不可操作。startup gate 同時以 `body.is-app-loading #app { pointer-events: none; }` 作為 pointer fallback；ready 前不可只靠 overlay 遮擋視覺而讓鍵盤仍能聚焦下層 controls。
 
-`main.js` 的 startup ready 順序固定為：`whenPageEntriesReady()` resolve → `AppShell.start()` 完成預設頁 mount → `#app` 內當下所有 `<img>` load/decode settled → 兩次 `requestAnimationFrame` → `startupGate.complete()`。Image decode failure 必須視為 settled，避免單一 icon 404 永久鎖住 App；Demo source、worker 與互動後才建立的資源不可加入 startup wait。
+`main.js` 先本地化 startup gate，並透過 `app.app.applyShellCopy()` 同步 header App title 與 Menu placeholder。其後 startup ready 順序固定為：`whenPageEntriesReady()` resolve → `AppShell.start()` 完成預設頁 mount → `#app` 內當下所有 `<img>` load/decode settled → 兩次 `requestAnimationFrame` → `startupGate.complete()`。Image decode failure 必須視為 settled，避免單一 icon 404 永久鎖住 App；Demo source、worker 與互動後才建立的資源不可加入 startup wait。
 
-Startup 期間的 direct script、stylesheet、unhandled runtime error 或 60 秒 timeout 必須呼叫 `startupGate.fail()`。Error state 保留 `#app` inert、停止 spinner、以 i18n 顯示通用載入失敗文字與 Reload button；startup ready 後的 runtime error 不可重新開啟 gate。
+`startupGate.setProgress()` 只接受單調遞增的整數百分比。`script-loader.js` 對新建的動態 script 登記 total，並在每支 script `load` 後讓啟動前段增加一個百分點（上限 60%）；後續由 `main.js` 在 page entries ready、AppShell mount、initial image settle 與 paint 階段推進至 100%。此百分比代表啟動階段完成度，不代表下載 bytes。
+
+Startup 期間的 direct script、stylesheet、unhandled runtime error 或 60 秒 timeout 必須呼叫 `startupGate.fail()`。Error state 保留 `#app` inert、停止 spinner、隱藏 progressbar、以 i18n 顯示通用載入失敗文字與 Reload button；startup ready 後的 runtime error 不可重新開啟 gate。
 
 每個檔案使用 IIFE 或清楚的 namespace assignment：
 

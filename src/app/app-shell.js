@@ -40,6 +40,17 @@
         return 'ready';
     }
 
+    // Startup gate 本地化時先同步 header placeholder，避免 loading 與 shell 暫時使用不同語言。
+    function applyShellCopy(titleNode, menuButton) {
+        document.title = app.i18n.t('appTitle');
+        titleNode.textContent = app.i18n.t('appTitle');
+        menuButton.setAttribute('aria-label', app.i18n.t('menuButtonLabel'));
+        var menuLabel = menuButton.querySelector('span:not(.svg-icon)');
+        if (menuLabel) {
+            menuLabel.textContent = app.i18n.t('menuButtonLabel');
+        }
+    }
+
     // AppShell 持有 header、page-host、router、menu 的 DOM 參照。
     function AppShell() {
         this.host = document.getElementById('page-host');
@@ -74,13 +85,7 @@
     // index.html 內的 header 文字只是 JS 啟動前的 placeholder；
     // 這裡統一改用 i18n 蓋章，讓所有使用者可見字串走同一份字典。
     AppShell.prototype.applyShellText = function applyShellText() {
-        document.title = app.i18n.t('appTitle');
-        this.titleNode.textContent = app.i18n.t('appTitle');
-        this.menuButton.setAttribute('aria-label', app.i18n.t('menuButtonLabel'));
-        var menuLabel = this.menuButton.querySelector('span:not(.svg-icon)');
-        if (menuLabel) {
-            menuLabel.textContent = app.i18n.t('menuButtonLabel');
-        }
+        applyShellCopy(this.titleNode, this.menuButton);
         renderStatus(this.statusNode, null);
     };
 
@@ -91,5 +96,6 @@
     };
 
     app.app.AppShell = AppShell;
+    app.app.applyShellCopy = applyShellCopy;
     app.app.renderStatus = renderStatus;
 })(window.DitherApp);

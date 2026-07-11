@@ -20,7 +20,18 @@
     function waitForInitialImages() {
         var appNode = document.getElementById('app');
         var images = appNode ? Array.prototype.slice.call(appNode.querySelectorAll('img')) : [];
-        return Promise.all(images.map(settleImage));
+        var settled = 0;
+        if (app.startupGate) {
+            app.startupGate.setProgress(images.length ? 84 : 94);
+        }
+        return Promise.all(images.map(function (image) {
+            return settleImage(image).then(function () {
+                settled += 1;
+                if (app.startupGate) {
+                    app.startupGate.setProgress(84 + (10 * settled / images.length));
+                }
+            });
+        }));
     }
 
     // 讓已掛載 UI 至少完成一次 layout + paint，再移除全畫面 loading gate。
@@ -41,6 +52,10 @@
             error: app.i18n.t('startupLoadFailed'),
             reload: app.i18n.t('startupReload')
         });
+        app.app.applyShellCopy(
+            document.querySelector('.app-title'),
+            document.getElementById('app-menu-button')
+        );
     }
 
     // App 啟動點：等待所有 page entry 完成註冊後，再交給 app shell mount。
@@ -51,11 +66,22 @@
         app.app
             .whenPageEntriesReady()
             .then(function () {
+                if (app.startupGate) {
+                    app.startupGate.setProgress(70);
+                }
                 var shell = new app.app.AppShell();
                 shell.start();
+                if (app.startupGate) {
+                    app.startupGate.setProgress(82);
+                }
                 return waitForInitialImages();
             })
-            .then(waitForPaint)
+            .then(function () {
+                if (app.startupGate) {
+                    app.startupGate.setProgress(96);
+                }
+                return waitForPaint();
+            })
             .then(function () {
                 if (app.startupGate) {
                     app.startupGate.complete();

@@ -36,24 +36,45 @@ body.is-app-loading #app {
 .app-loading-content {
     display: grid;
     justify-items: center;
-    gap: 12px;
-    max-width: min(320px, 100%);
+    gap: 16px;
+    width: min(320px, 100%);
     text-align: center;
 }
 
 .app-loading-spinner {
-    width: 34px;
-    height: 34px;
-    border: 3px solid var(--color-border-strong);
+    width: 64px;
+    height: 64px;
+    border: 5px solid var(--color-border-strong);
     border-top-color: var(--color-accent);
     border-radius: 50%;
     animation: app-loading-spin 0.85s linear infinite;
 }
 
 .app-loading-message {
-    font-size: 14px;
+    font-size: 18px;
     font-weight: 650;
     line-height: 1.4;
+}
+
+.app-loading-progress {
+    width: min(280px, 100%);
+    height: 10px;
+    overflow: hidden;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 5px;
+    background: var(--color-surface);
+}
+
+.app-loading-progress[hidden] {
+    display: none;
+}
+
+.app-loading-progress-bar {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    background: var(--color-accent);
+    transition: width 160ms ease-out;
 }
 
 .app-loading-overlay[data-state="error"] .app-loading-spinner {
@@ -73,6 +94,10 @@ body.is-app-loading #app {
 @media (prefers-reduced-motion: reduce) {
     .app-loading-spinner {
         animation-duration: 1.7s;
+    }
+
+    .app-loading-progress-bar {
+        transition: none;
     }
 }
 

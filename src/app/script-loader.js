@@ -32,13 +32,22 @@
             return loadedScripts[path];
         }
 
+        if (app.startupGate) {
+            app.startupGate.registerResource();
+        }
+
         // 使用 classic <script>，不使用 module / fetch template，
         // 是為了維持 file:// 直接開啟時也能運作。
         loadedScripts[path] = new Promise(function (resolve, reject) {
             var script = document.createElement('script');
             script.src = path;
             script.async = false;
-            script.onload = resolve;
+            script.onload = function () {
+                if (app.startupGate) {
+                    app.startupGate.settleResource();
+                }
+                resolve();
+            };
             script.onerror = function () {
                 reject(new Error('Failed to load script: ' + path));
             };
