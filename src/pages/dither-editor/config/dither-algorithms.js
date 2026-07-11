@@ -8,6 +8,7 @@
         id: 'floyd-steinberg',
         labelKey: 'algorithmFloydSteinberg',
         processorId: 'error-diffusion',
+        helpFamily: 'error-diffusion',
         matrixId: 'floydSteinberg',
         supportsSerpentine: true,
         supportsErrorStrength: true
@@ -16,6 +17,7 @@
         id: 'atkinson',
         labelKey: 'algorithmAtkinson',
         processorId: 'error-diffusion',
+        helpFamily: 'error-diffusion',
         matrixId: 'atkinson',
         supportsErrorStrength: true
     });
@@ -23,6 +25,7 @@
         id: 'jarvis',
         labelKey: 'algorithmJarvis',
         processorId: 'error-diffusion',
+        helpFamily: 'error-diffusion',
         matrixId: 'jarvis',
         supportsSerpentine: true,
         supportsErrorStrength: true
@@ -31,6 +34,7 @@
         id: 'sierra-lite',
         labelKey: 'algorithmSierraLite',
         processorId: 'error-diffusion',
+        helpFamily: 'error-diffusion',
         matrixId: 'sierraLite',
         supportsSerpentine: true,
         supportsErrorStrength: true
@@ -39,6 +43,7 @@
         id: 'stevenson-arce',
         labelKey: 'algorithmStevensonArce',
         processorId: 'error-diffusion',
+        helpFamily: 'error-diffusion',
         matrixId: 'stevensonArce',
         supportsErrorStrength: true
     });
@@ -46,6 +51,7 @@
         id: 'adaptive-fs-3x3',
         labelKey: 'algorithmAdaptiveFs3',
         processorId: 'adaptive-error-diffusion',
+        helpFamily: 'error-diffusion',
         adaptiveRadius: 1,
         supportsSerpentine: true,
         supportsErrorStrength: true
@@ -54,6 +60,7 @@
         id: 'bayer-4',
         labelKey: 'algorithmBayer4',
         processorId: 'ordered',
+        helpFamily: 'ordered',
         matrixId: 'bayer4',
         thresholdScale: 70,
         supportsThresholdStrength: true
@@ -62,6 +69,7 @@
         id: 'bayer-8',
         labelKey: 'algorithmBayer8',
         processorId: 'ordered',
+        helpFamily: 'ordered',
         matrixId: 'bayer8',
         thresholdScale: 70,
         supportsThresholdStrength: true
@@ -70,6 +78,7 @@
         id: 'blue-noise-64',
         labelKey: 'algorithmBlueNoise64',
         processorId: 'ordered',
+        helpFamily: 'ordered',
         matrixId: 'blueNoise64',
         thresholdScale: 42,
         supportsThresholdStrength: true
@@ -78,12 +87,14 @@
         id: 'dot-diffusion-simple',
         labelKey: 'algorithmDotDiffusionSimple',
         processorId: 'dot-diffusion',
+        helpFamily: 'dot',
         supportsErrorStrength: true
     });
     registry.register({
         id: 'pattern-dots',
         labelKey: 'algorithmPatternDots',
         processorId: 'pattern',
+        helpFamily: 'dot',
         thresholdScale: 86,
         supportsDotDensity: true
     });
@@ -94,4 +105,8 @@
             return registry.list();
         }
     });
+
+    if (app.app.projectCapabilities) {
+        app.app.projectCapabilities.replaceCollection('dither-algorithms', registry.list());
+    }
 })(window.DitherApp);

@@ -11,6 +11,8 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-11: 新增 app-level `project-capabilities.js` 與 Help content model/validator；Dither config 註冊可用清單、constants 註冊限制 fact，i18n 支援可重複 named/positional placeholder，Help 演算法卡片改由 registry 與 ID 文案交集產生。
+- 2026-07-11: Help page 改為 manifest 驅動的雙語文件中心；PageRouter 保存完整 route 並支援同頁 `onRouteChange`，Help 使用獨立 i18n bundle、文件 renderer、互動視覺模組與 `assets/help/` 引擎渲染比較圖。
 - 2026-07-11: `main.js` 本地化 startup gate 時透過 `applyShellCopy()` 同步 header placeholder；AppShell mount 後仍重套 shell 文案與 status。
 - 2026-07-11: Startup gate 新增單調遞增的 `setProgress()` 與動態 script resource 計數，`main.js` 依 mount、initial image settle 與 paint 更新階段進度。
 - 2026-07-11: Startup overlay 改用 theme-specific 半透明 `--color-loading-overlay`，固定從 64px header 下方開始，避免遮住 App title；`inert` 與 pointer fallback 維持全 App 鎖定。
@@ -238,13 +240,15 @@ app-shell
 
 Router 必須負責同步 browser history：
 
-- app start 時，router 讀取目前 URL hash，例如 `#/dither-editor`、`#/web-setting`、`#/help`、`#/about`。
+- app start 時，router 讀取目前完整 URL hash route，例如 `#/dither-editor`、`#/web-setting`、`#/help`、`#/help/dithering/error-diffusion`、`#/about`。
 - 如果 URL 沒有 hash，預設進入 `#/dither-editor`。
-- 如果 hash 對應不到已註冊頁面，回退到 `#/dither-editor`。
+- route 第一段是 page id；其餘段落交給該 page 解讀。第一段對應不到已註冊頁面時回退到 `#/dither-editor`。
 - 使用 Menu 切頁時，router 必須透過 `history.pushState()` 寫入新頁面狀態。
 - 初次進入或需要校正 URL 時，router 應使用 `history.replaceState()`，避免多塞一筆無意義 history。
 - 使用者按瀏覽器上一頁/下一頁時，router 必須監聽 `popstate`，並依目前 history state 或 hash 重新 mount 對應頁面。
 - `popstate` 觸發的頁面切換不可再次 `pushState()`，避免 history 堆疊重複。
+- 同一個 page 內切換子 route 時不可先 unmount / mount 整頁；若 page 提供 `onRouteChange(route, context)`，router 應更新 `context.route` 後呼叫它。
+- app context 必須提供共用 `navigate(route, options)` 與 `currentRoute()`，讓子文件仍透過唯一 router 寫入 history，不自行註冊第二套全域路由。
 
 建議 URL 格式：
 
@@ -252,10 +256,18 @@ Router 必須負責同步 browser history：
 #/dither-editor
 #/web-setting
 #/help
+#/help/introduction
+#/help/quick-start
+#/help/dithering
+#/help/dithering/error-diffusion
+#/help/dithering/ordered
+#/help/dithering/dot
+#/help/palette-mapping
+#/help/color-distance
 #/about
 ```
 
-Router 只保存目前 page id 和 browser history 狀態，不保存 Dither Editor 的圖片、settings、pipeline 或 canvas 內容。Dither Editor 切頁後回來的工作區保留，仍由 `pages/dither-editor/page.js` 的 page-specific cache 負責。
+Router 保存目前 route、由第一段解析出的 page id 與 browser history 狀態，不保存 Dither Editor 的圖片、settings、pipeline 或 canvas 內容。Dither Editor 切頁後回來的工作區保留，仍由 `pages/dither-editor/page.js` 的 page-specific cache 負責。
 
 ### 跨頁共用原則
 
@@ -338,6 +350,7 @@ embedded-web-dithering/
       app-shell.js
       app-menu.js
       app-state.js
+      project-capabilities.js
       page-router.js
       page-registry.js
     pages/
@@ -388,7 +401,14 @@ embedded-web-dithering/
         page.js
       help/
         entry.js
+        document-manifest.js
+        content-model.js
+        validation.js
+        visuals.js
         page.js
+        i18n/
+          en.js
+          zh-TW.js
       about/
         entry.js
         page.js
@@ -576,6 +596,7 @@ const defaultDitherOptions = {
 <script defer src="src/ui/svg-icons.js"></script>
 <script defer src="src/core/canvas/canvas-utils.js"></script>
 <script defer src="src/ui/sortable-list.js"></script>
+<script defer src="src/app/project-capabilities.js"></script>
 <script defer src="src/app/page-registry.js"></script>
 <script defer src="src/pages/dither-editor/entry.js"></script>
 <script defer src="src/pages/web-setting/entry.js"></script>
@@ -1004,6 +1025,41 @@ pages/web-setting/
 - 切換 language 時，必須重新套用 app shell、menu 與目前頁面文字；Dither Editor 的圖片、pipeline 與 editor state 不應因此寫入 localStorage。
 - 未來若加入後端登入或 session，再另外導入 cookie；現階段 Web Setting 不使用 cookie。
 - 新增 Web Setting 頁面不應要求修改 Dither Editor 的 controller、page 或 feature registry。
+
+### Help Page
+
+`Help` 是 app shell 層級的文件中心，不屬於 Dither Editor feature，也不可保存或修改 editor state。
+
+```text
+pages/help/
+  entry.js
+  document-manifest.js
+  content-model.js
+  validation.js
+  visuals.js
+  page.js
+  i18n/
+    en.js
+    zh-TW.js
+```
+
+規則：
+
+- `document-manifest.js` 是文件 id、route、parent 與導覽順序的唯一來源；文章 renderer、文件樹、Breadcrumb、上一篇／下一篇不可另寫平行文件清單。
+- `i18n/en.js` 與 `i18n/zh-TW.js` 以 `helpBundle` 擴充既有 i18n dictionary，兩種語言必須維持相同文件 id 與 section 結構。
+- `app/project-capabilities.js` 保存由實際 config/registry 發布的 collection 與 fact。它是 app-level 唯讀橋接，不反向依賴 Dither Editor；config 或 constants 在 capability registry 存在時才發布資料，讓 Worker 與 headless harness 可在未載入它時繼續執行。
+- `content-model.js` 以 `dither-algorithms` capability collection 決定演算法卡片順序與可見性，並以 stable algorithm id 查找目前語言的長文。沒有長文時必須從 `labelKey`、processor、matrix 與 supports metadata 產生可用 fallback，不可讓 Help crash。
+- `constants.js` 必須把 `MAX_INPUT_LONG_EDGE` 與 `MAX_RESIZE_OUTPUT_SIZE` 發布為 `maxInputLongEdge` / `maxResizeOutputSize` fact；Help table cell 只保存 i18n key 與 fact id，不複製數值。
+- `i18n.t(key, replacements)` 支援 `{value}` named placeholder 與 `{0}` positional placeholder；replacement 使用 global match，同一 placeholder 重複出現時必須全部替換，缺值則保留原 placeholder 供驗證發現。
+- `validation.js` 比對 runtime algorithms、`helpFamily`、英文／繁中 detail id、必要 fact 與 i18n template，並以模擬新增／移除確認 fallback 與隱藏行為。驗證錯誤只在 Help 載入時警告，不阻止使用者閱讀 fallback。
+- `page.js` 負責文件 layout、通用 article block renderer、route 切換與 DOM lifecycle，不保存大段雙語文案。
+- `visuals.js` 負責 Help 專用流程圖、Before / After、matrix/kernel 與 Color Distance explorer；它可以使用 `core.paletteUtils` 驗證實際色距選色，但不可呼叫或修改 Dither Editor controller/state。
+- Help route 固定由 `#/help` 開始；未知 Help 子 route 顯示 Help 首頁，不可造成 startup failure。
+- Help 文件連結必須保留實際 `href` 供複製與另開分頁；一般左鍵點擊則交給 app context `navigate()`，確保 history state 完整。
+- 桌面 Help layout 由 `assets/styles/layout.css` 提供文件樹、文章與頁內目錄欄位；Help article/navigation/visual components 由 `assets/styles/components.css` 提供，顏色必須使用既有 theme tokens。
+- Help i18n、manifest、visuals 與 page scripts 由 `pages/help/entry.js` 依序載入；`index.html` 不可展開列出內部檔案。
+- `assets/help/*.png` 必須由 `tools/dither-render/run.py` 使用專案實際 dither scripts 產生，不手動畫假結果。比較圖使用固定 480x288 synthetic gradient、E6 palette 與畫面標示的 Algorithm / Mapping / Color Distance / Strength；輸出變更時必須重新產生對應資產並人工確認。
+- `tools/help-validate/run.py` 必須透過 headless browser 載入實際 classic scripts，驗證 capability、雙語內容、限制模板與重複 placeholder；缺少任何已註冊演算法的雙語 detail 時以非零 exit code 結束，已移除演算法殘留的不可見 detail 只報 cleanup warning。
 
 ### Device Settings Page
 

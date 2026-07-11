@@ -41,15 +41,28 @@
         setDocumentLanguage(currentLanguage);
     }
 
-    function t(key) {
+    function interpolate(value, replacements) {
+        if (typeof value !== 'string' || replacements === undefined || replacements === null) {
+            return value;
+        }
+        return value.replace(/\{([a-zA-Z][a-zA-Z0-9_]*|\d+)\}/g, function (match, name) {
+            var replacement = Array.isArray(replacements)
+                ? replacements[Number(name)]
+                : replacements[name];
+            return replacement === undefined || replacement === null ? match : String(replacement);
+        });
+    }
+
+    function t(key, replacements) {
         var active = app.i18n[currentLanguage] || app.i18n[DEFAULT_LANGUAGE] || {};
         var fallback = app.i18n[DEFAULT_LANGUAGE] || {};
-        return active[key] || fallback[key] || key;
+        return interpolate(active[key] || fallback[key] || key, replacements);
     }
 
     app.i18n.normalizePreference = normalizePreference;
     app.i18n.resolveLanguage = resolveLanguage;
     app.i18n.setLanguagePreference = setLanguagePreference;
+    app.i18n.interpolate = interpolate;
     app.i18n.t = t;
     app.i18n.languageOptions = [
         { id: 'auto', labelKey: 'languageAuto' },

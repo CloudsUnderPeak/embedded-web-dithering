@@ -115,7 +115,6 @@
         errorGeneric: 'Something went wrong. Please try again.',
         helpTitle: 'Help',
         aboutTitle: 'About',
-        placeholderHelp: 'Load an image, tune the controls, reorder effects, then export PNG.',
         placeholderAbout: 'A static browser-based dither image editor MVP.'
     };
 })(window.DitherApp);

@@ -64,6 +64,15 @@ These tools are for local agent workflows. They should help future changes produ
     python3 tools/generate-demo-data/run.py
     ```
 
+- `tools/help-validate/`
+  - Use this after adding/removing a Dither Algorithm, changing Help content, or changing capability-backed image limits.
+  - Primary purpose: verify runtime algorithm metadata, English/Traditional Chinese Help details, capability facts, and repeated i18n placeholders.
+  - Prefer the runner:
+
+    ```bash
+    python3 tools/help-validate/run.py
+    ```
+
 - `tools/dither-benchmark/`
   - Use this when changing dither algorithms, Palette Mapping, Color Distance, CPU hot paths, or GPU paths.
   - Primary purpose: collect before/after performance data and verify CPU/GPU output consistency with checksum.

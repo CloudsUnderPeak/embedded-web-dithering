@@ -22,4 +22,14 @@
             height: 480
         }
     };
+    if (app.app.projectCapabilities) {
+        app.app.projectCapabilities.setFact(
+            'maxInputLongEdge',
+            app.pages.ditherEditor.constants.MAX_INPUT_LONG_EDGE
+        );
+        app.app.projectCapabilities.setFact(
+            'maxResizeOutputSize',
+            app.pages.ditherEditor.constants.MAX_RESIZE_OUTPUT_SIZE
+        );
+    }
 })(window.DitherApp);

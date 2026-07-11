@@ -113,7 +113,6 @@
         errorGeneric: '發生錯誤，請再試一次。',
         helpTitle: '說明',
         aboutTitle: '關於',
-        placeholderHelp: '載入圖片、調整控制項、重新排序效果，然後匯出 PNG。',
         placeholderAbout: '靜態瀏覽器版 抖色圖片編輯器 MVP。'
     };
 })(window.DitherApp);

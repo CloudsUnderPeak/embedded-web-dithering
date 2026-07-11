@@ -33,6 +33,16 @@ Server/GitHub Pages 會直接讀取被選中的圖片。產生出的 `assets/dem
 - 套用 dithering，預覽圖片在有限顏色下的呈現效果。
 - 將處理後結果匯出為 PNG。
 
+## 說明中心
+
+開啟[內建說明中心](https://cloudsunderpeak.github.io/embedded-web-dithering/#/help)，可閱讀專案介紹、完整快速操作，以及抖色演算法、調色盤映射與色彩距離指南。每份文件都有可分享的獨立路徑；演算法文件也包含由專案引擎產生的比較圖、矩陣與 kernel 圖解及互動範例。
+
+演算法是否可用及圖片尺寸上限會讀取編輯器使用的同一份 runtime 設定。修改演算法或 Help 內容後，可用以下指令驗證兩種語言：
+
+```bash
+python3 tools/help-validate/run.py
+```
+
 ## 支援匯入格式
 
 目前支援上傳 PNG、JPEG/JPG 與 WebP 格式的圖片。

@@ -388,3 +388,93 @@
         min-height: 0;
     }
 }
+
+/* Help 文件中心讓文件樹與頁內目錄固定，只有文章主區域捲動。 */
+.help-page {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    height: calc(100vh - 64px);
+    min-height: 0;
+    overflow: hidden;
+}
+
+.help-sidebar {
+    min-width: 0;
+    overflow: auto;
+    padding: 24px 16px 36px;
+    border-right: 1px solid var(--color-border);
+    background: var(--color-surface-alpha);
+    scrollbar-color: var(--color-scroll-thumb) transparent;
+    scrollbar-width: thin;
+}
+
+.help-main {
+    display: grid;
+    grid-template-columns: minmax(0, 820px) 210px;
+    justify-content: center;
+    gap: 48px;
+    min-width: 0;
+    overflow: auto;
+    padding: 44px clamp(24px, 4vw, 64px) 72px;
+    scroll-behavior: smooth;
+}
+
+.help-article {
+    min-width: 0;
+}
+
+.help-toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    max-height: calc(100vh - 108px);
+    overflow: auto;
+}
+
+@media (max-width: 1180px) {
+    .help-main {
+        grid-template-columns: minmax(0, 820px);
+    }
+
+    .help-toc {
+        display: none;
+    }
+}
+
+@media (max-width: 920px) {
+    .help-page {
+        display: block;
+        height: 100%;
+        overflow: auto;
+    }
+
+    .help-sidebar {
+        overflow: visible;
+        padding: 16px 20px;
+        border-right: 0;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .help-document-nav {
+        display: none;
+        padding-top: 14px;
+    }
+
+    .help-page.is-nav-open .help-document-nav {
+        display: block;
+    }
+
+    .help-main {
+        display: block;
+        overflow: visible;
+        padding: 28px 20px 56px;
+    }
+}
+
+@media (max-width: 560px) {
+    .help-sidebar,
+    .help-main {
+        padding-right: 14px;
+        padding-left: 14px;
+    }
+}

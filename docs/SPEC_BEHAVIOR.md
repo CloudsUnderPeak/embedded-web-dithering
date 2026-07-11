@@ -11,6 +11,8 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-11: Help 的演算法卡片與圖片尺寸限制改由 runtime capability 產生；新增演算法缺少教學文案時顯示基本 fallback，移除後自動隱藏，限制值透過可重複 i18n placeholder 顯示。
+- 2026-07-11: Help 擴充為雙語文件中心，提供 9 份可深連結文件、文件樹、Breadcrumb、頁內目錄、上一篇／下一篇、響應式導覽，以及由專案引擎產生的比較圖、矩陣/kernel 圖解與互動示例。
 - 2026-07-11: Startup loading 套用 i18n 時同步更新 header App 標題與 Menu placeholder，避免延遲載入期間同時出現兩種語言。
 - 2026-07-11: App 啟動 loading 放大 spinner、百分比文字與進度條，提升載入期間的視覺辨識度。
 - 2026-07-11: App 啟動 loading 新增階段式百分比與進度條，spinner 加大以提高辨識度；百分比依 script、mount、image settle 與 paint 階段單調前進。
@@ -318,6 +320,25 @@ Acceptance:
 - Text and controls must not overlap.
 - The user can load an image, adjust settings, preview, and export from a narrow viewport.
 
+### US-15 Learn From The Help Center
+
+As a user, I want the Help page to behave like a small documentation space, so that I can learn the workflow and understand how algorithm settings affect output.
+
+Acceptance:
+
+- Help provides separate documents for the Help home, project introduction, quick start, Dithering Algorithms overview, Error Diffusion, Ordered / Blue Noise, Dot-based Algorithms, Palette Mapping, and Color Distance.
+- Every document has a shareable nested route under `#/help` and browser back / forward restores the corresponding document.
+- The left document tree, breadcrumb, previous / next links, and desktop on-page table of contents remain consistent with the active document.
+- Desktop uses a documentation layout with a document tree, article, and optional on-page table of contents; narrow viewports collapse the document tree behind an explicit button and keep the article in one column.
+- Help content follows the current English or Traditional Chinese language without losing the active document when language changes.
+- Algorithm guides use the project-supported algorithms and controls, not options that only exist in external reference projects.
+- The visible algorithm cards follow the runtime Dither Algorithm registry order. Removing an algorithm removes its card; a newly registered algorithm appears in its declared family even before long-form Help is authored.
+- Missing long-form algorithm content uses a clear fallback and emits a development validation error without preventing Help from loading.
+- Input working-size and configured output-size limits are rendered from the editor constants instead of duplicated numeric Help text.
+- Visual comparisons identify their synthetic source size, palette, algorithm, mapping, distance, and strength settings.
+- The comparison slider, algorithm/mapping/distance tabs, and Color Distance palette explorer remain keyboard accessible.
+- Opening Help and returning to Dither Editor preserves the current editor session.
+
 ## 頁面與導覽行為
 
 App 由一個固定外殼承載多個頁面：
@@ -333,6 +354,32 @@ App 由一個固定外殼承載多個頁面：
 - 使用者透過 Menu 切換頁面時，瀏覽器 URL 需要反映目前頁面。
 - 使用者按瀏覽器上一頁或下一頁時，App 需要切換到對應頁面。
 - 返回 Dither Editor 時，應恢復該 session 內的編輯狀態。
+- Help 子文件使用 `#/help/...` 巢狀路徑；切換子文件時不需要卸載整個 Help page，但 URL、上一頁與下一頁必須同步。
+
+### Help 文件中心
+
+Help 不是單一 placeholder 文章，而是內建文件中心。文件樹固定包含：
+
+```text
+Help
+├─ Help 首頁
+├─ 開始使用
+│  ├─ 專案介紹
+│  └─ 快速操作
+└─ 演算法指南
+   ├─ 抖色演算法
+   │  ├─ Error Diffusion
+   │  ├─ Ordered / Blue Noise
+   │  └─ Dot-based Algorithms
+   ├─ 調色盤映射
+   └─ 色彩距離
+```
+
+桌面版顯示左側文件樹、中間文章與空間足夠時的右側頁內目錄。窄版將文件樹收合為文章上方的明確按鈕，文章改為單欄。文章必須提供 Breadcrumb 與上一篇／下一篇，所有文件連結都要能複製或另開分頁。
+
+演算法解說必須以目前產品實際註冊的 Dither Algorithm、Palette Mapping 與 Color Distance 為準。Dither Algorithm 卡片依 runtime registry 順序與 `helpFamily` 顯示：移除註冊後自動消失，新增但尚無雙語長文時仍顯示名稱、processor、支援控制與結構 fallback，同時讓開發驗證回報缺漏。每種已有解說的演算法以一致格式說明摘要、特性、適用情境、注意事項、控制項與結構。
+
+Help 內的輸入工作圖長邊與可設定單邊輸出上限必須由 editor constants 暴露的 capability fact 取得，不可複製固定數字。完整句子或含單位文字透過 i18n placeholder 排版；同一 placeholder 在字串內出現多次時必須全部替換。比較圖必須由專案 dither render 流程產生，並在畫面標示重現設定。Help 可提供 Before / After 拖曳、範例切換、matrix/kernel 圖解與 Color Distance 互動色票選擇，但不得改變 Dither Editor 工作圖片或 settings。
 
 ## 版面行為
 

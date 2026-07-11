@@ -33,6 +33,16 @@ Many e-paper and embedded displays can only show a small set of colors. If you p
 - Apply dithering and preview how the image looks with limited colors.
 - Export the processed result as PNG.
 
+## Help Center
+
+Open [the built-in Help center](https://cloudsunderpeak.github.io/embedded-web-dithering/#/help) for the project introduction, a complete quick-start workflow, and guides to Dithering Algorithms, Palette Mapping, and Color Distance. Each document has a shareable route, and the algorithm guides include engine-rendered comparisons, matrix and kernel diagrams, and interactive examples.
+
+Algorithm availability and image-size limits are read from the same runtime configuration used by the editor. After changing an algorithm or Help content, validate both language variants with:
+
+```bash
+python3 tools/help-validate/run.py
+```
+
 ## Supported Input Formats
 
 You can upload PNG, JPEG/JPG, and WebP images.
