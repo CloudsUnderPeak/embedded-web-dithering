@@ -45,15 +45,18 @@ These tools are for local agent workflows. They should help future changes produ
   - Use this when producing the optional static release output.
   - Primary purpose: copy server/device static app files to a timestamped folder under ignored `build/`, optionally minify HTML/CSS/JS/SVG, and optionally replace output files with gzip-only `.gz` versions.
   - Build output is for HTTP server/device serving, not `file://`; exclude generated demo data fallback files such as `assets/demo/demo-data.js` from build output.
+  - Release builds strip the `<!-- PREVIEW START/END -->` block from `index.html` and exclude `src/device/device-mock.js`, so device output never contains the mock device API. `--demo` (or `make demo`) keeps both for static demo hosting and never gzips.
+  - Every run clears and rebuilds `build/latest` as a mirror of that run's timestamped output; treat `build/latest` as "the newest build" regardless of mode.
   - Minify and gzip replacement are enabled by default. Use `--no-minify` or `--no-gzip` only when the task explicitly needs raw output or normal files.
+  - The simple JS minifier treats `//` inside regex literals as a comment; write such regexes with `[/]`-style character classes in any file that reaches build output.
   - Prefer the runner:
 
     ```bash
     python3 tools/build/run.py
     ```
 
-  - For repeated builds, keep each run in its generated timestamp folder, for example `build/20260627-143015/`. If multiple builds happen in the same second, the tool appends a numeric suffix.
-  - `make build` is the convenience entrypoint for minify plus gzip-only output. `make minify` runs minify only. `make gzip` copies raw files and keeps only gzip versions.
+  - For repeated builds, keep each run in its generated timestamp folder, for example `build/20260627-143015/` (demo runs get a `-demo` suffix). If multiple builds happen in the same second, the tool appends a numeric suffix.
+  - `make build` is the convenience entrypoint for minify plus gzip-only output. `make demo` builds the mock-enabled static demo. `make minify` runs minify only. `make gzip` copies raw files and keeps only gzip versions.
 
 - `tools/generate-demo-data/`
   - Use this after replacing the single supported image in `assets/demo/` when demo metadata or `file://` Load Demo fallback support is needed.

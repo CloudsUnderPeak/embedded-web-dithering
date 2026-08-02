@@ -339,8 +339,8 @@
                 paletteContext.renderSwatches();
                 paletteContext.updateOriginalControls();
             });
-            var presetRow = ui.row(ui.t('labelPreset'), presetInput);
-            paletteContext.presetInput = presetInput;
+            var presetRow = ui.row(ui.t('labelPreset'), presetInput.node);
+            paletteContext.presetInput = presetInput.select;
             paletteContext.updateOriginalControls();
             return ui.section('panelPalette', [
                 buildPaletteEditor(paletteContext),

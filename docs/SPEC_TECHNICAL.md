@@ -11,6 +11,18 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-07-29: `assets/icons/device/` 圖示來源對齊：`filter.svg` 與 `warning.svg` 改用 iot-node-bedrock builtin-web icon set 的原始 path（filter-funnel／warning），`lock.svg` 換成使用者提供的 SVG Repo lock-01（正規化為 24 viewBox、`stroke="currentColor"`、stroke-width 2、round cap/join、`aria-hidden`）。目前該目錄除 lock 外全部取自 builtin-web icon set。
+- 2026-07-29: 連線狀態卡新增 `.network-status-icon`（34px accent-soft 方塊＋accent filter icon），icon 以 `grid-row: 1 / span 2` 跨 label 與值兩列並垂直置中，說明列縮排在同一文字欄下，icon 下方不留空欄；新增 `assets/icons/device/signal.svg` 與 `globe.svg`（path 取自 iot-node-bedrock builtin-web icon set），STA 沿用 `wifi-strength-4.svg`；桌面與手機共用同一結構（手機單欄逐項）。`.network-status-grid` 桌面為三欄一列，欄寬加權（1 / 1.15 / 1.35）讓 mDNS 網址維持單行。移除 `.device-mono`：mDNS 網址與 hostname 預覽改用全站一般字體，等寬字只保留給 Help 的 matrix/kernel 格子。
+- 2026-07-29: `deviceSystemTitle`／`menuDeviceSystem` 文案改為「裝置設定」／"Device Setting"，`mockBadge` 簡化為 "PREVIEW"；`.device-grid` 與 `.network-status-grid` 在 920px 手機模式改為逐項單欄（移除 700/480 的併欄規則），且每列改為 130px 左標籤欄＋右側值（`.device-field` 兩欄、`.network-status-column` 的 value/hint 落在第二欄），不留整塊空白。
+- 2026-07-29: Web Setting 比照裝置頁改用 `panel-section` + `panel-body` 卡片並移除頁內 `h1` 與 `simple-page` 依賴；`components.css` 移除已無使用者的 `.setting-section`，新增 `.web-setting-page` 置中卡片堆疊版面（含 920px 自行捲動斷點）。
+- 2026-07-29: select 自訂箭頭抽成共用 `src/ui/select-field.js`（`app.ui.selectField.create(select)` 回傳 `.select-field` 包裝；樣式移入 components.css）；編輯器 `panel-utils.selectInput` 改回傳 `{ node, select }` 並套用包裝，crop／dither／palette feature 與 `wifi-form` 全部改走共用元件，全站 select 外觀一致。
+- 2026-07-29: 裝置頁卡片改用 components.css 的 `panel-section` + `panel-body`（`device-card-header` 承載含 badge／總空間的標題列變體），移除頁內 `h1` 與 `simple-page` 依賴；`assets/styles/device.css` 全面對齊編輯器尺寸階（輸入框 34px、字級 11–14px、間距 10–12px、圓角 6/8px），`device-form-row`／`device-toggle-row` 改為 130px 左標籤欄並在 560px 斷點收合，modal 圓角與內距同步縮小。容量圖例改為 builtin-web 式 `capacity-stats`／`capacity-stat`（`segments-N` 決定欄數、700px 以下兩欄），`wifi-form` 的 select 以 `.select-field` 包裝：`appearance:none` 隱藏原生箭頭、疊 `chevron-down.svg`，盒位使用全站統一的結尾圖示尺寸，讓各表單元件結尾的 svg 對齊。容量圖 `capacity-color-1..4` 改為圖表專用固定色階，色相取自 accent teal 與 status-busy 藍（依「深藍→深青綠→中藍→亮青綠」明度遞增排列，light 與 dark 節奏一致：light `#08569a`/`#058461`/`#5795cc`/`#49c6a7`，dark 以 `body[data-theme="dark"]` 覆寫 `#1f62a4`/`#04865d`/`#5483bb`/`#30a981`，恢復獨立 dark 覆寫、與語意 token 脫鉤但同色相），`capacity-color-5` 維持 `color-mix` 中性底色；色階經 OKLCH 明度帶、彩度下限與相鄰 CVD ΔE 驗證，`capacity-seg + capacity-seg` 加 1px `--color-surface` 分隔線。
+- 2026-07-29: `wifi-form` 的 `toggleRow()` 改為 `<div>` 外層＋只包住開關的 `<label>`，文字用 `aria-labelledby` 關聯，因此點標籤不會切換；靜態 IP 欄位透過 `wifiIpExample` placeholder 帶範例值；`wifiSecurityOpen` 改為英文 `Open`，掃描列的 `encryption` 統一 `toUpperCase()`；`scan-dialog` 新增 `.scan-tools`（篩選欄內嵌 `filter.svg`、rescan 帶 `refresh.svg` 並固定 148px 寬），倒數只改內層 label 文字以保留圖示。
+- 2026-07-29: `<details>` 的非 summary 子節點會被瀏覽器包進單一 `::details-content` 盒子，因此 `.device-advanced` 的 grid gap 只作用在 summary 之後；進階欄位間距改由明確的 `.device-advanced-body` wrapper 負責（`wifi-form` 的 `advancedPanel()`）。`.save-dock` 取消 `flex-wrap` 並在窄螢幕隱藏狀態文字讓按鈕平分；`.device-toggle-row` 改為 `justify-content: space-between`，視覺順序用 `order` 調整以維持 `input:checked + .toggle-switch-track` 的相鄰關係；`device-info` 的 `capacityCard()` 在 header 顯示分段總和。
+- 2026-07-28: 啟用完整重設：`device-api` 只保留 `systemReset()`（`POST /api/system/reset`），`pages/device-system` 新增 danger zone 與確認 dialog，成功後 `invalidateSession()` 並留常駐 notice；新增 `assets/icons/device/warning.svg` 與 `.device-danger-icon`（紅底＋既有 svg-icon 反白 filter）；device-mock 的 heap 改為固定值，`api/system/reset` 改為精確路徑並把 in-memory 狀態重設回出廠預設 AP。
+- 2026-07-28: 裝置頁樣式與資訊密度調整集中在 `assets/styles/device.css`（不動 `layout.css` / `components.css`），以 `.device-page .setting-section` 覆蓋側欄尺寸的預設卡片並新增 480px 單欄斷點；容量圖色票改由 `--color-accent-strong` / `--color-accent` / `--color-control-accent` 與 `color-mix` 推導，取消獨立的 dark 覆寫；`ui/password-field` 改為 `.password-field` 相對定位 + 疊在 input 內的 `.password-toggle`；`wifi-form` 的密碼與 AP 密碼保護說明改用 `.device-rule-hint`，`.wifi-section` / `.device-advanced` 邊框改用 `--color-border` 並讓進階區塊帶 `--color-surface-muted` 底色與 `[open] summary` 分隔線；`app-menu` 移除裝置連線小點；`device-info` 移除手動 refresh、stale badge 與 config_state 欄位；device-mock 初始 Wi-Fi mode 改為 `ap_sta`（STA 已連線）。
+- 2026-07-28: 新增開發／demo 假資料機制：`index.html` PREVIEW 區塊載入 `src/device/device-mock.js`（載入即預設啟用、`?mock=0` 關閉）；`make build` 剝除區塊並排除 mock 檔，新增 `make demo` 保留 mock 的靜態展示輸出（不 gzip）。`tools/build` 每次執行先清空並重建 `build/latest` 鏡像，內容與該次時間戳資料夾相同。
+- 2026-07-28: 新增 `src/device/` 裝置整合層（`device-api` REST client、`device-live` alive 監看、`device-gate` 離線反灰、`device-auth` 認證）與三個裝置頁（`device-info`、`device-network`、`device-system`），對接 iot-node-bedrock REST API；共用 `ui/modal`、`ui/notice`、`ui/password-field` 與 `assets/styles/device.css`。header `#app-status` 圓點改為合成裝置連線與頁面狀態。
 - 2026-07-11: 新增 app-level `project-capabilities.js` 與 Help content model/validator；Dither config 註冊可用清單、constants 註冊限制 fact，i18n 支援可重複 named/positional placeholder，Help 演算法卡片改由 registry 與 ID 文案交集產生。
 - 2026-07-11: Help page 改為 manifest 驅動的雙語文件中心；PageRouter 保存完整 route 並支援同頁 `onRouteChange`，Help 使用獨立 i18n bundle、文件 renderer、互動視覺模組與 `assets/help/` 引擎渲染比較圖。
 - 2026-07-11: `main.js` 本地化 startup gate 時透過 `applyShellCopy()` 同步 header placeholder；AppShell mount 後仍重套 shell 文案與 status。
@@ -338,6 +350,7 @@ embedded-web-dithering/
       layout.css
       components.css
       themes.css
+      device.css
   src/
     vendor/
       rgbquant.js
@@ -412,11 +425,18 @@ embedded-web-dithering/
       about/
         entry.js
         page.js
-      device-settings/
+      device-info/
         entry.js
         page.js
-        device-status-panel.js
-        network-panel.js
+      device-network/
+        entry.js
+        page.js
+        wifi-form.js
+        wifi-controller.js
+        scan-dialog.js
+      device-system/
+        entry.js
+        page.js
     core/
       storage/
         storage-keys.js
@@ -436,21 +456,21 @@ embedded-web-dithering/
         device-output-encoder.js
     device/
       device-api.js
-      device-session.js
-      device-status.js
-      network-settings.js
-      display-profile.js
-      display-upload.js
-      device-errors.js
+      device-live.js
+      device-gate.js
+      device-auth.js
     ui/
       button.js
       dropdown-menu.js
       dropzone.js
       slider.js
-      select.js
+      select-field.js
       color-swatch.js
       svg-icons.js
       sortable-list.js
+      modal.js
+      notice.js
+      password-field.js
       tooltip.js
       toggle.js
     utils/
@@ -596,9 +616,20 @@ const defaultDitherOptions = {
 <script defer src="src/ui/svg-icons.js"></script>
 <script defer src="src/core/canvas/canvas-utils.js"></script>
 <script defer src="src/ui/sortable-list.js"></script>
+<script defer src="src/ui/modal.js"></script>
+<script defer src="src/ui/notice.js"></script>
+<script defer src="src/ui/password-field.js"></script>
+<script defer src="src/ui/select-field.js"></script>
+<script defer src="src/device/device-api.js"></script>
+<script defer src="src/device/device-live.js"></script>
+<script defer src="src/device/device-gate.js"></script>
+<script defer src="src/device/device-auth.js"></script>
 <script defer src="src/app/project-capabilities.js"></script>
 <script defer src="src/app/page-registry.js"></script>
 <script defer src="src/pages/dither-editor/entry.js"></script>
+<script defer src="src/pages/device-info/entry.js"></script>
+<script defer src="src/pages/device-network/entry.js"></script>
+<script defer src="src/pages/device-system/entry.js"></script>
 <script defer src="src/pages/web-setting/entry.js"></script>
 <script defer src="src/pages/help/entry.js"></script>
 <script defer src="src/pages/about/entry.js"></script>
@@ -976,35 +1007,66 @@ pipeline 順序也必須由 enabled features 的 `pipelineStage` 與 `pipelineOr
 
 如果舊資料包含已停用或不存在的 feature settings，預設不應套用到 UI，也不應讓 preview/export crash。需要保留資料時，可以放進 unknown settings 區，等該 feature 重新啟用後再由 `migrateSettings()` 處理。
 
-## ESP32 Device Mode 預留
+## ESP32 裝置整合
 
-本版 MVP 先完成可獨立使用的 Standalone Mode。下一版預留 ESP32 Device Mode，讓同一份靜態網站可以被 ESP32 提供給使用者，並在瀏覽器端完成圖片處理後上傳到裝置。
+本專案會放進 iot-node-bedrock 的 `user-web/`，由 ESP32 韌體提供同一份靜態網站；裝置管理功能已實作（裝置資訊、網路、裝置設定），Upload to Device 仍屬下一版預留。API contract 以 iot-node-bedrock `docs/SPEC_API_REFERENCE.md` 為準，本章只描述前端側的整合設計。
 
-### App Mode
+### 裝置整合層（src/device/）
 
-使用 config 控制運行模式：
-
-```js
-const APP_MODE = 'auto'; // 'auto' | 'standalone' | 'device'
+```text
+src/device/
+  device-api.js    REST client：envelope 解析、Bearer token store、AbortController timeout、resources 目錄
+  device-live.js   alive 監看：GET /api/alive 輪詢、online/offline/standalone 狀態、subscribe
+  device-gate.js   離線反灰：banner、fieldset disable、恢復後自動刷新
+  device-auth.js   認證：login dialog、session 驗證、logout、全域 401 處理、鎖定卡
 ```
 
 規則：
 
-- `standalone`：不呼叫 ESP32 API，只提供編輯、保存與 PNG download。
-- `device`：要求 ESP32 API 可用，API 不通時顯示 device disconnected。
-- `auto`：先嘗試 device info API，成功則進入 Device Mode，失敗則回到 Standalone Mode。
-- GitHub Pages demo 預設使用 `standalone` 或 `auto`。
-- ESP32 內建網站未來可使用 `device` 或 `auto`。
+- 頁面一律透過 `app.device.api.resources` 取用 endpoint，不直接呼叫 `fetch`；path 使用相對路徑（部署後與裝置 API 同源）。
+- REST envelope 固定 `{success, data, message}`；HTTP 200 但 `success !== true` 也視為錯誤。錯誤統一帶 `status`、`code`、`fields`；網路層失敗包成 `{code: 'transport_error', status: 0}`。
+- 常見 error code 由 `app.device.errorText()` 翻成使用者語言；API `message` 只作 fallback。
 
-### Device Mode 目標
+### 裝置連線監看（device-live）
 
-Device Mode 中：
+- `main.js` 於 startup gate complete 後呼叫 `app.device.live.start()`。
+- 每 5 秒打 `GET /api/alive`（timeout 2.5s）；連續 2 次失敗才轉 `offline`，1 次成功即轉 `online`；從未成功過為 `standalone`（開發環境）。
+- 任何 API 成功都視為 alive；一般 API 網路層失敗會立即補查一次。分頁隱藏時暫停輪詢，恢復可見立即補查。
+- `suppress(reason)` / `release(reason)` 供已知會短暫斷線的流程（Wi-Fi safe transition）暫停離線判定。
+- header `#app-status` 圓點合成優先序：裝置離線（紅）> 頁面 error/busy > 裝置在線（綠）> standalone（灰）。
+- 裝置頁以 `app.device.bindLiveGate(container, {onOnline})` 綁定：offline/standalone 時容器加 `.is-device-offline`、內部 `fieldset` 全部 disable、顯示常駐 banner；恢復後自動刷新資料並顯示 2.2 秒成功 banner。Dither Editor 為純前端頁，不受影響。
 
-- 靜態網站由 ESP32 提供。
-- 圖片處理仍全部在瀏覽器端完成。
-- ESP32 不負責 crop、resize、palette、dither 等運算。
-- ESP32 負責提供 device API、session token、network settings、接收上傳 payload，並直接刷新顯示器。
-- Upload to Device 是下一版功能，不列入 MVP。
+### 開發／demo 假資料（device-mock）
+
+仿 iot-node-bedrock builtin-web 的 preview 機制：**有沒有 mock 是 build 產物的差異，不做任何執行期偵測**。
+
+- `index.html` 以 `<!-- PREVIEW START -->` / `<!-- PREVIEW END -->` 註解包住 `src/device/device-mock.js` 的 script 標籤；source 工作副本永遠帶著這個區塊，因此 `file://` 直開或本機 server 開 source 都是假資料。
+- `device-mock.js` 被載入即預設啟用（載入本身就代表非正式 build），`?mock=0`（或 `false`／`off`）可關閉、回到 standalone 呈現。啟用時攔截相對路徑 `api/...` 的 `window.fetch`（其餘 URL 照常放行），並於 header 顯示常駐「PREVIEW」badge。
+- 正式 build（`make build`）由 `tools/build/run.py` 剝除 index.html 的 PREVIEW 區塊並排除 mock 檔；找不到 PREVIEW 區塊時 build 直接失敗，避免默默漏剝。裝置產物物理上不含任何 mock 程式。
+- `make demo`（`run.py --demo`）保留 PREVIEW 區塊與 mock 檔，輸出時間戳資料夾加 `-demo` 後綴；demo 供一般靜態站（如 GitHub Pages）使用，固定不做 gzip-only 輸出，minify 照常。
+- Mock 為 in-memory 狀態機，涵蓋 alive、device、storage、wifi（scan、202 safe transition 與 4 秒後 connected/failed）、auth（login/session/logout/password）與 system；登入帳密 `admin` / `password`；`heap_used_percent` 為固定值，不隨輪詢隨機浮動。完整重設會把 in-memory 狀態（密碼、hostname、Wi-Fi、token）全部還原成出廠預設。初始 Wi-Fi 狀態為 `ap_sta`（STA 已連線 `HomeWiFi-5G` / `192.168.1.50`，AP 同時啟用），因此 safe transition 需先存成 AP mode 再切回含 STA 的 mode；儲存 SSID 含 `fail`（掃描清單內建 `Mock-Fail`）模擬驗證失敗。重新整理即重設，不持久化。
+- 注意：`tools/build` 的簡易 JS minifier 會把 regex 字面值內的 `//` 誤判為註解；demo 會 minify mock 檔，regex 內的斜線需寫成 `[/]` 類寫法。
+
+### 認證與 session
+
+- token 由 `POST /api/auth/login` 取得，存 localStorage（key 走 `storage-keys.js`）；裝置重開機或他人登入即失效，本地只是快取，有效性以 `GET /api/auth/session` 為準。
+- 所有帶 token 的 request 收到 401 時，`device-api` 觸發全域 unauthorized 事件 → `device-auth` 清 token 並通知訂閱者，受保護頁面退回鎖定卡。login 本身的 401 是帳密錯誤，不觸發全域登出。
+- session 驗證失敗但屬 transport 錯誤時保留 token，待裝置恢復後重新驗證，避免離線時誤登出。
+- login dialog 為全站共用 modal；username 由公開 `GET /api/auth` 取得（固定 `admin`、唯讀），成功後原地解鎖目前頁面，不跳頁。Menu 底部在持有 token 時顯示登出。
+- 修改管理員密碼成功、AP 密碼保護開關變更（裝置重啟）時，前端主動 `invalidateSession()`。
+
+### 裝置管理頁
+
+- `pages/device-info/`：公開唯讀。`GET /api/device` + `GET /api/storage`，掛載時抓一次並每 10 秒背景輪詢，不提供手動 Refresh、不顯示 stale badge，也不呈現 `config_state`；容量分段長條圖推導與 bedrock builtin-web Hardware 頁一致，Available 直接使用 `user.limits.max_upload_bytes`。失敗沿用最後成功值，離線提示交給 `device-gate` banner。
+- `pages/device-network/`：狀態卡公開（`GET /api/wifi` 每 10 秒輪詢，`if-clean` 不覆蓋表單草稿）；Wi-Fi 設定需登入。`PUT /api/wifi` 是完整 replacement，不適用分類由已載入 baseline 帶入；202 safe transition 以 1s 間隔輪詢 `GET /api/wifi/connect`、25s deadline、generation 序號丟棄過期回覆，期間 `suppress` 離線判定並容忍 transport 失敗；terminal `connected` 才把送出值設為 baseline 並清 password input，`failed` 保留草稿並顯示 rollback。掃描 dialog 過濾 hidden／空 SSID／RSSI ≤ -75、依 RSSI 排序、10 秒 cooldown 倒數，429/409 依 `retry_after_seconds` 提示。
+- `pages/device-system/`：整頁需登入。hostname 走 `PUT /api/system`（前端套用相同 1–31 字元規則與 mDNS 預覽）；管理員密碼走 `PUT /api/auth/password`（allowlist 正則 + 兩次一致），成功後清 token 要求重新登入。完整重設走 `POST /api/system/reset`（API client 只保留這一支；settings/data 兩支未使用已移除），UI 必須先通過確認 dialog，送出期間 `setDismissible(false)` 並鎖住按鈕，成功後 `invalidateSession()` 並以 sticky notice 保留重新連線指示。
+- 表單皆採 `busy || !dirty || !valid` 三態儲存鈕與文字狀態列；一般成功 notice 約 2.2 秒自動消失，錯誤與需保留脈絡（重啟、斷線、rollback）的 notice 常駐。
+- 視覺語言與 Dither Editor 對齊：卡片一律使用 components.css 的 `panel-section`（h2 標題列）＋`panel-body device-card-body`；需要右側 badge／總空間的卡片改用 `device-card-header` 標題列變體。頁面不放 `h1`（頁名由 app header 顯示）。`device.css` 只保存裝置專屬樣式，顏色沿用 theme token，尺寸沿用編輯器的 34px 輸入框與 11–14px 字級階。
+
+### Device Mode 目標（Upload 預留）
+
+- 靜態網站由 ESP32 提供；圖片處理仍全部在瀏覽器端完成，ESP32 不負責 crop、resize、palette、dither 運算。
+- Upload to Device（`/api/storage/files` 或後續顯示器 endpoint）是下一版功能，不列入本版。
 
 ### Web Setting Page
 
@@ -1025,6 +1087,7 @@ pages/web-setting/
 - 切換 language 時，必須重新套用 app shell、menu 與目前頁面文字；Dither Editor 的圖片、pipeline 與 editor state 不應因此寫入 localStorage。
 - 未來若加入後端登入或 session，再另外導入 cookie；現階段 Web Setting 不使用 cookie。
 - 新增 Web Setting 頁面不應要求修改 Dither Editor 的 controller、page 或 feature registry。
+- 版面與裝置頁一致：`.web-setting-page` 是置中卡片堆疊（gap 12、max-width 860、padding 16），卡片使用 `panel-section`（h2 標題列）＋`panel-body`，頁內不放 `h1`。
 
 ### Help Page
 
@@ -1060,57 +1123,6 @@ pages/help/
 - Help i18n、manifest、visuals 與 page scripts 由 `pages/help/entry.js` 依序載入；`index.html` 不可展開列出內部檔案。
 - `assets/help/*.png` 必須由 `tools/dither-render/run.py` 使用專案實際 dither scripts 產生，不手動畫假結果。比較圖使用固定 480x288 synthetic gradient、E6 palette 與畫面標示的 Algorithm / Mapping / Color Distance / Strength；輸出變更時必須重新產生對應資產並人工確認。
 - `tools/help-validate/run.py` 必須透過 headless browser 載入實際 classic scripts，驗證 capability、雙語內容、限制模板與重複 placeholder；缺少任何已註冊演算法的雙語 detail 時以非零 exit code 結束，已移除演算法殘留的不可見 detail 只報 cleanup warning。
-
-### Device Settings Page
-
-未來可新增可見頁面：
-
-```text
-pages/device-settings/
-  entry.js
-  page.js
-  device-status-panel.js
-  network-panel.js
-```
-
-用途：
-
-- 顯示 ESP32 連線狀態。
-- 顯示 device id、firmware version、api version。
-- 顯示 display profile。
-- 設定 AP mode。
-- 設定連線到指定 Wi-Fi。
-- 測試 Wi-Fi 連線。
-- 顯示目前 IP。
-- 顯示 session/token 狀態。
-
-### Device API 預留
-
-下一版可採用以下 API 草稿：
-
-```text
-GET  /api/device/info
-GET  /api/device/status
-GET  /api/network/status
-POST /api/network/ap
-POST /api/network/wifi
-GET  /api/display/profile
-POST /api/display/image
-```
-
-`POST /api/display/image` 上傳成功後，ESP32 直接刷新顯示器。
-
-### Session Token 預留
-
-Device Mode 必須避免網頁連到非原本的 ESP32 裝置。
-
-下一版 token 規則：
-
-- ESP32 提供自動 session token。
-- 前端以 memory 或 sessionStorage 保存 token，不長期放 localStorage。
-- 每個 device API request 帶 `X-Device-Token`。
-- device info/status 必須回傳 `deviceId`。
-- 若後續 API 回傳的 `deviceId` 和目前 session 不一致，停止 Upload to Device 並提示使用者。
 
 ### Display Profile 預留
 
@@ -1516,6 +1528,12 @@ MVP 至少：
 - `pages/web-setting/entry.js`
 - `pages/web-setting/page.js`
 
+裝置管理（詳見 ESP32 裝置整合章節）：
+
+- `pages/device-info/`
+- `pages/device-network/`
+- `pages/device-system/`
+
 預留：
 
 - `pages/help/entry.js`
@@ -1578,7 +1596,7 @@ MVP 至少：
 
 - dropzone。
 - slider。
-- select。
+- select field（select 的共用包裝：隱藏原生箭頭、疊主題化 chevron，盒位使用全站統一的結尾圖示尺寸，讓各表單元件結尾的 svg 對齊）。
 - color swatch。
 - sortable list。
 - menu。

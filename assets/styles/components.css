@@ -821,6 +821,38 @@ body.is-app-loading #app {
     background: var(--color-accent-soft);
 }
 
+/* select 的共用包裝（app.ui.selectField）：隱藏原生下拉箭頭改疊自訂 chevron，
+   盒位使用全站統一的結尾圖示尺寸，讓各表單元件結尾的 svg 對齊；圖示走 svg-icon theme filter。 */
+.select-field {
+    position: relative;
+    display: block;
+    min-width: 0;
+}
+
+.select-field select {
+    width: 100%;
+    padding-right: 38px;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.select-chevron {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    bottom: 1px;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.select-chevron .svg-icon {
+    width: 16px;
+    height: 16px;
+}
+
 .svg-icon {
     display: inline-block;
     width: 18px;
@@ -1316,19 +1348,15 @@ body.is-sorting * {
     font-size: 13px;
 }
 
-.setting-section {
+/* Web Setting 與裝置頁共用編輯器版面語言：panel-section 卡片堆疊、置中欄寬、16px 頁面內距。 */
+.web-setting-page {
     display: grid;
+    align-content: start;
     gap: 12px;
+    max-width: 860px;
+    margin: 0 auto;
     padding: 16px;
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    background: var(--color-surface-alpha);
-    box-shadow: 0 12px 28px var(--color-shadow);
-}
-
-.setting-section h2 {
-    margin: 0;
-    font-size: 14px;
+    color: var(--color-text);
 }
 
 .setting-choice-list {
@@ -1364,6 +1392,14 @@ body.is-sorting * {
 }
 
 @media (max-width: 920px) {
+    /* 手機模式 page-host 固定高度且 overflow hidden；設定頁比照裝置頁自己捲動。 */
+    .web-setting-page {
+        height: 100%;
+        overflow: auto;
+        padding: 12px;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .tool-dock {
         display: grid;
         grid-template-columns: 1fr;

@@ -22,6 +22,12 @@ DEFAULT_OUTPUT = ROOT / "build"
 COPY_PATHS = ("index.html", "assets", "src", "LICENSE")
 EXCLUDE_PATHS = generated_demo_data_paths()
 MINIFY_SUFFIXES = {".html", ".css", ".js", ".svg"}
+# Preview block in index.html loads the dev/demo mock device API. Release builds
+# strip the block and exclude the mock file; demo builds keep both.
+MOCK_SCRIPT_PATH = Path("src") / "device" / "device-mock.js"
+PREVIEW_BLOCK_RE = re.compile(
+    r"[ \t]*<!-- PREVIEW START.*?PREVIEW END -->\r?\n?", re.DOTALL
+)
 
 
 def main() -> int:
@@ -69,9 +75,17 @@ def main() -> int:
         action="store_false",
         help="Keep normal copied output files instead of replacing them with .gz versions.",
     )
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Build a static demo that keeps the mock device API. Demo output never gzips.",
+    )
     args = parser.parse_args()
     if args.no_clean:
         args.clean = False
+    if args.demo:
+        # Demo output serves plain static hosting (e.g. GitHub Pages); gzip-only files break it.
+        args.gzip = False
 
     output_root = resolve_output_dir(args.output)
     if output_root == ROOT:
@@ -81,12 +95,24 @@ def main() -> int:
         shutil.rmtree(output_root)
     output_root.mkdir(parents=True, exist_ok=True)
 
-    output_dir = create_build_dir(output_root)
-    copied_files = copy_static_files(output_dir)
+    # latest is a mirror of the newest build; clear it up front so a failed build
+    # never leaves a stale copy behind.
+    latest_dir = output_root / "latest"
+    if latest_dir.exists():
+        shutil.rmtree(latest_dir)
+
+    exclude_paths = EXCLUDE_PATHS if args.demo else EXCLUDE_PATHS | {MOCK_SCRIPT_PATH}
+    output_dir = create_build_dir(output_root, "-demo" if args.demo else "")
+    copied_files = copy_static_files(output_dir, exclude_paths)
+    if not args.demo:
+        strip_preview_block(output_dir / "index.html")
     minified_files = minify_files(output_dir) if args.minify else 0
     gzipped_files = gzip_output_files(output_dir) if args.gzip else []
+    shutil.copytree(output_dir, latest_dir)
 
+    print(f"Build mode: {'demo' if args.demo else 'release'}")
     print(f"Build output: {display_path(output_dir)}")
+    print(f"Latest mirror: {display_path(latest_dir)}")
     print(f"Copied files: {copied_files}")
     print(f"Minify: {'enabled' if args.minify else 'disabled'}")
     print(f"Minified files: {minified_files}")
@@ -102,8 +128,8 @@ def resolve_output_dir(output: str) -> Path:
     return path.resolve()
 
 
-def create_build_dir(output_root: Path) -> Path:
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+def create_build_dir(output_root: Path, name_suffix: str = "") -> Path:
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S") + name_suffix
     output_dir = output_root / stamp
     suffix = 2
     while output_dir.exists():
@@ -117,7 +143,7 @@ def display_path(path: Path) -> str:
     return str(path.relative_to(ROOT) if path.is_relative_to(ROOT) else path)
 
 
-def copy_static_files(output_dir: Path) -> int:
+def copy_static_files(output_dir: Path, exclude_paths: set[Path]) -> int:
     copied = 0
     for item in COPY_PATHS:
         source = ROOT / item
@@ -125,13 +151,23 @@ def copy_static_files(output_dir: Path) -> int:
         if source.is_dir():
             for path in source.rglob("*"):
                 relative_path = path.relative_to(ROOT)
-                if path.is_file() and relative_path not in EXCLUDE_PATHS:
+                if path.is_file() and relative_path not in exclude_paths:
                     copy_file(path, output_dir / relative_path)
                     copied += 1
-        elif source.is_file() and Path(item) not in EXCLUDE_PATHS:
+        elif source.is_file() and Path(item) not in exclude_paths:
             copy_file(source, target)
             copied += 1
     return copied
+
+
+def strip_preview_block(index_path: Path) -> None:
+    text = index_path.read_text(encoding="utf-8")
+    stripped = PREVIEW_BLOCK_RE.sub("", text)
+    if stripped == text:
+        raise SystemExit(
+            "index.html preview block not found; release build cannot verify the mock was stripped."
+        )
+    index_path.write_text(stripped, encoding="utf-8", newline="\n")
 
 
 def copy_file(source: Path, target: Path) -> None:

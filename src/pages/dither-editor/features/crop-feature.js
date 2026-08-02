@@ -245,7 +245,7 @@
                 }
             );
             backgroundColorInput.addEventListener('input', function () {
-                backgroundPresetInput.value = background.PRESET_CUSTOM;
+                backgroundPresetInput.select.value = background.PRESET_CUSTOM;
                 state.settings.crop.backgroundPreset = background.PRESET_CUSTOM;
                 state.settings.crop.backgroundColor = background.normalizeHexColor(backgroundColorInput.value);
             });
@@ -288,10 +288,10 @@
             });
 
             panelRefs = {
-                aspectRatio: aspectRatioInput,
+                aspectRatio: aspectRatioInput.select,
                 zoom: zoomInput,
                 rotation: rotationInput,
-                backgroundPreset: backgroundPresetInput,
+                backgroundPreset: backgroundPresetInput.select,
                 backgroundColor: backgroundColorInput,
                 flipX: flipXButton,
                 flipY: flipYButton
@@ -301,10 +301,10 @@
                 app.utils.dom.el('div', {
                     className: 'crop-quadrant-grid',
                     children: [
-                        cropField(ui.t('labelRatio'), aspectRatioInput),
+                        cropField(ui.t('labelRatio'), aspectRatioInput.node),
                         cropField(ui.t('labelZoom'), zoomInput),
                         cropField(ui.t('labelRotate'), rotationInput),
-                        cropField(ui.t('labelFill'), cropBackgroundControl(backgroundPresetInput, backgroundColorInput)),
+                        cropField(ui.t('labelFill'), cropBackgroundControl(backgroundPresetInput.node, backgroundColorInput)),
                         app.utils.dom.el('div', {
                             className: 'crop-icon-button-row',
                             children: [rotateLeftButton, rotateRightButton, flipXButton, flipYButton]

@@ -5,6 +5,18 @@
     function renderStatus(node, status) {
         var label = status || app.i18n.t('statusReady');
         var state = statusState(label);
+        // 圓點同時承載裝置連線與頁面狀態，優先序：
+        // 裝置離線（紅）> 頁面 error/busy > 裝置在線（綠）> 未偵測到裝置（灰）。
+        var live = app.device.live ? app.device.live.state() : null;
+        if (live === 'offline') {
+            state = 'error';
+            label = app.i18n.t('deviceLiveOffline');
+        } else if (state === 'ready' && live === 'online') {
+            label = app.i18n.t('deviceLiveOnline');
+        } else if (state === 'ready' && live === 'standalone') {
+            state = 'idle';
+            label = app.i18n.t('deviceLiveStandalone');
+        }
         node.className = 'app-status is-' + state;
         node.textContent = '';
         node.title = label;
@@ -72,13 +84,19 @@
 
     // 讓頁面或 controller 可以更新全站狀態顯示。
     AppShell.prototype.setStatus = function setStatus(status) {
+        this.lastStatus = status || null;
         renderStatus(this.statusNode, status);
     };
 
     // 建立選單與 router，並啟動預設頁面。
     AppShell.prototype.start = function start() {
+        var self = this;
         this.applyShellText();
         app.app.refreshUi = this.refreshUi.bind(this);
+        // 裝置連線狀態改變時，用最後一次頁面狀態重新合成圓點。
+        app.device.live.subscribe(function () {
+            renderStatus(self.statusNode, self.lastStatus);
+        });
         this.router.start('dither-editor');
     };
 

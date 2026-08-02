@@ -72,26 +72,35 @@
         mount: function mount(container) {
             container.appendChild(
                 app.utils.dom.el('section', {
-                    className: 'simple-page web-setting-page',
+                    className: 'web-setting-page',
                     children: [
-                        app.utils.dom.el('h1', { text: t('webSettingTitle') }),
                         app.utils.dom.el('section', {
-                            className: 'setting-section',
+                            className: 'panel-section',
                             children: [
                                 app.utils.dom.el('h2', { text: t('webSettingTheme') }),
                                 app.utils.dom.el('div', {
-                                    className: 'setting-choice-list',
-                                    children: app.app.themeOptions.map(themeOption)
+                                    className: 'panel-body',
+                                    children: [
+                                        app.utils.dom.el('div', {
+                                            className: 'setting-choice-list',
+                                            children: app.app.themeOptions.map(themeOption)
+                                        })
+                                    ]
                                 })
                             ]
                         }),
                         app.utils.dom.el('section', {
-                            className: 'setting-section',
+                            className: 'panel-section',
                             children: [
                                 app.utils.dom.el('h2', { text: t('webSettingLanguage') }),
                                 app.utils.dom.el('div', {
-                                    className: 'setting-choice-list',
-                                    children: app.i18n.languageOptions.map(languageOption)
+                                    className: 'panel-body',
+                                    children: [
+                                        app.utils.dom.el('div', {
+                                            className: 'setting-choice-list',
+                                            children: app.i18n.languageOptions.map(languageOption)
+                                        })
+                                    ]
                                 })
                             ]
                         })

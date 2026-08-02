@@ -86,6 +86,8 @@
                 if (app.startupGate) {
                     app.startupGate.complete();
                 }
+                // 啟動完成後才開始裝置連線監看，避免 alive 輪詢干擾 startup gate。
+                app.device.live.start();
             })
             .catch(function (error) {
                 if (app.startupGate) {

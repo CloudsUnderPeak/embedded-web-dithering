@@ -281,6 +281,7 @@
     }
 
     // 建立下拉選單，options 使用 { value, label }。
+    // 回傳 { node, select }：node 是帶自訂 chevron 的共用包裝，select 供讀寫目前值。
     function selectInput(value, options, onChange) {
         var select = app.utils.dom.el('select');
         options.forEach(function (option) {
@@ -290,7 +291,7 @@
         select.addEventListener('change', function () {
             onChange(select.value);
         });
-        return select;
+        return { node: app.ui.selectField.create(select), select: select };
     }
 
     // 建立 checkbox，變更時回傳 checked boolean。

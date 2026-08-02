@@ -16,22 +16,53 @@
     }
 
     // 依目前 pageRegistry 內容重新渲染選單項目。
+    // 每次展開都重新 render，因此登入狀態永遠即時。
     AppMenu.prototype.render = function render() {
         var self = this;
         app.utils.dom.clear(this.node);
-        [
-            { id: 'dither-editor', label: app.i18n.t('menuDitherEditor') },
-            { id: 'web-setting', label: app.i18n.t('menuWebSetting') },
-            { id: 'help', label: app.i18n.t('menuHelp') },
-            { id: 'about', label: app.i18n.t('menuAbout') }
-        ].forEach(function (item) {
-            var button = app.utils.dom.el('button', { text: item.label, attrs: { type: 'button' } });
+
+        function addItem(id, label) {
+            var button = app.utils.dom.el('button', { text: label, attrs: { type: 'button' } });
             button.addEventListener('click', function () {
                 self.hide();
-                self.onSelect(item.id);
+                self.onSelect(id);
             });
             self.node.appendChild(button);
-        });
+        }
+
+        function addDivider() {
+            self.node.appendChild(app.utils.dom.el('hr', { className: 'app-menu-divider' }));
+        }
+
+        addItem('dither-editor', app.i18n.t('menuDitherEditor'));
+
+        addDivider();
+        self.node.appendChild(app.utils.dom.el('div', {
+            className: 'app-menu-group',
+            text: app.i18n.t('menuDeviceGroup')
+        }));
+        // 裝置連線狀態一律由 header 的 app-status 圓點呈現，選單不另外標示。
+        addItem('device-info', app.i18n.t('menuDeviceInfo'));
+        addItem('device-network', app.i18n.t('menuDeviceNetwork'));
+        addItem('device-system', app.i18n.t('menuDeviceSystem'));
+
+        addDivider();
+        addItem('web-setting', app.i18n.t('menuWebSetting'));
+        addItem('help', app.i18n.t('menuHelp'));
+        addItem('about', app.i18n.t('menuAbout'));
+
+        if (app.device.auth.hasToken()) {
+            addDivider();
+            var logoutButton = app.utils.dom.el('button', {
+                text: app.i18n.t('menuLogout'),
+                attrs: { type: 'button' }
+            });
+            logoutButton.addEventListener('click', function () {
+                self.hide();
+                app.device.auth.logout();
+            });
+            this.node.appendChild(logoutButton);
+        }
     };
 
     // 綁定按鈕開關與外部點擊關閉，避免選單停留在畫面上。
