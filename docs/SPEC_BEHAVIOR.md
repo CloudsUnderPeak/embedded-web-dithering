@@ -11,6 +11,7 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-08-03: 編輯器的下拉選單（裁切比例／填色、抖色演算法／映射／色距、調色盤 preset）一致隱藏原生箭頭並疊主題化 chevron，讓箭頭與右側邊界保有適當間距。
 - 2026-07-11: Help 的演算法卡片與圖片尺寸限制改由 runtime capability 產生；新增演算法缺少教學文案時顯示基本 fallback，移除後自動隱藏，限制值透過可重複 i18n placeholder 顯示。
 - 2026-07-11: Help 擴充為雙語文件中心，提供 9 份可深連結文件、文件樹、Breadcrumb、頁內目錄、上一篇／下一篇、響應式導覽，以及由專案引擎產生的比較圖、矩陣/kernel 圖解與互動示例。
 - 2026-07-11: Startup loading 套用 i18n 時同步更新 header App 標題與 Menu placeholder，避免延遲載入期間同時出現兩種語言。

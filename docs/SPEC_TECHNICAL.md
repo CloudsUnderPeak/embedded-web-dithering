@@ -11,6 +11,7 @@ Split From: SPEC_INDEX.md
 
 ## History
 
+- 2026-08-03: select 自訂箭頭抽成共用 `src/ui/select-field.js`（`app.ui.selectField.create(select)` 回傳 `.select-field` 包裝；樣式位於 `components.css`）；編輯器 `panel-utils.selectInput` 改回傳 `{ node, select }`，crop／dither／palette feature 全部改走共用元件。
 - 2026-07-11: 新增 app-level `project-capabilities.js` 與 Help content model/validator；Dither config 註冊可用清單、constants 註冊限制 fact，i18n 支援可重複 named/positional placeholder，Help 演算法卡片改由 registry 與 ID 文案交集產生。
 - 2026-07-11: Help page 改為 manifest 驅動的雙語文件中心；PageRouter 保存完整 route 並支援同頁 `onRouteChange`，Help 使用獨立 i18n bundle、文件 renderer、互動視覺模組與 `assets/help/` 引擎渲染比較圖。
 - 2026-07-11: `main.js` 本地化 startup gate 時透過 `applyShellCopy()` 同步 header placeholder；AppShell mount 後仍重套 shell 文案與 status。
@@ -447,7 +448,7 @@ embedded-web-dithering/
       dropdown-menu.js
       dropzone.js
       slider.js
-      select.js
+      select-field.js
       color-swatch.js
       svg-icons.js
       sortable-list.js
@@ -596,6 +597,7 @@ const defaultDitherOptions = {
 <script defer src="src/ui/svg-icons.js"></script>
 <script defer src="src/core/canvas/canvas-utils.js"></script>
 <script defer src="src/ui/sortable-list.js"></script>
+<script defer src="src/ui/select-field.js"></script>
 <script defer src="src/app/project-capabilities.js"></script>
 <script defer src="src/app/page-registry.js"></script>
 <script defer src="src/pages/dither-editor/entry.js"></script>
@@ -1578,7 +1580,7 @@ MVP 至少：
 
 - dropzone。
 - slider。
-- select。
+- select field（隱藏原生箭頭、疊主題化 chevron，並保留一致的右側圖示間距）。
 - color swatch。
 - sortable list。
 - menu。

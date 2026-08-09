@@ -164,21 +164,21 @@
                         algorithm: value,
                         errorStrength: constants.DEFAULT_DITHER_ERROR_STRENGTH
                     });
-                })),
+                }).node),
                 ui.row(ui.t('labelPaletteMapping'), ui.selectInput(
                     state.settings.dither.paletteMapping,
                     paletteMappingOptions(),
                     function (value) {
                         controller.updateSetting('dither', 'paletteMapping', value);
                     }
-                )),
+                ).node),
                 ui.row(ui.t('labelColorDistance'), ui.selectInput(
                     state.settings.dither.colorDistance,
                     colorDistanceOptions(),
                     function (value) {
                         controller.updateSetting('dither', 'colorDistance', value);
                     }
-                )),
+                ).node),
                 app.utils.dom.el('div', {
                     className: 'control-row',
                     children: [serpentineLabel, serpentineControl]

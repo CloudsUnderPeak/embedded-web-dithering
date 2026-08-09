@@ -821,6 +821,38 @@ body.is-app-loading #app {
     background: var(--color-accent-soft);
 }
 
+/* select 的共用包裝（app.ui.selectField）：隱藏原生下拉箭頭改疊自訂 chevron，
+   盒位使用全站統一的結尾圖示尺寸，讓各表單元件結尾的 svg 對齊；圖示走 svg-icon theme filter。 */
+.select-field {
+    position: relative;
+    display: block;
+    min-width: 0;
+}
+
+.select-field select {
+    width: 100%;
+    padding-right: 38px;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.select-chevron {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    bottom: 1px;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.select-chevron .svg-icon {
+    width: 16px;
+    height: 16px;
+}
+
 .svg-icon {
     display: inline-block;
     width: 18px;
